@@ -12,16 +12,16 @@ public class Card {
         this.suit = suit;
 
 
-        establishHeirarchicalValue();
+        establishHierarchicalValue();
     }
 
     Card(Card c) {
         this.suit = c.getSuit();
         this.rank = c.getRank();
-        establishHeirarchicalValue();
+        establishHierarchicalValue();
     }
 
-    private void establishHeirarchicalValue() {
+    private void establishHierarchicalValue() {
         if(suit == Suit.BIG_JOKER) {
             hierarchicalValue = 31;
         } else if(suit == Suit.SMALL_JOKER) {

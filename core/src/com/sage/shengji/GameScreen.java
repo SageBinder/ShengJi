@@ -12,7 +12,7 @@ import com.badlogic.gdx.utils.viewport.ExtendViewport;
 
 import java.util.ArrayList;
 
-import static com.sage.shengji.Constants.WORLD_SIZE;
+import static com.sage.shengji.Constants.GAME_WORLD_SIZE;
 
 public class GameScreen extends InputAdapter implements Screen {
     private ShengJiGame game;
@@ -34,7 +34,7 @@ public class GameScreen extends InputAdapter implements Screen {
         batch = new SpriteBatch();
         renderer = new ShapeRenderer();
         camera = new OrthographicCamera();
-        viewport = new ExtendViewport(WORLD_SIZE, WORLD_SIZE, camera);
+        viewport = new ExtendViewport(GAME_WORLD_SIZE, GAME_WORLD_SIZE, camera);
         hand  = new RenderableHand(viewport);
 
 //		for(Suit suit : Suit.values()) {
@@ -64,20 +64,18 @@ public class GameScreen extends InputAdapter implements Screen {
 
     @Override
     public void render(float delta) {
-        Gdx.gl.glClearColor(0, 0.2f, 0.11f, 1);
+        Gdx.gl.glClearColor(Constants.BACKGROUND_COLOR.r, Constants.BACKGROUND_COLOR.g, Constants.BACKGROUND_COLOR.b, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         viewport.apply();
         batch.setProjectionMatrix(camera.combined);
         renderer.setProjectionMatrix(camera.combined);
-        batch.begin();
 
+        batch.begin();
+        hand.render(batch, renderer);
         for(RenderableCard c : cards) {
             c.render(batch, renderer);
         }
-
-        hand.render(batch, renderer);
-
         batch.end();
     }
 
@@ -109,7 +107,7 @@ public class GameScreen extends InputAdapter implements Screen {
 	@Override
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
 	    Vector2 worldCoordinates = new Vector2(viewport.unproject(new Vector2(screenX, screenY)));
-	    cards.add(RenderableCard.getRandomCardAtPos(new Vector2(worldCoordinates.x, worldCoordinates.y)));
+	    cards.add(RenderableCard.getRandomCardAtPosWithScale(new Vector2(worldCoordinates.x, worldCoordinates.y), 0.25f));
         return true;
     }
 }
