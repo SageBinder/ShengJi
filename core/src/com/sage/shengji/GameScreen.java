@@ -106,8 +106,8 @@ public class GameScreen extends InputAdapter implements Screen {
 
 	@Override
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-	    Vector2 worldCoordinates = new Vector2(viewport.unproject(new Vector2(screenX, screenY)));
-	    cards.add(RenderableCard.getRandomCardAtPosWithScale(new Vector2(worldCoordinates.x, worldCoordinates.y), 0.25f));
+	    Vector2 clickCoordinates = new Vector2(viewport.unproject(new Vector2(screenX, screenY)));
+	    cards.add(RenderableCard.getRandomCardAtPosWithScale(new Vector2(clickCoordinates.x, clickCoordinates.y), 0.25f));
         return true;
     }
 }

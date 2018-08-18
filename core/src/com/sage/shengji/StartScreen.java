@@ -39,6 +39,7 @@ public class StartScreen extends InputAdapter implements Screen {
         font.getRegion().getTexture().setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
         font.setUseIntegerPositions(false);
 
+        Gdx.input.setInputProcessor(this);
         updateButtons();
     }
 
@@ -108,6 +109,37 @@ public class StartScreen extends InputAdapter implements Screen {
     @Override
     public void dispose() {
 
+    }
+
+    @Override
+    public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+        Vector2 clickCoordinates = new Vector2(viewport.unproject(new Vector2(screenX, screenY)));
+
+        if(clickCoordinates.x > createButtonPos.x
+                && clickCoordinates.x < createButtonPos.x + buttonWidth
+                && clickCoordinates.y > createButtonPos.y
+                && clickCoordinates.y < createButtonPos.y + buttonHeight) {
+            game.showCreateGameScreen();
+            return true;
+        }
+
+        if(clickCoordinates.x > joinButtonPos.x
+                && clickCoordinates.x < joinButtonPos.x + buttonWidth
+                && clickCoordinates.y > joinButtonPos.y
+                && clickCoordinates.y < joinButtonPos.y + buttonHeight) {
+            game.showJoinGameScreen();
+            return true;
+        }
+
+        if(clickCoordinates.x > optionsButtonPos.x
+                && clickCoordinates.x < optionsButtonPos.x + buttonWidth
+                && clickCoordinates.y > optionsButtonPos.y
+                && clickCoordinates.y < optionsButtonPos.y + buttonHeight) {
+            game.showOptionsScreen();
+            return true;
+        }
+
+        return false;
     }
 
     private void updateButtons() {

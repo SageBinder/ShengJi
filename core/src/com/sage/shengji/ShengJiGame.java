@@ -11,4 +11,16 @@ public class ShengJiGame extends Game {
     public void showGameScreen() {
         setScreen(new GameScreen(this));
     }
+
+    public void showCreateGameScreen() {
+        setScreen(new CreateGameScreen(this));
+    }
+
+    public void showJoinGameScreen() {
+        setScreen(new JoinGameScreen(this));
+    }
+
+    public void showOptionsScreen() {
+        setScreen(new JoinGameScreen(this));
+    }
 }
