@@ -14,7 +14,7 @@ import java.util.ArrayList;
 
 import static com.sage.shengji.Constants.GAME_WORLD_SIZE;
 
-public class GameScreen extends InputAdapter implements Screen {
+class GameScreen extends InputAdapter implements Screen {
     private ShengJiGame game;
 
 	private SpriteBatch batch;

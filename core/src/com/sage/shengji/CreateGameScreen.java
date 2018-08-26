@@ -1,9 +1,11 @@
 package com.sage.shengji;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.graphics.GL20;
 
-public class CreateGameScreen extends InputAdapter implements Screen {
+class CreateGameScreen extends InputAdapter implements Screen {
     ShengJiGame game;
 
     CreateGameScreen(ShengJiGame game) {
@@ -17,7 +19,8 @@ public class CreateGameScreen extends InputAdapter implements Screen {
 
     @Override
     public void render(float delta) {
-
+        Gdx.gl.glClearColor(Constants.BACKGROUND_COLOR.r, Constants.BACKGROUND_COLOR.g, Constants.BACKGROUND_COLOR.b, 1);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
     }
 
     @Override

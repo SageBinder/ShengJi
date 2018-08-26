@@ -7,7 +7,7 @@ import com.badlogic.gdx.utils.viewport.ExtendViewport;
 
 import java.util.Iterator;
 
-public class RenderableHand extends Hand {
+class RenderableHand extends Hand {
     private ExtendViewport viewport;
 
     RenderableHand(ExtendViewport viewport) {

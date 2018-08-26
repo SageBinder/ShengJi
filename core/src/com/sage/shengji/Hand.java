@@ -3,10 +3,10 @@ package com.sage.shengji;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-public class Hand {
+class Hand {
     ArrayList<Card> cards;
 
-    Hand() {
+    public Hand() {
         cards = new ArrayList<>();
     }
 

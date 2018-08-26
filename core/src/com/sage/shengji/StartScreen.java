@@ -14,7 +14,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 
-public class StartScreen extends InputAdapter implements Screen {
+class StartScreen extends InputAdapter implements Screen {
     private ShengJiGame game;
 
     private ExtendViewport viewport;

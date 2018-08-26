@@ -1,4 +1,4 @@
-package com.sage.shengji;
+package com.sage.server;
 
 enum Rank {
     ACE,

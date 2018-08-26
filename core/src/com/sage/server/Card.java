@@ -1,4 +1,4 @@
-package com.sage.shengji;
+package com.sage.server;
 
 import java.util.Random;
 
@@ -6,11 +6,19 @@ class Card {
     Rank rank;
     Suit suit;
     private int hierarchicalValue;
+    private int cardNum;
 
     Card(Rank rank, Suit suit) {
         this.rank = rank;
         this.suit = suit;
 
+        if(this.suit == Suit.SMALL_JOKER) {
+            cardNum = 52;
+        } else if(this.suit == Suit.BIG_JOKER) {
+            cardNum = 53;
+        } else {
+            cardNum = (rank.toInt() * 4) + suit.toInt();
+        }
 
         establishHierarchicalValue();
     }
@@ -45,14 +53,29 @@ class Card {
         return suit;
     }
 
+    Suit getEffectiveSuit() {
+        return suit.getEffectiveSuit();
+    }
+
     Rank getRank() {
         return rank;
     }
 
-    static Card getRandomCard() {
-        Random random = new Random();
-        int cardNum = random.nextInt(54);
+    int getCardNum() {
+        return cardNum;
+    }
 
+    int getPointValue() {
+        if(rank == Rank.TEN || rank == Rank.KING) {
+            return 10;
+        }
+        if(rank == Rank.FIVE) {
+            return 5;
+        }
+        return 0;
+    }
+
+    static Card getCardFromCardNum(int cardNum) {
         if(cardNum == 52) {
             return new Card(Rank.JOKER, Suit.SMALL_JOKER);
         } else if(cardNum == 53) {
@@ -62,11 +85,45 @@ class Card {
         }
     }
 
+    static Rank getRankFromCardNum(int cardNum) {
+        if(cardNum <= 52) {
+            return Rank.JOKER;
+        } else {
+            return Rank.values()[cardNum / 4];
+        }
+    }
+
+    static Suit getSuitFromCardNum(int cardNum) {
+        if(cardNum == 52) {
+            return Suit.SMALL_JOKER;
+        } else if(cardNum == 53) {
+            return Suit.BIG_JOKER;
+        } else {
+            return Suit.values()[cardNum % 4];
+        }
+    }
+
+    static Card getRandomCard() {
+        Random random = new Random();
+        int cardNum = random.nextInt(54);
+
+        return getCardFromCardNum(cardNum);
+    }
+
     public boolean isTrump() {
         return suit.isTrumpSuit() || rank.isTrumpRank();
     }
 
     public boolean isJoker() {
         return suit.isJoker();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        try {
+            return this.rank == ((Card)obj).getRank() && this.suit == ((Card)obj).getSuit();
+        } catch(ClassCastException e) {
+            return super.equals(obj);
+        }
     }
 }

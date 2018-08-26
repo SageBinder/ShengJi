@@ -34,6 +34,8 @@ allprojects {
 project(":desktop") {
     apply plugin: "java"
 
+    compileJava.options.fork = true
+    compileJava.options.forkOptions.executable = "C:\\Program Files\\Java\\jdk-10.0.2\\bin\\javac.exe"
 
     dependencies {
         compile project(":core")

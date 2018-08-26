@@ -11,7 +11,7 @@ import com.badlogic.gdx.math.Vector2;
 import static com.sage.shengji.Constants.CARD_HEIGHT;
 import static com.sage.shengji.Constants.CARD_WIDTH;
 
-public class RenderableCard extends Card {
+class RenderableCard extends Card {
     private Sprite cardSprite;
     private float scale = 1f; // Overall scale of the card
     private float borderWidth = 0.009f;

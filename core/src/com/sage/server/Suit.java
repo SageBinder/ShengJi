@@ -1,4 +1,4 @@
-package com.sage.shengji;
+package com.sage.server;
 
 enum Suit {
     HEARTS,
@@ -12,6 +12,18 @@ enum Suit {
 
     public static void setCurrentTrumpSuit(Suit suit) {
         currentTrumpSuit = suit;
+    }
+
+    public static Suit getCurrentTrumpSuit() {
+        return currentTrumpSuit;
+    }
+
+    public Suit getEffectiveSuit() {
+        if(this == Suit.BIG_JOKER || this == Suit.SMALL_JOKER) {
+            return Suit.getCurrentTrumpSuit();
+        } else {
+            return this;
+        }
     }
 
     public boolean isTrumpSuit() {
@@ -38,6 +50,21 @@ enum Suit {
                 return "big_joker";
             default:
                 return "";
+        }
+    }
+
+    public int toInt() {
+        switch(this) {
+            case HEARTS:
+                return 0;
+            case CLUBS:
+                return 1;
+            case DIAMONDS:
+                return 2;
+            case SPADES:
+                return 3;
+            default:
+                return -1;
         }
     }
 }
