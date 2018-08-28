@@ -49,7 +49,7 @@ class Round {
         Deck deck = new Deck();
         for(int i = 0; i < numFullDecks; i++) {
             for(int j = 0; j < 54; j++) {
-                deck.add(Card.getCardFromCardNum(j));
+                deck.add(new Card(j));
             }
         }
         return deck;
@@ -81,21 +81,23 @@ class Round {
     }
 
     private int[] sendKittyToCallerAndGetNewKitty(int[] kittyCardNums, Player caller) {
+        int[] newKitty = new int[kittyCardNums.length];
+
         // Send caller cards in kittyCardNums
         caller.sendInt(ServerCodes.WAIT_FOR_KITTY);
         for(int cardNum : kittyCardNums) {
             caller.sendInt(cardNum);
-            caller.addToHand(Card.getCardFromCardNum(cardNum));
+            caller.addToHand(new Card(cardNum));
         }
 
         // Get cards that caller put in kittyCardNums and remove them from their hand
         caller.sendInt(ServerCodes.SEND_KITTY_REPLACEMENTS);
-        for(int i = 0; i < kittyCardNums.length; i++) {
-            kittyCardNums[i] = caller.readInt();
-            caller.removeFromHand(Card.getRankFromCardNum(kittyCardNums[i]), Card.getSuitFromCardNum(kittyCardNums[i]));
+        for(int i = 0; i < newKitty.length; i++) {
+            newKitty[i] = caller.readInt();
+            caller.removeFromHand(Card.getRankFromCardNum(newKitty[i]), Card.getSuitFromCardNum(newKitty[i]));
         }
 
-        return kittyCardNums;
+        return newKitty;
     }
 
     private CardList getFriendCardsAndSendToOtherPlayers(Player caller) {
@@ -103,7 +105,7 @@ class Round {
         caller.sendInt(ServerCodes.SEND_FRIEND_CARDS);
         CardList friendCards = new CardList();
         for(int i = 0; i < players.size() / 2; i++) {
-            friendCards.add(Card.getCardFromCardNum(caller.readInt()));
+            friendCards.add(new Card(caller.readInt()));
         }
 
         // Send friend cards to other players
@@ -154,7 +156,7 @@ class Round {
                                 p.sendInt(ServerCodes.INVALID_CALL);
                                 continue;
                             }
-                            if(p.isValidCall(Card.getCardFromCardNum(callCardNum)) && numCallCards > highestNumCallCards) {
+                            if(p.isValidCall(new Card(callCardNum)) && numCallCards > highestNumCallCards) {
                                 synchronized(lock) {
                                     highestNumCallCards = numCallCards;
                                     if(caller != null) { // Send previous caller SEND_CALL code to check if they want to overtake the new call

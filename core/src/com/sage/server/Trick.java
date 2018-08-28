@@ -37,7 +37,7 @@ class Trick {
                 CardList cardsInPlay = new CardList();
                 turnPlayer.sendInt(ServerCodes.SEND_PLAY);
                 for(int i = 0; i < numCardsInPlay; i++) {
-                    cardsInPlay.add(Card.getCardFromCardNum(turnPlayer.readInt()));
+                    cardsInPlay.add(new Card(turnPlayer.readInt()));
                 }
                 // basePlay == null if the turnPlayer is the starting player
                 turnPlay = new Play(playOrderIndex, cardsInPlay, turnPlayer, basePlay);

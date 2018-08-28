@@ -23,9 +23,16 @@ class Card {
         establishHierarchicalValue();
     }
 
+    Card(int cardNum) {
+        this.cardNum = cardNum;
+        this.rank = getRankFromCardNum(cardNum);
+        this.suit = getSuitFromCardNum(cardNum);
+    }
+
     Card(Card c) {
         this.suit = c.getSuit();
         this.rank = c.getRank();
+        this.cardNum = c.getCardNum();
         establishHierarchicalValue();
     }
 
@@ -75,16 +82,6 @@ class Card {
         return 0;
     }
 
-    static Card getCardFromCardNum(int cardNum) {
-        if(cardNum == 52) {
-            return new Card(Rank.JOKER, Suit.SMALL_JOKER);
-        } else if(cardNum == 53) {
-            return new Card(Rank.JOKER, Suit.BIG_JOKER);
-        } else {
-            return new Card(Rank.values()[cardNum / 4], Suit.values()[cardNum % 4]);
-        }
-    }
-
     static Rank getRankFromCardNum(int cardNum) {
         if(cardNum <= 52) {
             return Rank.JOKER;
@@ -107,7 +104,7 @@ class Card {
         Random random = new Random();
         int cardNum = random.nextInt(54);
 
-        return getCardFromCardNum(cardNum);
+        return new Card(cardNum);
     }
 
     public boolean isTrump() {
