@@ -52,7 +52,7 @@ class Card {
         }
     }
 
-    public int getHierarchicalValue() {
+    int getHierarchicalValue() {
         return hierarchicalValue;
     }
 
@@ -107,7 +107,7 @@ class Card {
         return new Card(cardNum);
     }
 
-    public boolean isTrump() {
+    boolean isTrump() {
         return suit.isTrumpSuit() || rank.isTrumpRank();
     }
 

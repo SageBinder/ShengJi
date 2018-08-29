@@ -2,14 +2,17 @@ package com.sage.server;
 
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.Random;
 
 class Deck extends CardList {
     private Random random = new Random();
 
-    Deck() {
-
+    Deck(int numFullDecks) {
+        for(int i = 0; i < numFullDecks; i++) {
+            for(int j = 0; j < 54; j++) {
+                add(new Card(j));
+            }
+        }
     }
 
     Deck(ArrayList<Card> cards) {

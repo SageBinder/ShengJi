@@ -15,6 +15,7 @@ class Trick {
         Player turnPlayer = startingPlayer;
         ArrayList<Play> plays = new ArrayList<>();
         Play basePlay = null;
+        Play winningPlay;
 
         // Get number of cards in play
         turnPlayer.sendInt(ServerCodes.SEND_PLAY_LENGTH);
@@ -43,6 +44,8 @@ class Trick {
                 turnPlay = new Play(playOrderIndex, cardsInPlay, turnPlayer, basePlay);
 
                 if(turnPlay.isLegal()) {
+                    plays.add(turnPlay);
+                    winningPlay = getWinningPlay(plays);
                     if(turnPlayer == startingPlayer) {
                         basePlay = turnPlay;
                     }
@@ -91,10 +94,14 @@ class Trick {
             playOrderIndex++;
         } while(turnPlayer != startingPlayer);
 
-        return new TrickResult(getTrickWinner(plays), getPointCardsInPlays(plays));
+        return new TrickResult(getTrickWinner(plays), getPointCardsInPlays(plays), winningPlay);
     }
 
     private Player getTrickWinner(ArrayList<Play> plays) {
+        return getWinningPlay(plays).getPlayer();
+    }
+
+    private Play getWinningPlay(ArrayList<Play> plays) {
         Play currentWinningPlay = plays.get(0);
 
         for(Play p : plays) {
@@ -110,7 +117,7 @@ class Trick {
             }
         }
 
-        return currentWinningPlay.getPlayer();
+        return currentWinningPlay;
     }
 
     private CardList getPointCardsInPlays(ArrayList<Play> plays) {

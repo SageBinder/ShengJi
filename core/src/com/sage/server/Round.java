@@ -1,6 +1,7 @@
 package com.sage.server;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 
 class Round {
@@ -10,12 +11,18 @@ class Round {
         this.players.addAll(players);
     }
 
-    Player playNewRound() {
-        Collections.shuffle(players); // TODO: send all players the new player order
+    void playNewRound() {
+        // Reorganize "seating"
+        Collections.shuffle(players);
+        Player.sendIntToAll(players, ServerCodes.WAIT_FOR_PLAYER_ORDER);
+        for(Player p : players) {
+            Player.sendIntToAll(players, p.getPlayerNum());
+        }
+
 
         int numFullDecks = players.size() / 2;
-        Deck deck = makeNewDeck(numFullDecks);
-        int[] kitty = getKittyFromDeck(deck);
+        Deck deck = new Deck(numFullDecks);
+        CardList kitty = getKittyFromDeck(deck);
         CardList friendCards;
 
         final int numPointsNeeded = 40 * numFullDecks;
@@ -28,6 +35,7 @@ class Round {
 
 
         Player trickWinner = caller;
+        Play winningPlay = null;
         while(players.get(0).getHand().size() > 0) {
             Trick trick = new Trick(players, friendCards);
             TrickResult trickResult = trick.startNewTrick(trickWinner);
@@ -37,64 +45,91 @@ class Round {
             Player.sendIntToAll(players, ServerCodes.WAIT_FOR_TRICK_WINNER);
             Player.sendIntToAll(players, trickWinner.getPlayerNum());
             Player.sendIntToAll(players, ServerCodes.WAIT_FOR_TRICK_POINT_CARDS);
-            for(Card c : trickResult.getPointCards()) {
-                Player.sendIntToAll(players, c.getCardNum());
+            Player.sendCardsToAll(players, trickResult.getPointCards());
+
+            winningPlay = trickResult.getWinningPlay();
+        }
+
+        // Multiplier for point cards in kitty will be the largest group size of the final winning play
+        int largestGroupSizeInWinningPlay;
+        try { // Apparently IntelliJ IDEA says that this gets the max value in winningPay.getPlayStructure() ¯\_(ツ)_/¯
+            largestGroupSizeInWinningPlay = Arrays.stream(winningPlay.getPlayStructure()).filter(groupSize -> groupSize >= 0).max().orElse(0);
+        } catch(NullPointerException e) {
+            e.printStackTrace();
+            largestGroupSizeInWinningPlay = 1;
+        }
+        int totalPointsCollected = pointCardsCollected.getTotalPoints();
+        totalPointsCollected += largestGroupSizeInWinningPlay * (kitty.getTotalPoints());
+
+        // Send total collected points to all players
+        Player.sendIntToAll(players, ServerCodes.WAIT_FOR_COLLECTED_POINTS);
+        Player.sendIntToAll(players, totalPointsCollected);
+
+        // Send kitty to all players
+        Player.sendIntToAll(players, ServerCodes.WAIT_FOR_KITTY);
+        Player.sendCardsToAll(players, kitty);
+
+        // Send round winners to all players
+        Player.sendIntToAll(players, ServerCodes.WAIT_FOR_ROUND_WINNERS);
+        Team winningTeam;
+        if(totalPointsCollected >= numPointsNeeded) {
+            winningTeam = Team.COLLECTORS;
+        } else {
+            winningTeam = Team.KEEPERS;
+        }
+        for(Player p : players) {
+            if(p.getTeam() == winningTeam) {
+                Player.sendIntToAll(players, p.getPlayerNum());
+                p.increaseCallRank(1); // TODO: calculate whether or not winners should go up 2 or 3 ranks
             }
         }
 
-        return players.get(0);
-    }
-
-    private Deck makeNewDeck(int numFullDecks) {
-        Deck deck = new Deck();
-        for(int i = 0; i < numFullDecks; i++) {
-            for(int j = 0; j < 54; j++) {
-                deck.add(new Card(j));
-            }
+        // Send new calling numbers to all players
+        Player.sendIntToAll(players, ServerCodes.WAIT_FOR_CALLING_NUMBERS);
+        for(Player p : players) {
+            Player.sendIntToAll(players, p.getPlayerNum());
+            Player.sendIntToAll(players, p.getCallRank());
         }
-        return deck;
     }
 
-    private int[] getKittyFromDeck(Deck deck) {
+    private CardList getKittyFromDeck(Deck deck) {
         int kittySize = deck.size() % players.size();
         if(kittySize == 0) {
             kittySize = players.size();
         }
-        int[] kittyCardNums = new int[kittySize];
+        CardList kitty = new CardList();
         for(int i = 0; i < kittySize; i++) {
             Card c = deck.getRandomCard();
-            kittyCardNums[i] = c.getCardNum();
+            kitty.add(c);
             deck.remove(c);
         }
 
-        return kittyCardNums;
+        return kitty;
     }
 
     private void dealDeckToPlayers(Deck deck) {
         deck.dealAllRandomly(players);
         Player.sendIntToAll(players, ServerCodes.WAIT_FOR_HAND);
         for(Player p : players) {
-            for(Card c : p.getHand()) {
-                p.sendInt(c.getCardNum());
-            }
+            p.sendCards(p.getHand());
         }
     }
 
-    private int[] sendKittyToCallerAndGetNewKitty(int[] kittyCardNums, Player caller) {
-        int[] newKitty = new int[kittyCardNums.length];
+    private CardList sendKittyToCallerAndGetNewKitty(CardList kitty, Player caller) {
+        CardList newKitty = new CardList();
 
-        // Send caller cards in kittyCardNums
+        // Send caller cards in kitty
         caller.sendInt(ServerCodes.WAIT_FOR_KITTY);
-        for(int cardNum : kittyCardNums) {
-            caller.sendInt(cardNum);
-            caller.addToHand(new Card(cardNum));
+        caller.sendCards(kitty);
+        for(Card card : kitty) {
+            caller.addToHand(new Card(card.getCardNum()));
         }
 
-        // Get cards that caller put in kittyCardNums and remove them from their hand
+        // Get cards that caller put in kitty and remove them from their hand
         caller.sendInt(ServerCodes.SEND_KITTY_REPLACEMENTS);
-        for(int i = 0; i < newKitty.length; i++) {
-            newKitty[i] = caller.readInt();
-            caller.removeFromHand(Card.getRankFromCardNum(newKitty[i]), Card.getSuitFromCardNum(newKitty[i]));
+        for(int i = 0; i < kitty.size(); i++) {
+            newKitty.add(new Card(caller.readInt()));
+            caller.removeFromHand(newKitty.get(i).getCardNum());
         }
 
         return newKitty;
@@ -112,9 +147,7 @@ class Round {
         for(Player p : players) {
             if(p != caller) {
                 p.sendInt(ServerCodes.WAIT_FOR_FRIEND_CARDS);
-                for(Card c : friendCards) {
-                    p.sendInt(c.getCardNum());
-                }
+                p.sendCards(friendCards);
             }
         }
 

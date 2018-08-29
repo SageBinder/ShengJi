@@ -48,8 +48,10 @@ public class ShengJiServer {
 
         Round round = new Round(players);
         while(!gameEnd) {
-            Player winner = round.playNewRound();
-            winner.incrementCallRank();
+            round.playNewRound();
+            for(Player p : players) {
+                p.resetForNewRound();
+            }
         }
     }
 }

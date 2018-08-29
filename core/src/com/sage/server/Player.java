@@ -12,8 +12,6 @@ class Player {
     private Team team = Team.NO_TEAM;
 
     private String name;
-    private String ip;
-    private Socket s;
     private BufferedReader bufferedReader;
     private BufferedWriter bufferedWriter;
 
@@ -31,13 +29,22 @@ class Player {
         }
     }
 
+    static void sendCardsToAll(ArrayList<Player> players, CardList cards) {
+        for(Player p : players) {
+            p.sendCards(cards);
+        }
+    }
+
     Player(int playerNum, String name, Socket s) {
-        this.s = s;
         this.playerNum = playerNum;
         this.name = name;
-        ip = s.getRemoteAddress();
         bufferedReader = new BufferedReader(new InputStreamReader(s.getInputStream()));
         bufferedWriter = new BufferedWriter(new OutputStreamWriter(s.getOutputStream()));
+    }
+
+    void resetForNewRound() {
+        team = Team.NO_TEAM;
+        hand = new Hand();
     }
 
     boolean readyToRead() {
@@ -101,8 +108,8 @@ class Player {
         return callRank == c.rank.toInt() && hand.contains(c) && !(c.suit == Suit.BIG_JOKER || c.suit == Suit.SMALL_JOKER);
     }
 
-    void incrementCallRank() {
-        callRank++;
+    void increaseCallRank(int amount) {
+        callRank += amount;
     }
 
     int getCallRank() {
@@ -143,6 +150,10 @@ class Player {
 
     void removeFromHand(Rank rank, Suit suit) {
         hand.remove(rank, suit);
+    }
+
+    void removeFromHand(int cardNum) {
+        removeFromHand(Card.getRankFromCardNum(cardNum), Card.getSuitFromCardNum(cardNum));
     }
 
     void removeFromHand(Card c) {
