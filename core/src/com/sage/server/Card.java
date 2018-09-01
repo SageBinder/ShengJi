@@ -36,6 +36,11 @@ class Card {
         establishHierarchicalValue();
     }
 
+    // Sets this card to be a random card
+    Card() {
+        this(new Random().nextInt(54));
+    }
+
     private void establishHierarchicalValue() {
         if(suit == Suit.BIG_JOKER) {
             hierarchicalValue = 31;
@@ -98,13 +103,6 @@ class Card {
         } else {
             return Suit.values()[cardNum % 4];
         }
-    }
-
-    static Card getRandomCard() {
-        Random random = new Random();
-        int cardNum = random.nextInt(54);
-
-        return new Card(cardNum);
     }
 
     boolean isTrump() {
