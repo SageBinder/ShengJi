@@ -40,7 +40,9 @@ class Round {
             Trick trick = new Trick(players, friendCards);
             TrickResult trickResult = trick.startNewTrick(trickWinner);
             trickWinner = trickResult.getWinner();
-            pointCardsCollected.addAll(trickResult.getPointCards());
+            if(trickWinner.getTeam() == Team.COLLECTORS) {
+                pointCardsCollected.addAll(trickResult.getPointCards());
+            }
 
             Player.sendIntToAll(players, ServerCodes.WAIT_FOR_TRICK_WINNER);
             Player.sendIntToAll(players, trickWinner.getPlayerNum());
@@ -52,14 +54,12 @@ class Round {
 
         int totalPointsCollected = pointCardsCollected.getTotalPoints();
         int kittyPointsMultiplier;
-        try {
-            assert winningPlay != null;
-            kittyPointsMultiplier = winningPlay.size();
-        } catch(AssertionError e) {
-            kittyPointsMultiplier = 1;
-        }
-        totalPointsCollected += kittyPointsMultiplier * (kitty.getTotalPoints());
 
+        assert winningPlay != null : "This should never happen";
+        kittyPointsMultiplier = winningPlay.size();
+        if(winningPlay.getPlayer().getTeam() == Team.COLLECTORS) {
+            totalPointsCollected += kittyPointsMultiplier * (kitty.getTotalPoints());
+        }
         // Send total collected points to all players
         Player.sendIntToAll(players, ServerCodes.WAIT_FOR_COLLECTED_POINTS);
         Player.sendIntToAll(players, totalPointsCollected);
