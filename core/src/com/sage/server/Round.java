@@ -50,16 +50,15 @@ class Round {
             winningPlay = trickResult.getWinningPlay();
         }
 
-        // Multiplier for point cards in kitty will be the largest group size of the final winning play
-        int largestGroupSizeInWinningPlay;
-        try { // Apparently IntelliJ IDEA says that this gets the max value in winningPay.getPlayStructure() ¯\_(ツ)_/¯
-            largestGroupSizeInWinningPlay = Arrays.stream(winningPlay.getPlayStructure()).filter(groupSize -> groupSize >= 0).max().orElse(0);
-        } catch(NullPointerException e) {
-            e.printStackTrace();
-            largestGroupSizeInWinningPlay = 1;
-        }
         int totalPointsCollected = pointCardsCollected.getTotalPoints();
-        totalPointsCollected += largestGroupSizeInWinningPlay * (kitty.getTotalPoints());
+        int kittyPointsMultiplier;
+        try {
+            assert winningPlay != null;
+            kittyPointsMultiplier = winningPlay.size();
+        } catch(AssertionError e) {
+            kittyPointsMultiplier = 1;
+        }
+        totalPointsCollected += kittyPointsMultiplier * (kitty.getTotalPoints());
 
         // Send total collected points to all players
         Player.sendIntToAll(players, ServerCodes.WAIT_FOR_COLLECTED_POINTS);
