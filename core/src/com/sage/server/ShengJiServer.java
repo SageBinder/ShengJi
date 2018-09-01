@@ -2,6 +2,7 @@ package com.sage.server;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Net;
+import com.badlogic.gdx.net.NetJavaServerSocketImpl;
 import com.badlogic.gdx.net.ServerSocket;
 import com.badlogic.gdx.net.ServerSocketHints;
 import com.badlogic.gdx.net.Socket;
@@ -20,7 +21,7 @@ public class ShengJiServer {
     public void start(int PORT, int numPlayers) {
         var serverSocketHints = new ServerSocketHints();
         serverSocketHints.acceptTimeout = 0;
-        ServerSocket serverSocket = Gdx.net.newServerSocket(Net.Protocol.TCP, PORT, serverSocketHints);
+        NetJavaServerSocketImpl serverSocket = new NetJavaServerSocketImpl(Net.Protocol.TCP, PORT, serverSocketHints);
 
         // Accept client connections until all slots are full
         while(players.size() < numPlayers) {
