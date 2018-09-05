@@ -68,9 +68,15 @@ public class ShengJiServer extends Thread {
                 }
             }
 
-            manageNewConnectionsThread.start();
-            manageDisconnectionsThread.start();
-            manageHostCommunicationThread.start();
+            if(!manageNewConnectionsThread.isAlive()) {
+                manageNewConnectionsThread.start();
+            }
+            if(!manageDisconnectionsThread.isAlive()) {
+                manageDisconnectionsThread.start();
+            }
+            if(!manageHostCommunicationThread.isAlive()) {
+                manageHostCommunicationThread.start();
+            }
             try {
                 manageNewConnectionsThread.join();
                 manageDisconnectionsThread.join();
