@@ -89,6 +89,7 @@ class Round {
             Player.sendIntToAll(players, p.getPlayerNum());
             Player.sendIntToAll(players, p.getCallRank());
         }
+        Player.sendIntToAll(players, ServerCodes.ROUND_OVER);
     }
 
     private CardList getKittyFromDeck(Deck deck) {
@@ -158,6 +159,7 @@ class Round {
     volatile private Player caller;
     volatile private int numNoCallPlayers = 0;
 
+    // TODO: Make sure synchronization in this method is correct
     private Player establishCaller() {
         ArrayList<Thread> threads = new ArrayList<>();
 

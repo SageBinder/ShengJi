@@ -8,12 +8,12 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
 
-import static com.sage.shengji.Constants.CARD_HEIGHT;
-import static com.sage.shengji.Constants.CARD_WIDTH;
+import static com.sage.shengji.TableScreen.CARD_HEIGHT;
+import static com.sage.shengji.TableScreen.CARD_WIDTH;
 
 class RenderableCard extends Card {
     private Sprite cardSprite;
-    private float scale = 1f; // Overall scale of the card
+    private float scale = 1f; // Overall scale of the card with respect to the world
     private float borderWidth = 0.009f;
 
     private Vector2 position;

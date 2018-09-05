@@ -12,9 +12,12 @@ import com.badlogic.gdx.utils.viewport.ExtendViewport;
 
 import java.util.ArrayList;
 
-import static com.sage.shengji.Constants.GAME_WORLD_SIZE;
+class TableScreen extends InputAdapter implements Screen {
+    private static final float GAME_WORLD_SIZE = 5f;
 
-class GameScreen extends InputAdapter implements Screen {
+    static final float CARD_WIDTH = GAME_WORLD_SIZE / 5f;
+    static final float CARD_HEIGHT = (323f / 222f) * CARD_WIDTH; // 323/222 is the ratio of the card image's height to width
+
     private ShengJiGame game;
 
 	private SpriteBatch batch;
@@ -25,7 +28,7 @@ class GameScreen extends InputAdapter implements Screen {
 	private RenderableHand hand;
 	private ArrayList<RenderableCard> cards = new ArrayList<>();
 
-	GameScreen(ShengJiGame game) {
+	TableScreen(ShengJiGame game) {
 	    this.game = game;
     }
 
@@ -64,7 +67,7 @@ class GameScreen extends InputAdapter implements Screen {
 
     @Override
     public void render(float delta) {
-        Gdx.gl.glClearColor(Constants.BACKGROUND_COLOR.r, Constants.BACKGROUND_COLOR.g, Constants.BACKGROUND_COLOR.b, 1);
+        Gdx.gl.glClearColor(ShengJiGame.BACKGROUND_COLOR.r, ShengJiGame.BACKGROUND_COLOR.g, ShengJiGame.BACKGROUND_COLOR.b, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         viewport.apply();

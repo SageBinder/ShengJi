@@ -5,11 +5,14 @@ import com.badlogic.gdx.net.Socket;
 import java.io.*;
 import java.util.ArrayList;
 
+@SuppressWarnings("StatementWithEmptyBody")
 class Player {
     private int playerNum;
     private Hand hand = new Hand();
 //    private Play currentPlay;
     private Team team = Team.NO_TEAM;
+
+    private Socket s;
 
     private String name;
     private BufferedReader bufferedReader;
@@ -36,6 +39,7 @@ class Player {
     }
 
     Player(int playerNum, String name, Socket s) {
+        this.s = s;
         this.playerNum = playerNum;
         this.name = name;
         bufferedReader = new BufferedReader(new InputStreamReader(s.getInputStream()));
@@ -58,30 +62,28 @@ class Player {
 
     int readInt() {
         try {
-            char c;
-            StringBuilder intString = new StringBuilder();
-            while(Character.isDigit((c = (char)bufferedReader.read()))) {
-                intString.append(c);
-            }
-            return Integer.parseInt(intString.toString());
-        } catch(IOException e) {
+            return Integer.parseInt(readLine());
+        } catch(NullPointerException e) {
             e.printStackTrace();
-            return -1;
+            return -1; // TODO: NullPointerException may be thrown here if this player disconnects
         }
     }
 
     String readLine() {
         try {
-            return bufferedReader.readLine();
+            String line;
+            while((line = bufferedReader.readLine()).trim().isEmpty()); // This empty while loop just ignores empty strings
+            return line;
         } catch(IOException e) {
             e.printStackTrace();
-            return "";
+            return null;
         }
     }
 
     void sendString(String string) {
         try {
             bufferedWriter.write(string);
+            bufferedWriter.flush();
         } catch(IOException e) {
             e.printStackTrace();
         }
@@ -90,6 +92,7 @@ class Player {
     void sendInt(int i) {
         try {
             bufferedWriter.write(i);
+            bufferedWriter.flush();
         } catch(IOException e) {
             e.printStackTrace();
         }
@@ -114,6 +117,10 @@ class Player {
 
     int getCallRank() {
         return callRank;
+    }
+
+    void setCallRank(int newCallRank) {
+        callRank = newCallRank;
     }
 
 //    void setPlay(Play newPlay) {
@@ -172,5 +179,13 @@ class Player {
 
     int getPlayerNum() {
         return playerNum;
+    }
+
+    void setPlayerNum(int playerNum) {
+        this.playerNum = playerNum;
+    }
+
+    boolean socketIsConnected() {
+        return s.isConnected();
     }
 }

@@ -25,6 +25,6 @@ public class ServerCodes { // Codes are negative so as to not clash with the sen
     public static final int WAIT_FOR_ROUND_WINNERS = -208;
     public static final int WAIT_FOR_COLLECTED_POINTS = -209;
     public static final int WAIT_FOR_CALLING_NUMBERS = -210;
-
-    public static final int WAIT_FOR_PLAYER_ORDER = -300;
+    public static final int ROUND_OVER = -211;
+    public static final int WAIT_FOR_PLAYER_ORDER = -212;
 }

@@ -3,28 +3,38 @@ package com.sage.shengji;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.Screen;
-import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.utils.Align;
+import com.badlogic.gdx.scenes.scene2d.Actor;
+import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
+import com.badlogic.gdx.utils.viewport.StretchViewport;
+import com.badlogic.gdx.utils.viewport.Viewport;
 
 class StartScreen extends InputAdapter implements Screen {
+    private static final float WORLD_SIZE = 100f;
+    private static final float BUTTON_WIDTH = WORLD_SIZE * 0.3f;
+    private static final float BUTTON_HEIGHT = WORLD_SIZE * 0.1f;
+
+    private static final Vector2 CREATE_GAME_BUTTON_POS = new Vector2((WORLD_SIZE - BUTTON_WIDTH) * 0.5f,
+            (WORLD_SIZE * (5f / 6f)) - (BUTTON_HEIGHT * 0.5f));
+    private static final Vector2 JOIN_GAME_BUTTON_POS = new Vector2((WORLD_SIZE - BUTTON_WIDTH) * 0.5f,
+            (WORLD_SIZE * (3f / 6f)) - (BUTTON_HEIGHT * 0.5f));
+    private static final Vector2 OPTIONS_BUTTON_POS = new Vector2((WORLD_SIZE - BUTTON_WIDTH) * 0.5f,
+            (WORLD_SIZE * (1f / 6f)) - (BUTTON_HEIGHT * 0.5f));
+    
     private ShengJiGame game;
 
-    private ExtendViewport viewport;
+    private Viewport viewport;
 
-    private SpriteBatch batch;
-    private ShapeRenderer renderer;
-    private BitmapFont font;
-
-    private Vector2 createButtonPos, joinButtonPos, optionsButtonPos;
-    private float buttonHeight, buttonWidth;
+    private Stage stage;
+    private TextButton createButton, joinButton, optionsButton;
 
     StartScreen(ShengJiGame game) {
         this.game = game;
@@ -32,63 +42,55 @@ class StartScreen extends InputAdapter implements Screen {
 
     @Override
     public void show() {
-        viewport = new ExtendViewport(Constants.START_WORLD_SIZE, Constants.START_WORLD_SIZE);
-        batch = new SpriteBatch();
-        renderer = new ShapeRenderer();
-        font = new BitmapFont();
-        font.getRegion().getTexture().setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
-        font.setUseIntegerPositions(false);
+        // TODO: Use table layout instead of placing buttons
+        stage = new Stage();
+        viewport = new ExtendViewport(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        stage.setViewport(viewport);
 
-        Gdx.input.setInputProcessor(this);
+        Skin skin = new Skin(Gdx.files.internal("uiskin.json"));
+        createButton = new TextButton("Create game", skin);
+        createButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                game.showCreateGameScreen();
+            }
+        });
+        joinButton = new TextButton("Join game", skin);
+        joinButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                game.showJoinGameScreen();
+            }
+        });
+        optionsButton = new TextButton("Options", skin);
+        optionsButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                game.showOptionsScreen();
+            }
+        });
+
+        stage.addActor(createButton);
+        stage.addActor(joinButton);
+        stage.addActor(optionsButton);
+
         updateButtons();
+        Gdx.input.setInputProcessor(stage);
     }
 
     @Override
     public void render(float delta) {
-        Gdx.gl.glClearColor(Constants.BACKGROUND_COLOR.r, Constants.BACKGROUND_COLOR.g, Constants.BACKGROUND_COLOR.b, 1);
+        Gdx.gl.glClearColor(ShengJiGame.BACKGROUND_COLOR.r, ShengJiGame.BACKGROUND_COLOR.g, ShengJiGame.BACKGROUND_COLOR.b, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        viewport.apply();
-
-        renderer.setProjectionMatrix(viewport.getCamera().combined);
-        renderer.begin(ShapeRenderer.ShapeType.Filled);
-        renderer.setColor(Constants.START_WORLD_BUTTON_COLOR);
-        renderer.rect(createButtonPos.x, createButtonPos.y, buttonWidth, buttonHeight);
-        renderer.rect(joinButtonPos.x, joinButtonPos.y, buttonWidth, buttonHeight);
-        renderer.rect(optionsButtonPos.x, optionsButtonPos.y, buttonWidth, buttonHeight);
-        renderer.end();
-
-        var createButtonLayout = new GlyphLayout(font, "Create game", Color.BLACK, 0, Align.center, false);
-        float createButtonLayoutHeight = createButtonLayout.height;
-
-        var joinButtonLayout = new GlyphLayout(font, "Join game", Color.BLACK, 0, Align.center, false);
-        float joinButtonLayoutHeight = joinButtonLayout.height;
-
-        var optionsButtonLayout = new GlyphLayout(font, "Options", Color.BLACK, 0, Align.center, false);
-        float optionsButtonLayoutHeight = optionsButtonLayout.height;
-
-        batch.setProjectionMatrix(viewport.getCamera().combined);
-        batch.begin();
-        font.draw(batch,
-                createButtonLayout,
-                createButtonPos.x + (buttonWidth / 2),
-                (createButtonPos.y + (buttonHeight / 2)) + (createButtonLayoutHeight / 2));
-        font.draw(batch,
-                joinButtonLayout,
-                joinButtonPos.x + (buttonWidth / 2),
-                (joinButtonPos.y + (buttonHeight / 2)) + (joinButtonLayoutHeight / 2));
-        font.draw(batch,
-                optionsButtonLayout,
-                optionsButtonPos.x + (buttonWidth / 2),
-                (optionsButtonPos.y + (buttonHeight / 2)) + (optionsButtonLayoutHeight / 2));
-        batch.end();
+        stage.act(delta);
+        stage.draw();
     }
 
     @Override
     public void resize(int width, int height) {
         viewport.update(width, height, true);
         updateButtons();
-        font.getData().setScale(Constants.START_FONT_REFERENCE_SCREEN_SIZE);
     }
 
     @Override
@@ -111,48 +113,29 @@ class StartScreen extends InputAdapter implements Screen {
 
     }
 
-    @Override
-    public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-        Vector2 clickCoordinates = new Vector2(viewport.unproject(new Vector2(screenX, screenY)));
-
-        if(clickCoordinates.x > createButtonPos.x
-                && clickCoordinates.x < createButtonPos.x + buttonWidth
-                && clickCoordinates.y > createButtonPos.y
-                && clickCoordinates.y < createButtonPos.y + buttonHeight) {
-            game.showCreateGameScreen();
-            return true;
-        }
-
-        if(clickCoordinates.x > joinButtonPos.x
-                && clickCoordinates.x < joinButtonPos.x + buttonWidth
-                && clickCoordinates.y > joinButtonPos.y
-                && clickCoordinates.y < joinButtonPos.y + buttonHeight) {
-            game.showJoinGameScreen();
-            return true;
-        }
-
-        if(clickCoordinates.x > optionsButtonPos.x
-                && clickCoordinates.x < optionsButtonPos.x + buttonWidth
-                && clickCoordinates.y > optionsButtonPos.y
-                && clickCoordinates.y < optionsButtonPos.y + buttonHeight) {
-            game.showOptionsScreen();
-            return true;
-        }
-
-        return false;
-    }
-
     private void updateButtons() {
-        createButtonPos = new Vector2(Constants.CREATE_GAME_BUTTON_POS.x * (viewport.getWorldWidth() / Constants.START_WORLD_SIZE),
-                Constants.CREATE_GAME_BUTTON_POS.y * (viewport.getWorldHeight() / Constants.START_WORLD_SIZE));
+        float heightScale = viewport.getWorldHeight() / WORLD_SIZE;
+        float widthScale = viewport.getWorldWidth() / WORLD_SIZE;
 
-        joinButtonPos = new Vector2(Constants.JOIN_GAME_BUTTON_POS.x * (viewport.getWorldWidth() / Constants.START_WORLD_SIZE),
-                Constants.JOIN_GAME_BUTTON_POS.y * (viewport.getWorldHeight() / Constants.START_WORLD_SIZE));
+        Vector2 createButtonPos = new Vector2(CREATE_GAME_BUTTON_POS.x * widthScale,
+                CREATE_GAME_BUTTON_POS.y * heightScale);
 
-        optionsButtonPos = new Vector2(Constants.OPTIONS_BUTTON_POS.x * (viewport.getWorldWidth() / Constants.START_WORLD_SIZE),
-                Constants.OPTIONS_BUTTON_POS.y * (viewport.getWorldHeight() / Constants.START_WORLD_SIZE));
+        Vector2 joinButtonPos = new Vector2(JOIN_GAME_BUTTON_POS.x * widthScale,
+                JOIN_GAME_BUTTON_POS.y * heightScale);
 
-        buttonHeight = Constants.START_WORLD_BUTTON_HEIGHT * (viewport.getWorldHeight() / Constants.START_WORLD_SIZE);
-        buttonWidth = Constants.START_WORLD_BUTTON_WIDTH * (viewport.getWorldWidth() / Constants.START_WORLD_SIZE);
+        Vector2 optionsButtonPos = new Vector2(OPTIONS_BUTTON_POS.x * widthScale,
+                OPTIONS_BUTTON_POS.y * heightScale);
+
+        float buttonHeight = BUTTON_HEIGHT * heightScale;
+        float buttonWidth = BUTTON_WIDTH * widthScale;
+
+        createButton.setPosition(createButtonPos.x, createButtonPos.y);
+        createButton.setSize(buttonWidth, buttonHeight);
+
+        joinButton.setPosition(joinButtonPos.x, joinButtonPos.y);
+        joinButton.setSize(buttonWidth, buttonHeight);
+
+        optionsButton.setPosition(optionsButtonPos.x, optionsButtonPos.y);
+        optionsButton.setSize(buttonWidth, buttonHeight);
     }
 }
