@@ -83,6 +83,9 @@ class Trick {
                         }
                     }
 
+                    Player.sendIntToAll(players, ServerCodes.WAIT_FOR_PLAYER_IN_LEAD);
+                    Player.sendIntToAll(players, winningPlay.getPlayer().getPlayerNum());
+
                     turnPlayer.removeFromHand(turnPlay);
                     break;
                 } else {
