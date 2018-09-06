@@ -44,9 +44,7 @@ class RenderableHand extends Hand {
         float pixelDivision = width / cards.size();
 
         for(int i = 0; i < cards.size(); i++) {
-            RenderableCard cardToRender = (RenderableCard)cards.get(i);
-            cardToRender.setScale(0.5f);
-            cardToRender.setPosition(new Vector2((i * pixelDivision) + 0.1f, 0.2f));
+            RenderableCard cardToRender = ((RenderableCard)cards.get(i)).setScale(0.5f).setPosition(new Vector2((i * pixelDivision) + 0.1f, 0.2f));
             cardToRender.render(batch, renderer);
         }
     }

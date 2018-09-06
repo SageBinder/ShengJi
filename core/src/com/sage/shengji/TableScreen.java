@@ -16,7 +16,10 @@ class TableScreen extends InputAdapter implements Screen {
     private static final float GAME_WORLD_SIZE = 5f;
 
     static final float CARD_WIDTH = GAME_WORLD_SIZE / 5f;
-    static final float CARD_HEIGHT = (323f / 222f) * CARD_WIDTH; // 323/222 is the ratio of the card image's height to width
+
+    static final int CARD_HEIGHT_IN_PIXELS = 323;
+    static final int CARD_WIDTH_IN_PIXELS = 222;
+    static final float CARD_HEIGHT = (323f / 222f) * CARD_WIDTH;
 
     private ShengJiGame game;
 
@@ -27,6 +30,8 @@ class TableScreen extends InputAdapter implements Screen {
 
 	private RenderableHand hand;
 	private ArrayList<RenderableCard> cards = new ArrayList<>();
+
+    private boolean b = true;
 
 	TableScreen(ShengJiGame game) {
 	    this.game = game;
@@ -57,7 +62,7 @@ class TableScreen extends InputAdapter implements Screen {
 //            hand.add(Rank.ACE, suit);
 //        }
 
-        for(int i = 0; i < 22; i++) {
+        for(int i = 0; i < 2; i++) {
             hand.add(new RenderableCard());
         }
 
@@ -88,6 +93,13 @@ class TableScreen extends InputAdapter implements Screen {
     }
 
     @Override
+    public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+        Vector2 clickCoordinates = new Vector2(viewport.unproject(new Vector2(screenX, screenY)));
+        cards.add(new RenderableCard().setPosition(clickCoordinates).setScale(1f).setFaceUp((b = !b)));
+        return true;
+    }
+
+    @Override
     public void pause() {
 
     }
@@ -106,11 +118,4 @@ class TableScreen extends InputAdapter implements Screen {
 	public void dispose() {
 		batch.dispose();
 	}
-
-	@Override
-    public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-	    Vector2 clickCoordinates = new Vector2(viewport.unproject(new Vector2(screenX, screenY)));
-	    cards.add(new RenderableCard().setPosition(clickCoordinates).setScale(0.25f));
-        return true;
-    }
 }

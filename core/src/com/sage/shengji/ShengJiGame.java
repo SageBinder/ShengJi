@@ -12,7 +12,7 @@ public class ShengJiGame extends Game {
 
     @Override
     public void create() {
-        setScreen(new StartScreen(this));
+        setScreen(new TableScreen(this));
     }
 
     void showStartScreen() {
