@@ -57,8 +57,8 @@ class TableScreen extends InputAdapter implements Screen {
 //            hand.add(Rank.ACE, suit);
 //        }
 
-        for(int i = 0; i < 52; i++) {
-            hand.add(RenderableCard.getRandomCard());
+        for(int i = 0; i < 22; i++) {
+            hand.add(new RenderableCard());
         }
 
         camera.position.set(camera.viewportWidth/2,camera.viewportHeight/2,0);
@@ -110,7 +110,7 @@ class TableScreen extends InputAdapter implements Screen {
 	@Override
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
 	    Vector2 clickCoordinates = new Vector2(viewport.unproject(new Vector2(screenX, screenY)));
-	    cards.add(RenderableCard.getRandomCardAtPosWithScale(new Vector2(clickCoordinates.x, clickCoordinates.y), 0.25f));
+	    cards.add(new RenderableCard().setPosition(clickCoordinates).setScale(0.25f));
         return true;
     }
 }

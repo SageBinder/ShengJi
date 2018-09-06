@@ -1,7 +1,9 @@
 package com.sage.server;
 
+import com.sage.Rank;
+import com.sage.Suit;
+
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 
 class Round {
@@ -22,11 +24,11 @@ class Round {
 
         int numFullDecks = players.size() / 2;
         Deck deck = new Deck(numFullDecks);
-        CardList kitty = getKittyFromDeck(deck);
-        CardList friendCards;
+        ServerCardList kitty = getKittyFromDeck(deck);
+        ServerCardList friendCards;
 
         final int numPointsNeeded = 40 * numFullDecks;
-        CardList pointCardsCollected = new CardList();
+        ServerCardList pointCardsCollected = new ServerCardList();
 
         dealDeckToPlayers(deck);
         Player caller = establishCaller();
@@ -92,14 +94,14 @@ class Round {
         Player.sendIntToAll(players, ServerCodes.ROUND_OVER);
     }
 
-    private CardList getKittyFromDeck(Deck deck) {
+    private ServerCardList getKittyFromDeck(Deck deck) {
         int kittySize = deck.size() % players.size();
         if(kittySize == 0) {
             kittySize = players.size();
         }
-        CardList kitty = new CardList();
+        ServerCardList kitty = new ServerCardList();
         for(int i = 0; i < kittySize; i++) {
-            Card c = deck.getRandomCard();
+            ServerCard c = deck.getRandomCard();
             kitty.add(c);
             deck.remove(c);
         }
@@ -115,32 +117,32 @@ class Round {
         }
     }
 
-    private CardList sendKittyToCallerAndGetNewKitty(CardList kitty, Player caller) {
-        CardList newKitty = new CardList();
+    private ServerCardList sendKittyToCallerAndGetNewKitty(ServerCardList kitty, Player caller) {
+        ServerCardList newKitty = new ServerCardList();
 
         // Send caller cards in kitty
         caller.sendInt(ServerCodes.WAIT_FOR_KITTY);
         caller.sendCards(kitty);
-        for(Card card : kitty) {
-            caller.addToHand(new Card(card.getCardNum()));
+        for(ServerCard card : kitty) {
+            caller.addToHand(new ServerCard(card.getCardNum()));
         }
 
         // Get cards that caller put in kitty and remove them from their hand
         caller.sendInt(ServerCodes.SEND_KITTY_REPLACEMENTS);
         for(int i = 0; i < kitty.size(); i++) {
-            newKitty.add(new Card(caller.readInt()));
+            newKitty.add(new ServerCard(caller.readInt()));
             caller.removeFromHand(newKitty.get(i).getCardNum());
         }
 
         return newKitty;
     }
 
-    private CardList getFriendCardsAndSendToOtherPlayers(Player caller) {
+    private ServerCardList getFriendCardsAndSendToOtherPlayers(Player caller) {
         // Get friend cards from caller
         caller.sendInt(ServerCodes.SEND_FRIEND_CARDS);
-        CardList friendCards = new CardList();
+        ServerCardList friendCards = new ServerCardList();
         for(int i = 0; i < players.size() / 2; i++) {
-            friendCards.add(new Card(caller.readInt()));
+            friendCards.add(new ServerCard(caller.readInt()));
         }
 
         // Send friend cards to other players
@@ -190,7 +192,7 @@ class Round {
                                 p.sendInt(ServerCodes.INVALID_CALL);
                                 continue;
                             }
-                            if(p.isValidCall(new Card(callCardNum)) && numCallCards > highestNumCallCards) {
+                            if(p.isValidCall(new ServerCard(callCardNum)) && numCallCards > highestNumCallCards) {
                                 synchronized(lock) {
                                     highestNumCallCards = numCallCards;
                                     if(caller != null) { // Send previous caller SEND_CALL code to check if they want to overtake the new call
@@ -198,8 +200,8 @@ class Round {
                                     }
                                     caller = p;
                                     p.sendInt(ServerCodes.SUCCESSFUL_CALL);
-                                    Rank.setCurrentTrumpRank(Card.getRankFromCardNum(callCardNum));
-                                    Suit.setCurrentTrumpSuit(Card.getSuitFromCardNum(callCardNum));
+                                    Rank.setCurrentTrumpRank(ServerCard.getRankFromCardNum(callCardNum));
+                                    Suit.setCurrentTrumpSuit(ServerCard.getSuitFromCardNum(callCardNum));
 
                                     for(Player p1 : players) {
                                         if(p1 != caller) {

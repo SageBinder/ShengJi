@@ -1,10 +1,12 @@
 package com.sage.server;
 
+import com.sage.Suit;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 
-class Play extends CardList {
+class Play extends ServerCardList {
     private int playOrder;
     private int playHierarchicalNum; // This value is 0 if the play is a trash play, otherwise it's hierarchicalNum of the lowest card in the play
     private int[] playStructure; // playStructure represents the number of cards in each group (groups ordered by ascending hierarchicalValue)
@@ -12,35 +14,35 @@ class Play extends CardList {
     private Play trickBasePlay;
     private Player belongsTo;
 
-    Play(int playOrder, CardList cardsInPlay, Player belongsTo, Play basePlay) {
+    Play(int playOrder, ServerCardList cardsInPlay, Player belongsTo, Play basePlay) {
         super(cardsInPlay);
         this.playOrder = playOrder;
         this.belongsTo = belongsTo;
 
         // If this is the first play in the trick, set it as base play
         this.trickBasePlay = playOrder == 0 ? this : basePlay;
-        this.basePlaySuit = playOrder == 0 ? get(0).getSuit().getEffectiveSuit() : trickBasePlay.getBasePlaySuit().getEffectiveSuit();
+        this.basePlaySuit = playOrder == 0 ? get(0).suit().getEffectiveSuit() : trickBasePlay.getBasePlaySuit().getEffectiveSuit();
 
         sort();
-        ArrayList<CardList> groupedPlay = groupPlay();
+        ArrayList<ServerCardList> groupedPlay = groupPlay();
 
         playHierarchicalNum = getPlayHierarchicalValue(groupedPlay);
 
         playStructure = getPlayStructure(groupedPlay);
     }
 
-    private ArrayList<CardList> groupPlay() {
+    private ArrayList<ServerCardList> groupPlay() {
         // Key to hashmap corresponds to a card's cardnum
-        HashMap<Integer, CardList> cardGroupsHashMap = new HashMap<>();
-        for(Card c : this) {
+        HashMap<Integer, ServerCardList> cardGroupsHashMap = new HashMap<>();
+        for(ServerCard c : this) {
             int cardNum = c.getCardNum();
             if(cardGroupsHashMap.get(cardNum) == null) {
-                cardGroupsHashMap.put(cardNum, new CardList());
+                cardGroupsHashMap.put(cardNum, new ServerCardList());
             }
 
             cardGroupsHashMap.get(cardNum).add(c);
         }
-        ArrayList<CardList> cardGroups = new ArrayList<>(cardGroupsHashMap.values());
+        ArrayList<ServerCardList> cardGroups = new ArrayList<>(cardGroupsHashMap.values());
         cardGroups.sort((c1, c2)->{
             Integer c1value = c1.get(0).getHierarchicalValue();
             Integer c2value = c2.get(0).getHierarchicalValue();
@@ -51,8 +53,8 @@ class Play extends CardList {
         return cardGroups;
     }
 
-    private int getPlayHierarchicalValue(ArrayList<CardList> cardGroups) {
-        // Each CardList in cardGroups contains identical cards, and cardGroups is sorted by ascending hierarchicalValue
+    private int getPlayHierarchicalValue(ArrayList<ServerCardList> cardGroups) {
+        // Each ServerCardList in cardGroups contains identical cards, and cardGroups is sorted by ascending hierarchicalValue
 
         // If the first group isn't in a valid suit, it's a trash play
         if(!cardGroups.get(0).get(0).isTrump()
@@ -67,7 +69,7 @@ class Play extends CardList {
         // Checks if group lengths and hierarchical values are consecutive, and if suit is valid
         int lastGroupHierarchy = cardGroups.get(0).get(0).getHierarchicalValue();
         int lastGroupLength = cardGroups.get(0).size();
-        for(CardList group : cardGroups) {
+        for(ServerCardList group : cardGroups) {
             if(group.size() != lastGroupLength // If group length isn't consecutive, it's a trash play
                     || group.size() != lastGroupLength + 1
                     || group.size() != lastGroupLength - 1
@@ -95,7 +97,7 @@ class Play extends CardList {
         return cardGroups.get(0).get(0).getHierarchicalValue();
     }
 
-    private int[] getPlayStructure(ArrayList<CardList> cardGroups) {
+    private int[] getPlayStructure(ArrayList<ServerCardList> cardGroups) {
         int[] playStructure = new int[cardGroups.size()];
         for(int i = 0; i < cardGroups.size(); i++) {
             playStructure[i] = cardGroups.size();
@@ -129,9 +131,9 @@ class Play extends CardList {
     }
 
     void sort() {
-        class CustomComparator implements Comparator<Card> {
+        class CustomComparator implements Comparator<ServerCard> {
             @Override
-            public int compare(Card c1, Card c2) {
+            public int compare(ServerCard c1, ServerCard c2) {
                 Integer c1value = c1.getHierarchicalValue();
                 Integer c2value = c2.getHierarchicalValue();
 

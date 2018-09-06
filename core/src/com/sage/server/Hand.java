@@ -1,5 +1,5 @@
 package com.sage.server;
 
-class Hand extends CardList {
+class Hand extends ServerCardList {
 
 }

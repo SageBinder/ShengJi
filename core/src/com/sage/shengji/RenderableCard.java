@@ -7,16 +7,22 @@ import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
+import com.sage.Card;
+import com.sage.Rank;
+import com.sage.Suit;
 
 import static com.sage.shengji.TableScreen.CARD_HEIGHT;
 import static com.sage.shengji.TableScreen.CARD_WIDTH;
 
 class RenderableCard extends Card {
-    private Sprite cardSprite;
+    private Sprite faceSprite;
+    private Sprite backSprite;
     private float scale = 1f; // Overall scale of the card with respect to the world
     private float borderWidth = 0.009f;
 
-    private Vector2 position;
+    private boolean faceUp = true;
+
+    private Vector2 position = new Vector2(0, 0);
 
     private static float faceScale = 0.95f; // Proportion that the face (numbers, design etc.) is scaled with respect to the card's overall rectangle
 
@@ -26,91 +32,82 @@ class RenderableCard extends Card {
         imageSetup();
     }
 
-
-    RenderableCard(Rank rank, Suit suit, Vector2 position) {
-        super(rank, suit);
-        this.position = position;
-        imageSetup();
-    }
-
-    RenderableCard(Rank rank, Suit suit, Vector2 position, float scale) {
-        super(rank, suit);
-        this.position = position;
-        this.scale = scale;
-        imageSetup();
-    }
-
     RenderableCard(Card c) {
         super(c);
         imageSetup();
     }
 
-    RenderableCard(Card c, Vector2 position) {
-        super(c);
-        this.position = position;
+    RenderableCard(int cardNum) {
+        super(cardNum);
         imageSetup();
     }
 
-    RenderableCard(Card c, Vector2 position, float scale) {
-        super(c);
-        this.position = position;
-        this.scale = scale;
+    RenderableCard() {
+        super();
         imageSetup();
     }
 
-    static RenderableCard getRandomCardAtPos(Vector2 position) {
-        return new RenderableCard(Card.getRandomCard(), position);
-    }
-
-    static RenderableCard getRandomCardAtPosWithScale(Vector2 position, float scale) {
-        return new RenderableCard(Card.getRandomCard(), position, scale);
-    }
-
-    static RenderableCard getRandomCard() {
-        return new RenderableCard(Card.getRandomCard());
-    }
-
-    void setScale(float scale) {
+    RenderableCard setScale(float scale) {
         this.scale = scale;
+        return this;
+    }
+
+    RenderableCard setPosition(Vector2 position) {
+        this.position = position;
+        return this;
+    }
+
+    RenderableCard setFaceUp(boolean faceUp) {
+        this.faceUp = faceUp;
+        return this;
     }
 
     float getScale() {
         return scale;
     }
 
-    void setPosition(Vector2 position) {
-        this.position = position;
+    Vector2 getPosition() {
+        return position;
     }
 
-    public Vector2 getPosition() {
-        return position;
+    boolean getFaceUp() {
+        return faceUp;
     }
 
     private void imageSetup() {
         String cardImagePath = "playing_cards/";
 
-        if(!suit.isJoker()) {
-            cardImagePath += rank.toStringName() + "_of_" + suit.toString() + ".png";
+        if(!suit().isJoker()) {
+            cardImagePath += rank().toStringName() + "_of_" + suit().toString() + ".png";
         } else {
-            cardImagePath += suit.toString() + ".png";
+            cardImagePath += suit().toString() + ".png";
         }
 
+        System.out.println(rank().toStringName() + ", " + suit().toString());
+        System.out.println(rank().toString() + ", " + suit().toString());
+
         Texture cardTexture = new Texture(Gdx.files.internal(cardImagePath));
-        cardSprite = new Sprite(cardTexture);
+        faceSprite = new Sprite(cardTexture);
+
+        backSprite = new Sprite(new Texture(Gdx.files.internal("playing_cards/back.png")));
     }
 
     void render(SpriteBatch batch, ShapeRenderer renderer) {
-        renderBackground(batch, renderer);
-        renderFace(batch);
+        if(faceUp) {
+            renderFaceBackground(batch, renderer);
+            renderFace(batch);
+        } else {
+            renderBack(batch);
+        }
     }
 
     private void renderFace(SpriteBatch batch) {
-        cardSprite.setSize(CARD_WIDTH * scale * faceScale, CARD_HEIGHT * scale * faceScale);
-        cardSprite.setPosition(position.x + (0.5f * scale * (CARD_WIDTH - (CARD_WIDTH * faceScale))), position.y + (0.5f * scale * (CARD_HEIGHT - (CARD_HEIGHT * faceScale))));
-        cardSprite.draw(batch);
+        faceSprite.setSize(CARD_WIDTH * scale * faceScale, CARD_HEIGHT * scale * faceScale);
+        faceSprite.setPosition(position.x + (0.5f * scale * (CARD_WIDTH - (CARD_WIDTH * faceScale))), position.y + (0.5f * scale * (CARD_HEIGHT - (CARD_HEIGHT * faceScale))));
+        faceSprite.draw(batch);
     }
 
-    private void renderBackground(SpriteBatch batch, ShapeRenderer renderer) {
+    private void renderFaceBackground(SpriteBatch batch, ShapeRenderer renderer) {
         batch.end();
 
         float radius = 0.075f * scale;
@@ -160,5 +157,11 @@ class RenderableCard extends Card {
         renderer.end();
 
         batch.begin();
+    }
+
+    private void renderBack(SpriteBatch batch) {
+        backSprite.setSize(CARD_WIDTH * scale * faceScale, CARD_HEIGHT * scale * faceScale);
+        backSprite.setPosition(position.x + (0.5f * scale * (CARD_WIDTH - (CARD_WIDTH * faceScale))), position.y + (0.5f * scale * (CARD_HEIGHT - (CARD_HEIGHT * faceScale))));
+        backSprite.draw(batch);
     }
 }

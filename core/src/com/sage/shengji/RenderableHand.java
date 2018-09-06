@@ -4,6 +4,9 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
+import com.sage.Card;
+import com.sage.Rank;
+import com.sage.Suit;
 
 import java.util.Iterator;
 
@@ -28,7 +31,7 @@ class RenderableHand extends Hand {
     public void remove(Rank rank, Suit suit) {
         for(Iterator<Card> i = cards.iterator(); i.hasNext();) {
             RenderableCard c = (RenderableCard)i.next();
-            if(c.getSuit() == suit && c.getRank() == rank) {
+            if(c.suit() == suit && c.rank() == rank) {
                 i.remove();
                 return;
             }
@@ -36,7 +39,7 @@ class RenderableHand extends Hand {
     }
 
     void render(SpriteBatch batch, ShapeRenderer renderer) {
-        float width = viewport.getWorldWidth() - 0.2f - (Constants.CARD_WIDTH / 2);
+        float width = viewport.getWorldWidth() - 0.2f - (TableScreen.CARD_WIDTH / 2);
         //    Gdx.app.log("Hand.render", "width: " + width);
         float pixelDivision = width / cards.size();
 

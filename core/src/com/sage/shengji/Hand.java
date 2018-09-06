@@ -1,12 +1,16 @@
 package com.sage.shengji;
 
+import com.sage.Card;
+import com.sage.Rank;
+import com.sage.Suit;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 
 class Hand {
     ArrayList<Card> cards;
 
-    public Hand() {
+    Hand() {
         cards = new ArrayList<>();
     }
 
@@ -21,7 +25,7 @@ class Hand {
     public void remove(Rank rank, Suit suit) {
         for(Iterator<Card> i = cards.iterator(); i.hasNext();) {
             Card c = i.next();
-            if(c.getSuit() == suit && c.getRank() == rank) {
+            if(c.suit() == suit && c.rank() == rank) {
                 i.remove();
                 return;
             }

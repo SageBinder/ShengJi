@@ -1,11 +1,11 @@
 package com.sage.server;
 
 class TrickResult {
-    private CardList cardsInvolved;
+    private ServerCardList cardsInvolved;
     private Player winner;
     private Play winningPlay;
 
-    TrickResult(Player winner, CardList cardsInvolved, Play winningPlay) {
+    TrickResult(Player winner, ServerCardList cardsInvolved, Play winningPlay) {
         this.winner = winner;
         this.cardsInvolved = cardsInvolved;
         this.winningPlay = winningPlay;
@@ -19,11 +19,11 @@ class TrickResult {
         return winningPlay;
     }
 
-    CardList getCardsInvolved() {
+    ServerCardList getCardsInvolved() {
         return cardsInvolved;
     }
 
-    CardList getPointCards() {
+    ServerCardList getPointCards() {
         return cardsInvolved.getPointCards();
     }
 }

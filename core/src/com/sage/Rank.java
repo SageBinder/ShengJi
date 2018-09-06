@@ -1,6 +1,6 @@
-package com.sage.server;
+package com.sage;
 
-enum Rank {
+public enum Rank {
     ACE,
     TWO,
     THREE,

@@ -1,6 +1,8 @@
 package com.sage.server;
 
 import com.badlogic.gdx.net.Socket;
+import com.sage.Rank;
+import com.sage.Suit;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -32,7 +34,7 @@ class Player {
         }
     }
 
-    static void sendCardsToAll(ArrayList<Player> players, CardList cards) {
+    static void sendCardsToAll(ArrayList<Player> players, ServerCardList cards) {
         for(Player p : players) {
             p.sendCards(cards);
         }
@@ -98,17 +100,17 @@ class Player {
         }
     }
 
-    void sendCards(CardList cardList) {
-        for(Card c : cardList) {
+    void sendCards(ServerCardList cardList) {
+        for(ServerCard c : cardList) {
             sendInt(c.getCardNum());
         }
     }
 
-    boolean isValidCall(Card c) {
+    boolean isValidCall(ServerCard c) {
 //        if(c.suit == Suit.BIG_JOKER || c.suit == Suit.SMALL_JOKER) {
 //            return false;
 //        }
-        return callRank == c.rank.toInt() && hand.contains(c) && !(c.suit == Suit.BIG_JOKER || c.suit == Suit.SMALL_JOKER);
+        return callRank == c.rank().toInt() && hand.contains(c) && !(c.suit() == Suit.BIG_JOKER || c.suit() == Suit.SMALL_JOKER);
     }
 
     void increaseCallRank(int amount) {
@@ -147,7 +149,7 @@ class Player {
         return team;
     }
 
-    void addToHand(Card c) {
+    void addToHand(ServerCard c) {
         hand.add(c);
     }
 
@@ -160,16 +162,16 @@ class Player {
     }
 
     void removeFromHand(int cardNum) {
-        removeFromHand(Card.getRankFromCardNum(cardNum), Card.getSuitFromCardNum(cardNum));
+        removeFromHand(ServerCard.getRankFromCardNum(cardNum), ServerCard.getSuitFromCardNum(cardNum));
     }
 
-    void removeFromHand(Card c) {
+    void removeFromHand(ServerCard c) {
         hand.remove(c);
     }
 
-    void removeFromHand(CardList cardList) {
-        for(Card c : cardList) {
-            removeFromHand(c.getRank(), c.getSuit());
+    void removeFromHand(ServerCardList cardList) {
+        for(ServerCard c : cardList) {
+            removeFromHand(c);
         }
     }
 

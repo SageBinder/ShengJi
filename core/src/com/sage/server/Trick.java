@@ -1,12 +1,14 @@
 package com.sage.server;
 
+import com.sage.Rank;
+
 import java.util.ArrayList;
 
 class Trick {
     private ArrayList<Player> players = new ArrayList<>();
-    private CardList friendCards = new CardList();
+    private ServerCardList friendCards = new ServerCardList();
 
-    Trick(ArrayList<Player> players, CardList friendCards) {
+    Trick(ArrayList<Player> players, ServerCardList friendCards) {
         this.players.addAll(players);
         this.friendCards.addAll(friendCards);
     }
@@ -35,10 +37,10 @@ class Trick {
             // Get the play made by turn player
             while(true) {
                 Play turnPlay;
-                CardList cardsInPlay = new CardList();
+                ServerCardList cardsInPlay = new ServerCardList();
                 turnPlayer.sendInt(ServerCodes.SEND_PLAY);
                 for(int i = 0; i < numCardsInPlay; i++) {
-                    cardsInPlay.add(new Card(turnPlayer.readInt()));
+                    cardsInPlay.add(new ServerCard(turnPlayer.readInt()));
                 }
                 // basePlay == null if the turnPlayer is the starting player
                 turnPlay = new Play(playOrderIndex, cardsInPlay, turnPlayer, basePlay);
@@ -67,7 +69,7 @@ class Trick {
                             Player.sendIntToAll(players, turnPlayer.getTeam().getTeamNum());
                         }
 
-                        for(Card c : turnPlay) {
+                        for(ServerCard c : turnPlay) {
                             friendCards.remove(c);
                             if(friendCards.isEmpty()) {
                                 for(Player p : players) {
@@ -123,12 +125,12 @@ class Trick {
         return currentWinningPlay;
     }
 
-    private CardList getPointCardsInPlays(ArrayList<Play> plays) {
-        CardList pointCards = new CardList();
+    private ServerCardList getPointCardsInPlays(ArrayList<Play> plays) {
+        ServerCardList pointCards = new ServerCardList();
 
         for(Play play : plays) {
-            for(Card c : play) {
-                if(c.getRank() == Rank.KING || c.getRank() == Rank.TEN || c.getRank() == Rank.FIVE) {
+            for(ServerCard c : play) {
+                if(c.rank() == Rank.KING || c.rank() == Rank.TEN || c.rank() == Rank.FIVE) {
                     pointCards.add(c);
                 }
             }
