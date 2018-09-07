@@ -30,6 +30,7 @@ class RenderableCard extends Card {
     private static float designScale = 0.95f; // Proportion that the face (numbers, design etc.) is scaled with respect to the card's overall rectangle
     @SuppressWarnings("FieldCanBeLocal")
     private static float faceBorderWidth = 0.009f;
+    @SuppressWarnings("FieldCanBeLocal")
     private static float backBorderWidth = 0.009f;
 
     private Color faceBorderColor = new Color(0, 0, 0, 0);
@@ -100,6 +101,7 @@ class RenderableCard extends Card {
                         int circleCenter_y = (CARD_HEIGHT_IN_PIXELS * i) - (cornerRadiusInPixels * (-1 + (i * 2)));
                         int circleCenter_x = (CARD_WIDTH_IN_PIXELS * j) - (cornerRadiusInPixels * (-1 + (j * 2)));
 
+                        // Using (<= and >=) vs (< and >) doesn't seem to make any visual difference
                         if(((i == 0 && y <= circleCenter_y) || (i == 1 && y >= circleCenter_y))
                                 && ((j == 0 && x <= circleCenter_x) || (j == 1 && x >= circleCenter_x))
                                 && Math.sqrt(Math.pow(x - circleCenter_x, 2) + Math.pow(y - circleCenter_y, 2)) >= cornerRadiusInPixels) {
@@ -221,6 +223,21 @@ class RenderableCard extends Card {
         batch.begin();
     }
 
+    private void renderBack(SpriteBatch batch, ShapeRenderer renderer) {
+        batch.end();
+        renderer.begin(ShapeRenderer.ShapeType.Filled);
+
+        renderBorder(renderer, backBorderColor, backBorderWidth);
+
+        renderer.end();
+        batch.begin();
+
+        backSprite.setSize(CARD_WIDTH * scale, CARD_HEIGHT * scale);
+        backSprite.setPosition(cardRect.x, cardRect.y);
+
+        backSprite.draw(batch);
+    }
+
     private void renderBorder(ShapeRenderer renderer, Color borderColor, float borderWidth) {
         // Drawing outer rectangle borders
         renderer.setColor(borderColor);
@@ -258,20 +275,5 @@ class RenderableCard extends Card {
         renderer.circle(bottomRightCircleCenter.x, bottomRightCircleCenter.y, scaledCornerRadius + borderWidth, 30);
         renderer.circle(topLeftCircleCenter.x, topLeftCircleCenter.y, scaledCornerRadius + borderWidth, 30);
         renderer.circle(topRightCircleCenter.x, topRightCircleCenter.y, scaledCornerRadius + borderWidth, 30);
-    }
-
-    private void renderBack(SpriteBatch batch, ShapeRenderer renderer) {
-        batch.end();
-        renderer.begin(ShapeRenderer.ShapeType.Filled);
-
-        renderBorder(renderer, backBorderColor, faceBorderWidth);
-
-        renderer.end();
-        batch.begin();
-
-        backSprite.setSize(CARD_WIDTH * scale, CARD_HEIGHT * scale);
-        backSprite.setPosition(cardRect.x, cardRect.y);
-
-        backSprite.draw(batch);
     }
 }
