@@ -39,7 +39,7 @@ class RenderableHand extends Hand {
     }
 
     void render(SpriteBatch batch, ShapeRenderer renderer) {
-        float width = viewport.getWorldWidth() - 0.2f - (TableScreen.CARD_WIDTH / 2);
+        float width = viewport.getWorldWidth() - 0.2f - (RenderableCard.CARD_WIDTH / 2);
         //    Gdx.app.log("Hand.render", "width: " + width);
         float pixelDivision = width / cards.size();
 

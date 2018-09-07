@@ -1,6 +1,7 @@
 package com.sage.shengji;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
@@ -13,13 +14,7 @@ import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import java.util.ArrayList;
 
 class TableScreen extends InputAdapter implements Screen {
-    private static final float GAME_WORLD_SIZE = 5f;
-
-    static final float CARD_WIDTH = GAME_WORLD_SIZE / 5f;
-
-    static final int CARD_HEIGHT_IN_PIXELS = 323;
-    static final int CARD_WIDTH_IN_PIXELS = 222;
-    static final float CARD_HEIGHT = (323f / 222f) * CARD_WIDTH;
+    static final float GAME_WORLD_SIZE = 5f;
 
     private ShengJiGame game;
 
@@ -30,8 +25,6 @@ class TableScreen extends InputAdapter implements Screen {
 
 	private RenderableHand hand;
 	private ArrayList<RenderableCard> cards = new ArrayList<>();
-
-    private boolean b = true;
 
 	TableScreen(ShengJiGame game) {
 	    this.game = game;
@@ -45,24 +38,7 @@ class TableScreen extends InputAdapter implements Screen {
         viewport = new ExtendViewport(GAME_WORLD_SIZE, GAME_WORLD_SIZE, camera);
         hand  = new RenderableHand(viewport);
 
-//		for(Suit suit : Suit.values()) {
-//		    for(Rank rank : Rank.values()) {
-//		        if((suit == Suit.JOKER && !(rank == Rank.SMALL || rank == Rank.BIG)) || ((suit != Suit.JOKER) && (rank == Rank.SMALL || rank == Rank.BIG))) {
-//		            continue;
-//                }
-//		        hand.add(suit, rank);
-//            }
-//        }
-
-//        for(Suit suit : Suit.values()) {
-//            if(suit.isJoker()) {
-//                continue;
-//            }
-//            hand.add(Rank.KING, suit);
-//            hand.add(Rank.ACE, suit);
-//        }
-
-        for(int i = 0; i < 2; i++) {
+        for(int i = 0; i < 52; i++) {
             hand.add(new RenderableCard());
         }
 
@@ -95,7 +71,7 @@ class TableScreen extends InputAdapter implements Screen {
     @Override
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
         Vector2 clickCoordinates = new Vector2(viewport.unproject(new Vector2(screenX, screenY)));
-        cards.add(new RenderableCard().setPosition(clickCoordinates).setScale(1f).setFaceUp((b = !b)));
+        cards.add(new RenderableCard().setPosition(clickCoordinates).setScale(1f).setFaceUp((button == Input.Buttons.LEFT)));
         return true;
     }
 
