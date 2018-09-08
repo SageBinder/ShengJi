@@ -4,8 +4,6 @@ import com.sage.Card;
 import com.sage.Rank;
 import com.sage.Suit;
 
-import java.util.Random;
-
 class ServerCard extends Card {
     private int hierarchicalValue;
 
@@ -20,7 +18,7 @@ class ServerCard extends Card {
     }
 
     ServerCard(ServerCard c) {
-        super(c.getCardNum());
+        super(c.cardNum());
         establishHierarchicalValue();
     }
 

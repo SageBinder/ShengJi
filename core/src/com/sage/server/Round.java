@@ -124,14 +124,14 @@ class Round {
         caller.sendInt(ServerCodes.WAIT_FOR_KITTY);
         caller.sendCards(kitty);
         for(ServerCard card : kitty) {
-            caller.addToHand(new ServerCard(card.getCardNum()));
+            caller.addToHand(new ServerCard(card.cardNum()));
         }
 
         // Get cards that caller put in kitty and remove them from their hand
         caller.sendInt(ServerCodes.SEND_KITTY_REPLACEMENTS);
         for(int i = 0; i < kitty.size(); i++) {
             newKitty.add(new ServerCard(caller.readInt()));
-            caller.removeFromHand(newKitty.get(i).getCardNum());
+            caller.removeFromHand(newKitty.get(i).cardNum());
         }
 
         return newKitty;

@@ -1,6 +1,7 @@
 package com.sage.shengji;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
@@ -16,14 +17,16 @@ import com.sage.Suit;
 import static com.sage.shengji.TableScreen.*;
 
 class RenderableCard extends Card {
+    // These fields aren't final because they need to change if the card sprites are changed
+    // and the dimensions of the new card sprites are different
     @SuppressWarnings("WeakerAccess")
-    static final int CARD_HEIGHT_IN_PIXELS = 323;
+    private static int cardHeightInPixels = 323;
     @SuppressWarnings("WeakerAccess")
-    static final int CARD_WIDTH_IN_PIXELS = 222;
+    private static int cardWidthInPixels = 222;
     @SuppressWarnings("WeakerAccess")
-    static final float CARD_WIDTH = GAME_WORLD_SIZE / 5f;
+    private static float cardWidth = TABLE_WORLD_SIZE / 5f;
     @SuppressWarnings("WeakerAccess")
-    static final float CARD_HEIGHT = ((float)CARD_HEIGHT_IN_PIXELS / (float)CARD_WIDTH_IN_PIXELS) * CARD_WIDTH;
+    private static float cardHeight = ((float) cardHeightInPixels / (float) cardWidthInPixels) * cardWidth;
 
     private static float unscaledCornerRadius = 0.075f;
     @SuppressWarnings("FieldCanBeLocal")
@@ -32,9 +35,6 @@ class RenderableCard extends Card {
     private static float faceBorderWidth = 0.009f;
     @SuppressWarnings("FieldCanBeLocal")
     private static float backBorderWidth = 0.009f;
-
-    private Color faceBorderColor = new Color(0, 0, 0, 0);
-    private Color backBorderColor = new Color(0.5f, 0.5f, 0.5f, 0.5f);
 
     private float scale = 1f; // Overall scale of the card with respect to the world
     private float scaledCornerRadius = 0.009f;
@@ -51,41 +51,70 @@ class RenderableCard extends Card {
             topLeftCircleCenter = new Vector2(),
             topRightCircleCenter = new Vector2();
 
-    private boolean faceUp = true;
+    private Color faceBackgroundColor = new Color(1, 1, 1, 1);
+    private Color faceBorderColor = new Color(0, 0, 0, 0);
+    private Color backBorderColor = new Color(0.5f, 0.5f, 0.5f, 0.5f);
 
-    private Sprite faceSprite;
-    private Sprite backSprite;
+    private static FileHandle defaultSpriteFolder = Gdx.files.internal("playing_cards/");
+    private static FileHandle spriteFolder = defaultSpriteFolder;
+
+    private static Sprite[] faceSprites = new Sprite[spriteFolder.list().length];
+    private static Sprite backSprite = null;
+
+    private boolean faceUp = true;
 
     RenderableCard(Rank rank, Suit suit) {
         super(rank, suit);
-        imageSetup();
     }
 
     RenderableCard(Card c) {
         super(c);
-        imageSetup();
     }
 
     RenderableCard(int cardNum) {
         super(cardNum);
-        imageSetup();
     }
 
     RenderableCard() {
         super();
-        imageSetup();
     }
 
-    private void imageSetup() {
-        faceImageSetup();
-        backImageSetup();
+    static void setSpriteFolder(FileHandle newSpriteFolder) {
+        spriteFolder = newSpriteFolder;
+        setHeightAndWidthValues();
+        clearSprites();
     }
 
-    private void backImageSetup() {
-        Pixmap rectPixmap = new Pixmap(Gdx.files.internal("playing_cards/back.png"));
+    static void useDefaultSpriteFolder() {
+        spriteFolder = defaultSpriteFolder;
+        setHeightAndWidthValues();
+        clearSprites();
+    }
+
+    private static void setHeightAndWidthValues() {
+        Texture image = new Texture(spriteFolder);
+
+        cardHeightInPixels = image.getHeight();
+        cardWidthInPixels = image.getWidth();
+        cardWidth = TABLE_WORLD_SIZE / 5f;
+        cardHeight = ((float) cardHeightInPixels / (float) cardWidthInPixels) * cardWidth;
+
+        image.dispose();
+    }
+
+    private static void clearSprites() {
+        backSprite = null;
+
+        for(int i = 0; i < faceSprites.length; i++) {
+            faceSprites[i] = null;
+        }
+    }
+
+    private void setBackSprite() {
+        Pixmap rectPixmap = new Pixmap(spriteFolder.child("back.png"));
         Pixmap roundedRectPixmap = new Pixmap(rectPixmap.getWidth(), rectPixmap.getHeight(), Pixmap.Format.RGBA8888);
 
-        int cornerRadiusInPixels = (int)(((unscaledCornerRadius) / (CARD_WIDTH)) * CARD_WIDTH_IN_PIXELS);
+        int cornerRadiusInPixels = (int)(((unscaledCornerRadius) / (cardWidth)) * cardWidthInPixels);
 
         // These loops create the rounded rectangle pixmap by adding transparent pixels at the corners
         for(int x = 0; x < rectPixmap.getWidth(); x++) {
@@ -98,8 +127,8 @@ class RenderableCard extends Card {
                         // Bottom left corner: i == 1, j == 0
                         // Top right corner: i == 0, j == 1
                         // Bottom right corner: i == 1, j == 1
-                        int circleCenter_y = (CARD_HEIGHT_IN_PIXELS * i) - (cornerRadiusInPixels * (-1 + (i * 2)));
-                        int circleCenter_x = (CARD_WIDTH_IN_PIXELS * j) - (cornerRadiusInPixels * (-1 + (j * 2)));
+                        int circleCenter_y = (cardHeightInPixels * i) - (cornerRadiusInPixels * (-1 + (i * 2)));
+                        int circleCenter_x = (cardWidthInPixels * j) - (cornerRadiusInPixels * (-1 + (j * 2)));
 
                         // Using (<= and >=) vs (< and >) doesn't seem to make any visual difference
                         if(((i == 0 && y <= circleCenter_y) || (i == 1 && y >= circleCenter_y))
@@ -125,36 +154,35 @@ class RenderableCard extends Card {
         roundedRectPixmap.dispose();
     }
 
-    private void faceImageSetup() {
-        String cardImagePath = "playing_cards/";
+    private void setFaceSpriteForThisCard() {
+        String cardImageName;
 
         if(!suit().isJoker()) {
-            cardImagePath += rank().toStringName() + "_of_" + suit().toString() + ".png";
+            cardImageName = rank().toStringName() + "_of_" + suit().toString() + ".png";
         } else {
-            cardImagePath += suit().toString() + ".png";
+            cardImageName = suit().toString() + ".png";
         }
 
-        Texture cardTexture = new Texture(Gdx.files.internal(cardImagePath));
-        faceSprite = new Sprite(cardTexture);
+        faceSprites[cardNum()] = new Sprite(new Texture(spriteFolder.child(cardImageName)));
     }
 
     private void updateShapes(Vector2 newPosition, float newScale) {
         this.scale = newScale;
         scaledCornerRadius = unscaledCornerRadius * scale;
 
-        cardRect.setSize(CARD_WIDTH * scale, CARD_HEIGHT * scale);
+        cardRect.setSize(cardWidth * scale, cardHeight * scale);
         cardRect.setPosition(newPosition);
 
         verticalRect.setPosition(cardRect.x + scaledCornerRadius, cardRect.y);
-        verticalRect.setSize((CARD_WIDTH * scale) - (2 * scaledCornerRadius), CARD_HEIGHT * scale);
+        verticalRect.setSize((cardWidth * scale) - (2 * scaledCornerRadius), cardHeight * scale);
 
         horizontalRect.setPosition(cardRect.x, cardRect.y + scaledCornerRadius);
-        horizontalRect.setSize(CARD_WIDTH * scale, (CARD_HEIGHT * scale) - (2 * scaledCornerRadius));
+        horizontalRect.setSize(cardWidth * scale, (cardHeight * scale) - (2 * scaledCornerRadius));
 
         bottomLeftCircleCenter.set(cardRect.x + scaledCornerRadius, cardRect.y + scaledCornerRadius);
-        bottomRightCircleCenter.set(cardRect.x + (CARD_WIDTH * scale) - scaledCornerRadius, cardRect.y + scaledCornerRadius);
-        topLeftCircleCenter.set(cardRect.x + scaledCornerRadius, cardRect.y + (CARD_HEIGHT * scale) - scaledCornerRadius);
-        topRightCircleCenter.set(cardRect.x + (CARD_WIDTH * scale) - scaledCornerRadius, cardRect.y + (CARD_HEIGHT * scale) - scaledCornerRadius);
+        bottomRightCircleCenter.set(cardRect.x + (cardWidth * scale) - scaledCornerRadius, cardRect.y + scaledCornerRadius);
+        topLeftCircleCenter.set(cardRect.x + scaledCornerRadius, cardRect.y + (cardHeight * scale) - scaledCornerRadius);
+        topRightCircleCenter.set(cardRect.x + (cardWidth * scale) - scaledCornerRadius, cardRect.y + (cardHeight * scale) - scaledCornerRadius);
     }
 
     RenderableCard setScale(float newScale) {
@@ -187,8 +215,14 @@ class RenderableCard extends Card {
 
     void render(SpriteBatch batch, ShapeRenderer renderer) {
         if(faceUp) {
+            if(faceSprites[cardNum()] == null) {
+                setFaceSpriteForThisCard();
+            }
             renderFace(batch, renderer);
         } else {
+            if(backSprite == null) {
+                setBackSprite();
+            }
             renderBack(batch, renderer);
         }
     }
@@ -196,9 +230,9 @@ class RenderableCard extends Card {
     private void renderFace(SpriteBatch batch, ShapeRenderer renderer) {
         renderFaceBackground(batch, renderer);
 
-        faceSprite.setSize(CARD_WIDTH * scale * designScale, CARD_HEIGHT * scale * designScale);
-        faceSprite.setPosition(cardRect.x + (0.5f * scale * (CARD_WIDTH - (CARD_WIDTH * designScale))), cardRect.y + (0.5f * scale * (CARD_HEIGHT - (CARD_HEIGHT * designScale))));
-        faceSprite.draw(batch);
+        faceSprites[cardNum()].setSize(cardWidth * scale * designScale, cardHeight * scale * designScale);
+        faceSprites[cardNum()].setPosition(cardRect.x + (0.5f * scale * (cardWidth - (cardWidth * designScale))), cardRect.y + (0.5f * scale * (cardHeight - (cardHeight * designScale))));
+        faceSprites[cardNum()].draw(batch);
     }
 
     private void renderFaceBackground(SpriteBatch batch, ShapeRenderer renderer) {
@@ -208,7 +242,7 @@ class RenderableCard extends Card {
         renderBorder(renderer, faceBorderColor, faceBorderWidth);
 
         // Draw corner circles for rounded corners
-        renderer.setColor(new Color(255, 255, 255, 1));
+        renderer.setColor(faceBackgroundColor);
 
         renderer.circle(bottomLeftCircleCenter.x, bottomLeftCircleCenter.y, scaledCornerRadius, 30);
         renderer.circle(bottomRightCircleCenter.x, bottomRightCircleCenter.y, scaledCornerRadius, 30);
@@ -232,7 +266,7 @@ class RenderableCard extends Card {
         renderer.end();
         batch.begin();
 
-        backSprite.setSize(CARD_WIDTH * scale, CARD_HEIGHT * scale);
+        backSprite.setSize(cardWidth * scale, cardHeight * scale);
         backSprite.setPosition(cardRect.x, cardRect.y);
 
         backSprite.draw(batch);
@@ -275,5 +309,21 @@ class RenderableCard extends Card {
         renderer.circle(bottomRightCircleCenter.x, bottomRightCircleCenter.y, scaledCornerRadius + borderWidth, 30);
         renderer.circle(topLeftCircleCenter.x, topLeftCircleCenter.y, scaledCornerRadius + borderWidth, 30);
         renderer.circle(topRightCircleCenter.x, topRightCircleCenter.y, scaledCornerRadius + borderWidth, 30);
+    }
+
+    static int getCardHeightInPixels() {
+        return cardHeightInPixels;
+    }
+
+    static int getCardWidthInPixels() {
+        return cardWidthInPixels;
+    }
+
+    static float getCardHeight() {
+        return cardHeight;
+    }
+
+    static float getCardWidth() {
+        return cardWidth;
     }
 }

@@ -35,7 +35,7 @@ class Play extends ServerCardList {
         // Key to hashmap corresponds to a card's cardnum
         HashMap<Integer, ServerCardList> cardGroupsHashMap = new HashMap<>();
         for(ServerCard c : this) {
-            int cardNum = c.getCardNum();
+            int cardNum = c.cardNum();
             if(cardGroupsHashMap.get(cardNum) == null) {
                 cardGroupsHashMap.put(cardNum, new ServerCardList());
             }

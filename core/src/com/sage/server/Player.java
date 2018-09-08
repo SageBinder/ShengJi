@@ -102,7 +102,7 @@ class Player {
 
     void sendCards(ServerCardList cardList) {
         for(ServerCard c : cardList) {
-            sendInt(c.getCardNum());
+            sendInt(c.cardNum());
         }
     }
 

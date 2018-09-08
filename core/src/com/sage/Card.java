@@ -3,9 +3,9 @@ package com.sage;
 import java.util.Random;
 
 public class Card {
-    private Rank rank;
-    private Suit suit;
-    private int cardNum;
+    private final Rank rank;
+    private final Suit suit;
+    private final int cardNum;
 
     public Card(Rank rank, Suit suit) {
         this.rank = rank;
@@ -29,7 +29,7 @@ public class Card {
     public Card(Card c) {
         this.suit = c.suit();
         this.rank = c.rank();
-        this.cardNum = c.getCardNum();
+        this.cardNum = c.cardNum();
     }
 
     // Sets this card to be a random card
@@ -45,7 +45,7 @@ public class Card {
         return rank;
     }
 
-    public int getCardNum() {
+    public int cardNum() {
         return cardNum;
     }
 

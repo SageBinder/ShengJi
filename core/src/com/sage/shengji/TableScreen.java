@@ -14,7 +14,7 @@ import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import java.util.ArrayList;
 
 class TableScreen extends InputAdapter implements Screen {
-    static final float GAME_WORLD_SIZE = 5f;
+    static final float TABLE_WORLD_SIZE = 5f;
 
     private ShengJiGame game;
 
@@ -35,7 +35,7 @@ class TableScreen extends InputAdapter implements Screen {
         batch = new SpriteBatch();
         renderer = new ShapeRenderer();
         camera = new OrthographicCamera();
-        viewport = new ExtendViewport(GAME_WORLD_SIZE, GAME_WORLD_SIZE, camera);
+        viewport = new ExtendViewport(TABLE_WORLD_SIZE, TABLE_WORLD_SIZE, camera);
         hand  = new RenderableHand(viewport);
 
         for(int i = 0; i < 52; i++) {
