@@ -14,6 +14,8 @@ import com.sage.Card;
 import com.sage.Rank;
 import com.sage.Suit;
 
+import java.util.HashMap;
+
 import static com.sage.shengji.TableScreen.*;
 
 class RenderableCard extends Card {
@@ -58,7 +60,7 @@ class RenderableCard extends Card {
     private static FileHandle defaultSpriteFolder = Gdx.files.internal("playing_cards/");
     private static FileHandle spriteFolder = defaultSpriteFolder;
 
-    private static Sprite[] faceSprites = new Sprite[spriteFolder.list().length];
+    private static HashMap<Integer, Sprite> faceSprites = new HashMap<>();
     private static Sprite backSprite = null;
 
     private boolean faceUp = true;
@@ -81,12 +83,15 @@ class RenderableCard extends Card {
 
     static void setSpriteFolder(FileHandle newSpriteFolder) {
         spriteFolder = newSpriteFolder;
-        setHeightAndWidthValues();
-        clearSprites();
+        resetForNewSprites();
     }
 
     static void useDefaultSpriteFolder() {
         spriteFolder = defaultSpriteFolder;
+        resetForNewSprites();
+    }
+
+    private static void resetForNewSprites() {
         setHeightAndWidthValues();
         clearSprites();
     }
@@ -104,10 +109,7 @@ class RenderableCard extends Card {
 
     private static void clearSprites() {
         backSprite = null;
-
-        for(int i = 0; i < faceSprites.length; i++) {
-            faceSprites[i] = null;
-        }
+        faceSprites.clear();
     }
 
     private void setBackSprite() {
@@ -163,7 +165,7 @@ class RenderableCard extends Card {
             cardImageName = suit().toString() + ".png";
         }
 
-        faceSprites[cardNum()] = new Sprite(new Texture(spriteFolder.child(cardImageName)));
+        faceSprites.put(cardNum(), new Sprite(new Texture(spriteFolder.child(cardImageName))));
     }
 
     private void updateShapes(Vector2 newPosition, float newScale) {
@@ -215,7 +217,7 @@ class RenderableCard extends Card {
 
     void render(SpriteBatch batch, ShapeRenderer renderer) {
         if(faceUp) {
-            if(faceSprites[cardNum()] == null) {
+            if(faceSprites.get(cardNum()) == null) {
                 setFaceSpriteForThisCard();
             }
             renderFace(batch, renderer);
@@ -230,9 +232,9 @@ class RenderableCard extends Card {
     private void renderFace(SpriteBatch batch, ShapeRenderer renderer) {
         renderFaceBackground(batch, renderer);
 
-        faceSprites[cardNum()].setSize(cardWidth * scale * designScale, cardHeight * scale * designScale);
-        faceSprites[cardNum()].setPosition(cardRect.x + (0.5f * scale * (cardWidth - (cardWidth * designScale))), cardRect.y + (0.5f * scale * (cardHeight - (cardHeight * designScale))));
-        faceSprites[cardNum()].draw(batch);
+        faceSprites.get(cardNum()).setSize(cardWidth * scale * designScale, cardHeight * scale * designScale);
+        faceSprites.get(cardNum()).setPosition(cardRect.x + (0.5f * scale * (cardWidth - (cardWidth * designScale))), cardRect.y + (0.5f * scale * (cardHeight - (cardHeight * designScale))));
+        faceSprites.get(cardNum()).draw(batch);
     }
 
     private void renderFaceBackground(SpriteBatch batch, ShapeRenderer renderer) {
