@@ -11,13 +11,7 @@ public class Card {
         this.rank = rank;
         this.suit = suit;
 
-        if(this.suit == Suit.SMALL_JOKER) {
-            cardNum = 52;
-        } else if(this.suit == Suit.BIG_JOKER) {
-            cardNum = 53;
-        } else {
-            cardNum = (rank.toInt() * 4) + suit.toInt();
-        }
+        cardNum = getCardNumFromRankAndSuit(rank, suit);
     }
 
     public Card(int cardNum) {
@@ -64,6 +58,17 @@ public class Card {
             return Suit.BIG_JOKER;
         } else {
             return Suit.values()[cardNum % 4];
+        }
+    }
+
+    @SuppressWarnings("WeakerAccess")
+    public static int getCardNumFromRankAndSuit(Rank rank, Suit suit) {
+        if(suit == Suit.SMALL_JOKER) {
+            return 52;
+        } else if(suit == Suit.BIG_JOKER) {
+            return 53;
+        } else {
+            return (rank.toInt() * 4) + suit.toInt();
         }
     }
 

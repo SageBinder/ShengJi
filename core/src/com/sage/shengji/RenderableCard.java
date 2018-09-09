@@ -22,9 +22,9 @@ class RenderableCard extends Card {
     // These fields aren't final because they need to change if the card sprites are changed
     // and the dimensions of the new card sprites are different
     @SuppressWarnings("WeakerAccess")
-    private static int cardHeightInPixels = 323;
+    private static int cardHeightInPixels;
     @SuppressWarnings("WeakerAccess")
-    private static int cardWidthInPixels = 222;
+    private static int cardWidthInPixels;
     @SuppressWarnings("WeakerAccess")
     private static float cardWidth = TABLE_WORLD_SIZE / 5f;
     @SuppressWarnings("WeakerAccess")
@@ -65,6 +65,10 @@ class RenderableCard extends Card {
 
     private boolean faceUp = true;
 
+    static {
+        setHeightAndWidthValues();
+    }
+
     RenderableCard(Rank rank, Suit suit) {
         super(rank, suit);
     }
@@ -97,7 +101,7 @@ class RenderableCard extends Card {
     }
 
     private static void setHeightAndWidthValues() {
-        Texture image = new Texture(spriteFolder);
+        Texture image = new Texture(spriteFolder.child("ace_of_spades.png"));
 
         cardHeightInPixels = image.getHeight();
         cardWidthInPixels = image.getWidth();
@@ -112,7 +116,7 @@ class RenderableCard extends Card {
         faceSprites.clear();
     }
 
-    private void setBackSprite() {
+    private static void loadBackSprite() {
         Pixmap rectPixmap = new Pixmap(spriteFolder.child("back.png"));
         Pixmap roundedRectPixmap = new Pixmap(rectPixmap.getWidth(), rectPixmap.getHeight(), Pixmap.Format.RGBA8888);
 
@@ -156,16 +160,19 @@ class RenderableCard extends Card {
         roundedRectPixmap.dispose();
     }
 
-    private void setFaceSpriteForThisCard() {
+    private static void loadFaceSpriteForCard(int cardNum) {
         String cardImageName;
 
-        if(!suit().isJoker()) {
-            cardImageName = rank().toStringName() + "_of_" + suit().toString() + ".png";
+        Suit suit = Card.getSuitFromCardNum(cardNum);
+        Rank rank = Card.getRankFromCardNum(cardNum);
+
+        if(!suit.isJoker()) {
+            cardImageName = rank.toStringName() + "_of_" + suit.toString() + ".png";
         } else {
-            cardImageName = suit().toString() + ".png";
+            cardImageName = suit.toString() + ".png";
         }
 
-        faceSprites.put(cardNum(), new Sprite(new Texture(spriteFolder.child(cardImageName))));
+        faceSprites.put(cardNum, new Sprite(new Texture(spriteFolder.child(cardImageName))));
     }
 
     private void updateShapes(Vector2 newPosition, float newScale) {
@@ -218,12 +225,12 @@ class RenderableCard extends Card {
     void render(SpriteBatch batch, ShapeRenderer renderer) {
         if(faceUp) {
             if(faceSprites.get(cardNum()) == null) {
-                setFaceSpriteForThisCard();
+                loadFaceSpriteForCard(cardNum());
             }
             renderFace(batch, renderer);
         } else {
             if(backSprite == null) {
-                setBackSprite();
+                loadBackSprite();
             }
             renderBack(batch, renderer);
         }
