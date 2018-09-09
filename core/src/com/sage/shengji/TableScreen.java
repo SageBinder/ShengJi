@@ -71,7 +71,11 @@ class TableScreen extends InputAdapter implements Screen {
     @Override
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
         Vector2 clickCoordinates = new Vector2(viewport.unproject(new Vector2(screenX, screenY)));
-        cards.add(new RenderableCard().setPosition(clickCoordinates).setScale(1f).setFaceUp((button == Input.Buttons.LEFT)));
+
+        if(!hand.click(clickCoordinates)) {
+            cards.add(new RenderableCard().setPosition(clickCoordinates).setScale(1f).setFaceUp((button == Input.Buttons.LEFT)));
+        }
+
         return true;
     }
 

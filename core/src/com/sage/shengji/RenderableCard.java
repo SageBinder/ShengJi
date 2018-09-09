@@ -8,12 +8,14 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.Circle;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.sage.Card;
 import com.sage.Rank;
 import com.sage.Suit;
 
+import java.util.Arrays;
 import java.util.HashMap;
 
 import static com.sage.shengji.TableScreen.*;
@@ -39,7 +41,6 @@ class RenderableCard extends Card {
     private static float backBorderWidth = 0.009f;
 
     private float scale = 1f; // Overall scale of the card with respect to the world
-    private float scaledCornerRadius = 0.009f;
 
     // cardRect represents overall rectangle before rounding corners
     private Rectangle cardRect = new Rectangle();
@@ -48,10 +49,12 @@ class RenderableCard extends Card {
     private Rectangle verticalRect = new Rectangle(), // VerticalRect borders top and bottom, horizontalRect borders left and right
             horizontalRect = new Rectangle();
 
-    private Vector2 bottomLeftCircleCenter = new Vector2(),
-            bottomRightCircleCenter = new Vector2(),
-            topLeftCircleCenter = new Vector2(),
-            topRightCircleCenter = new Vector2();
+    private Circle[] cornerCircles = new Circle[] {
+            new Circle(),
+            new Circle(),
+            new Circle(),
+            new Circle()
+    };
 
     private Color faceBackgroundColor = new Color(1, 1, 1, 1);
     private Color faceBorderColor = new Color(0, 0, 0, 0);
@@ -175,9 +178,25 @@ class RenderableCard extends Card {
         faceSprites.put(cardNum, new Sprite(new Texture(spriteFolder.child(cardImageName))));
     }
 
+    static int getCardHeightInPixels() {
+        return cardHeightInPixels;
+    }
+
+    static int getCardWidthInPixels() {
+        return cardWidthInPixels;
+    }
+
+    static float getCardHeight() {
+        return cardHeight;
+    }
+
+    static float getCardWidth() {
+        return cardWidth;
+    }
+
     private void updateShapes(Vector2 newPosition, float newScale) {
         this.scale = newScale;
-        scaledCornerRadius = unscaledCornerRadius * scale;
+        float scaledCornerRadius = unscaledCornerRadius * scale;
 
         cardRect.setSize(cardWidth * scale, cardHeight * scale);
         cardRect.setPosition(newPosition);
@@ -188,10 +207,21 @@ class RenderableCard extends Card {
         horizontalRect.setPosition(cardRect.x, cardRect.y + scaledCornerRadius);
         horizontalRect.setSize(cardWidth * scale, (cardHeight * scale) - (2 * scaledCornerRadius));
 
-        bottomLeftCircleCenter.set(cardRect.x + scaledCornerRadius, cardRect.y + scaledCornerRadius);
-        bottomRightCircleCenter.set(cardRect.x + (cardWidth * scale) - scaledCornerRadius, cardRect.y + scaledCornerRadius);
-        topLeftCircleCenter.set(cardRect.x + scaledCornerRadius, cardRect.y + (cardHeight * scale) - scaledCornerRadius);
-        topRightCircleCenter.set(cardRect.x + (cardWidth * scale) - scaledCornerRadius, cardRect.y + (cardHeight * scale) - scaledCornerRadius);
+        cornerCircles[0].set(cardRect.x + scaledCornerRadius,
+                cardRect.y + scaledCornerRadius,
+                scaledCornerRadius);
+
+        cornerCircles[1].set(cardRect.x + (cardWidth * scale) - scaledCornerRadius,
+                cardRect.y + scaledCornerRadius,
+                scaledCornerRadius);
+
+        cornerCircles[2].set(cardRect.x + scaledCornerRadius,
+                cardRect.y + (cardHeight * scale) - scaledCornerRadius,
+                scaledCornerRadius);
+
+        cornerCircles[3].set(cardRect.x + (cardWidth * scale) - scaledCornerRadius,
+                cardRect.y + (cardHeight * scale) - scaledCornerRadius,
+                scaledCornerRadius);
     }
 
     RenderableCard setScale(float newScale) {
@@ -207,6 +237,11 @@ class RenderableCard extends Card {
 
     RenderableCard setFaceUp(boolean faceUp) {
         this.faceUp = faceUp;
+        return this;
+    }
+
+    RenderableCard flip() {
+        faceUp = !faceUp;
         return this;
     }
 
@@ -253,10 +288,9 @@ class RenderableCard extends Card {
         // Draw corner circles for rounded corners
         renderer.setColor(faceBackgroundColor);
 
-        renderer.circle(bottomLeftCircleCenter.x, bottomLeftCircleCenter.y, scaledCornerRadius, 30);
-        renderer.circle(bottomRightCircleCenter.x, bottomRightCircleCenter.y, scaledCornerRadius, 30);
-        renderer.circle(topLeftCircleCenter.x, topLeftCircleCenter.y, scaledCornerRadius, 30);
-        renderer.circle(topRightCircleCenter.x, topRightCircleCenter.y, scaledCornerRadius, 30);
+        for(Circle cornerCircle : cornerCircles) {
+            renderer.circle(cornerCircle.x, cornerCircle.y, cornerCircle.radius, 30);
+        }
 
         // Draw each rectangle
         renderer.rect(verticalRect.x, verticalRect.y, verticalRect.width, verticalRect.height);
@@ -314,25 +348,18 @@ class RenderableCard extends Card {
                 borderWidth * 2);                               // width
 
         // Draw a slightly larger corner circle with black color for the border
-        renderer.circle(bottomLeftCircleCenter.x, bottomLeftCircleCenter.y, scaledCornerRadius + borderWidth, 30);
-        renderer.circle(bottomRightCircleCenter.x, bottomRightCircleCenter.y, scaledCornerRadius + borderWidth, 30);
-        renderer.circle(topLeftCircleCenter.x, topLeftCircleCenter.y, scaledCornerRadius + borderWidth, 30);
-        renderer.circle(topRightCircleCenter.x, topRightCircleCenter.y, scaledCornerRadius + borderWidth, 30);
+        for(Circle cornerCircle : cornerCircles) {
+            renderer.circle(cornerCircle.x, cornerCircle.y, cornerCircle.radius + borderWidth, 30);
+        }
     }
 
-    static int getCardHeightInPixels() {
-        return cardHeightInPixels;
+    @SuppressWarnings("unused")
+    boolean containsPoint(Vector2 point) {
+        return containsPoint(point.x, point.y);
     }
 
-    static int getCardWidthInPixels() {
-        return cardWidthInPixels;
-    }
-
-    static float getCardHeight() {
-        return cardHeight;
-    }
-
-    static float getCardWidth() {
-        return cardWidth;
+    @SuppressWarnings("WeakerAccess")
+    boolean containsPoint(float x, float y) {
+        return cardRect.contains(x, y) || Arrays.stream(cornerCircles).anyMatch(circle -> circle.contains(x, y));
     }
 }
