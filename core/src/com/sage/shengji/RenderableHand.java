@@ -23,7 +23,7 @@ class RenderableHand extends RenderableCardList {
 
     @Override
     void render(SpriteBatch batch, ShapeRenderer renderer) {
-        float width = viewport.getWorldWidth() - 0.2f - (RenderableCard.getCardWidth() / 2);
+        float width = viewport.getWorldWidth() - 0.2f - (RenderableCard.CARD_WIDTH / 2);
         float pixelDivision = width / size();
 
         for(int i = 0; i < size(); i++) {
