@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -14,7 +15,7 @@ import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import java.util.ArrayList;
 
 class TableScreen extends InputAdapter implements Screen {
-    static final float TABLE_WORLD_SIZE = 5f;
+    static final float TABLE_WORLD_SIZE = 100f;
 
     private ShengJiGame game;
 
@@ -25,6 +26,8 @@ class TableScreen extends InputAdapter implements Screen {
 
 	private RenderableHand hand;
 	private ArrayList<RenderableCard> cards = new ArrayList<>();
+
+	private int currentCardNum = 0;
 
 	TableScreen(ShengJiGame game) {
 	    this.game = game;
@@ -55,12 +58,10 @@ class TableScreen extends InputAdapter implements Screen {
         batch.setProjectionMatrix(camera.combined);
         renderer.setProjectionMatrix(camera.combined);
 
-        batch.begin();
         hand.render(batch, renderer);
         for(RenderableCard c : cards) {
             c.render(batch, renderer);
         }
-        batch.end();
     }
 
     @Override
@@ -73,7 +74,7 @@ class TableScreen extends InputAdapter implements Screen {
         Vector2 clickCoordinates = new Vector2(viewport.unproject(new Vector2(screenX, screenY)));
 
         if(!hand.click(clickCoordinates)) {
-            cards.add(new RenderableCard().setPosition(clickCoordinates).setScale(1f).setFaceUp((button == Input.Buttons.LEFT)));
+            cards.add(new RenderableCard((++currentCardNum % 54)).setPosition(clickCoordinates).setScale(1f).setFaceUp(button == Input.Buttons.LEFT).setFaceBackgroundColor(new Color(0, 0.5f, 1, 1)));
         }
 
         return true;

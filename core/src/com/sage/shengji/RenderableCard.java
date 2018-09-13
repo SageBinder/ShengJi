@@ -32,13 +32,13 @@ class RenderableCard extends Card {
     @SuppressWarnings("WeakerAccess")
     static final float CARD_HEIGHT = ((float) CARD_HEIGHT_IN_PIXELS / (float) CARD_WIDTH_IN_PIXELS) * CARD_WIDTH;
 
-    private static float unscaledCornerRadius = 0.075f;
     @SuppressWarnings("FieldCanBeLocal")
     private static float designScale = 0.95f; // Proportion that the face (numbers, design etc.) is scaled with respect to the card's overall rectangle
+    private static float unscaledCornerRadius = 0.075f * CARD_WIDTH;
     @SuppressWarnings("FieldCanBeLocal")
-    private static float faceBorderWidth = 0.009f;
+    private static int faceBorderThicknessInPixels = (int)(0.015f * CARD_WIDTH_IN_PIXELS);
     @SuppressWarnings("FieldCanBeLocal")
-    private static float backBorderWidth = 0.009f;
+    private static int backBorderThicknessInPixels = (int)(0.015f * CARD_WIDTH_IN_PIXELS);
 
     private float scale = 1f; // Overall scale of the card with respect to the world
 
@@ -50,21 +50,24 @@ class RenderableCard extends Card {
             horizontalRect = new Rectangle();
 
     private Circle[] cornerCircles = new Circle[] {
-            new Circle(),
-            new Circle(),
-            new Circle(),
-            new Circle()
+            new Circle(), // TOP LEFT
+            new Circle(), // TOP RIGHT
+            new Circle(), // BOTTOM LEFT
+            new Circle()  // BOTTOM RIGHT
     };
 
     private Color faceBackgroundColor = new Color(1, 1, 1, 1);
-    private Color faceBorderColor = new Color(0, 0, 0, 0);
-    private Color backBorderColor = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+
+    private static Color faceBorderColor = new Color(0, 0, 0, 1);
+    private static Color backBorderColor = new Color(0.5f, 0.5f, 0.5f, 1);
 
     private static FileHandle defaultSpriteFolder = Gdx.files.internal("playing_cards/");
     private static FileHandle spriteFolder = defaultSpriteFolder;
 
     private static HashMap<Integer, Sprite> faceSprites = new HashMap<>();
     private static Sprite backSprite = null;
+
+    private Sprite thisCardFaceSprite = null;
 
     private boolean faceUp = true;
 
@@ -107,55 +110,23 @@ class RenderableCard extends Card {
     private static void loadBackSprite() {
         Pixmap originalBackPixmap = new Pixmap(spriteFolder.child("back.png"));
         Pixmap resizedBackPixmap = new Pixmap(CARD_WIDTH_IN_PIXELS, CARD_HEIGHT_IN_PIXELS, originalBackPixmap.getFormat());
+
         resizedBackPixmap.drawPixmap(originalBackPixmap,
                 0, 0, originalBackPixmap.getWidth(), originalBackPixmap.getHeight(),
                 0, 0, resizedBackPixmap.getWidth(), resizedBackPixmap.getHeight());
-        Pixmap roundedCornersPixmap = new Pixmap(resizedBackPixmap.getWidth(), resizedBackPixmap.getHeight(), Pixmap.Format.RGBA8888);
 
-        originalBackPixmap.dispose();
+        int cornerRadiusInPixels = (int)((unscaledCornerRadius / CARD_WIDTH) * CARD_WIDTH_IN_PIXELS);
+        Pixmap roundedCornersPixmap = roundPixmapCorners(resizedBackPixmap, cornerRadiusInPixels);
 
-        int backPixmapHeight = resizedBackPixmap.getHeight();
-        int backPixmapWidth = resizedBackPixmap.getWidth();
-        int cornerRadiusInPixels = (int)(((unscaledCornerRadius) * backPixmapWidth));
-
-
-        // These loops create the rounded rectangle pixmap by adding transparent pixels at the corners
-        for(int x = 0; x < resizedBackPixmap.getWidth(); x++) {
-            nextIter:
-            for(int y = 0; y < resizedBackPixmap.getHeight(); y++) {
-                // These two innermost loops check conditions for adding a transparent pixel for each of the four corners
-                for(int i = 0; i < 2; i++) {
-                    for(int j = 0; j < 2; j++) {
-                        // Top left corner: i == 0, j == 0
-                        // Bottom left corner: i == 1, j == 0
-                        // Top right corner: i == 0, j == 1
-                        // Bottom right corner: i == 1, j == 1
-                        int circleCenter_y = (backPixmapHeight * i) - (cornerRadiusInPixels * (-1 + (i * 2)));
-                        int circleCenter_x = (backPixmapWidth * j) - (cornerRadiusInPixels * (-1 + (j * 2)));
-
-                        // Using (<= and >=) vs (< and >) doesn't seem to make any visual difference
-                        if(((i == 0 && y <= circleCenter_y) || (i == 1 && y >= circleCenter_y))
-                                && ((j == 0 && x <= circleCenter_x) || (j == 1 && x >= circleCenter_x))
-                                && Math.sqrt(Math.pow(x - circleCenter_x, 2) + Math.pow(y - circleCenter_y, 2)) >= cornerRadiusInPixels) {
-                            roundedCornersPixmap.drawPixel(x, y, 0);
-
-                            // Since it was determined that pixel (x, y) should be transparent,
-                            // the rest of the conditions shouldn't be checked, so exit the two innermost loops.
-                            continue nextIter;
-                        }
-                    }
-                }
-
-                // If all four condition checks failed, pixel (x, y) shouldn't be transparent,
-                // so add the pixel at (x, y) from the back image pixmap to the new pixmap
-                roundedCornersPixmap.drawPixel(x, y, resizedBackPixmap.getPixel(x, y));
-            }
-        }
-
+        drawCurvedBorderOnPixmap(roundedCornersPixmap,
+                cornerRadiusInPixels,
+                backBorderThicknessInPixels,
+                backBorderColor);
         backSprite = new Sprite(new Texture(roundedCornersPixmap));
 
-        roundedCornersPixmap.dispose();
+        originalBackPixmap.dispose();
         resizedBackPixmap.dispose();
+        roundedCornersPixmap.dispose();
     }
 
     private static void loadFaceSpriteForCard(int cardNum) {
@@ -170,7 +141,94 @@ class RenderableCard extends Card {
             cardImageName = suit.toString() + ".png";
         }
 
-        faceSprites.put(cardNum, new Sprite(new Texture(spriteFolder.child(cardImageName))));
+        Pixmap originalUnscaledImagePixmap = new Pixmap(spriteFolder.child(cardImageName));
+        Pixmap originalScaledImagePixmap = new Pixmap(CARD_WIDTH_IN_PIXELS, CARD_HEIGHT_IN_PIXELS, originalUnscaledImagePixmap.getFormat());
+
+        originalScaledImagePixmap.drawPixmap(originalUnscaledImagePixmap,
+                0, 0, originalUnscaledImagePixmap.getWidth(), originalUnscaledImagePixmap.getHeight(),
+                (int)(0.5f * (CARD_WIDTH_IN_PIXELS - (CARD_WIDTH_IN_PIXELS * designScale))), (int)(0.5f * (CARD_WIDTH_IN_PIXELS - (CARD_WIDTH_IN_PIXELS * designScale))),
+                (int)(CARD_WIDTH_IN_PIXELS * designScale), (int)(CARD_HEIGHT_IN_PIXELS * designScale));
+
+        drawCurvedBorderOnPixmap(originalScaledImagePixmap,
+                (int)((unscaledCornerRadius / CARD_WIDTH) * CARD_WIDTH_IN_PIXELS),
+                faceBorderThicknessInPixels,
+                faceBorderColor);
+
+        faceSprites.put(cardNum, new Sprite(new Texture(originalScaledImagePixmap)));
+
+        originalUnscaledImagePixmap.dispose();
+        originalScaledImagePixmap.dispose();
+    }
+
+    private static Pixmap roundPixmapCorners(Pixmap pixmap, int radius) {
+        Pixmap roundedPixmap = new Pixmap(pixmap.getWidth(), pixmap.getHeight(), pixmap.getFormat());
+
+        int pixmapHeight = pixmap.getHeight();
+        int pixmapWidth = pixmap.getWidth();
+
+        // These loops create the rounded rectangle pixmap by adding transparent pixels at the corners
+        for(int x = 0; x < pixmapWidth; x++) {
+            nextIter:
+            for(int y = 0; y < pixmapHeight; y++) {
+                // These two innermost loops check conditions for adding a transparent pixel for each of the four corners
+                for(int i = 0; i < 2; i++) {
+                    for(int j = 0; j < 2; j++) {
+                        // Top left corner: i == 0, j == 0
+                        // Bottom left corner: i == 1, j == 0
+                        // Top right corner: i == 0, j == 1
+                        // Bottom right corner: i == 1, j == 1
+                        int circleCenter_y = (pixmapHeight * i) - (radius * (-1 + (i * 2)));
+                        int circleCenter_x = (pixmapWidth * j) - (radius * (-1 + (j * 2)));
+
+                        // Using (<= and >=) as opposed to (< and >) doesn't seem to make any visual difference
+                        if(((i == 0 && y <= circleCenter_y) || (i == 1 && y >= circleCenter_y))
+                                && ((j == 0 && x <= circleCenter_x) || (j == 1 && x >= circleCenter_x))
+                                && Math.sqrt(Math.pow(x - circleCenter_x, 2) + Math.pow(y - circleCenter_y, 2)) >= radius) {
+                            roundedPixmap.drawPixel(x, y, 0);
+
+                            // Since it was determined that pixel (x, y) should be transparent,
+                            // the rest of the conditions shouldn't be checked, so exit the two innermost loops.
+                            continue nextIter;
+                        }
+                    }
+                }
+
+                // If all four condition checks failed, pixel (x, y) shouldn't be transparent,
+                // so add the pixel at (x, y) from the back image pixmap to the new pixmap
+                roundedPixmap.drawPixel(x, y, pixmap.getPixel(x, y));
+            }
+        }
+
+        return roundedPixmap;
+    }
+
+    private static void drawCurvedBorderOnPixmap(Pixmap pixmap, int radius, int borderThickness, Color color) {
+        Pixmap borderPixmap = new Pixmap(pixmap.getWidth(), pixmap.getHeight(), pixmap.getFormat());
+
+        int pixmapHeight = pixmap.getHeight();
+        int pixmapWidth = pixmap.getWidth();
+
+        borderPixmap.setColor(color);
+
+        System.out.println("Drawing rect: x = " + 0 + ", y = " + radius + ", width = " + borderThickness + ", height = " + (pixmapHeight - (2 * radius)));
+        // Left border
+        borderPixmap.fillRectangle(0, radius, borderThickness, pixmapHeight - (2 * radius));
+
+        // Right border
+        borderPixmap.fillRectangle(pixmapWidth - borderThickness, radius, borderThickness, pixmapHeight - (2 * radius));
+
+        // Top border
+        borderPixmap.fillRectangle(radius, 0, pixmapWidth - (2 * radius), borderThickness);
+
+        // Bottom border
+        borderPixmap.fillRectangle(radius, pixmapHeight - borderThickness, pixmapWidth - (2 * radius), borderThickness);
+
+        pixmap.drawPixmap(borderPixmap,
+                0, 0, borderPixmap.getWidth(), borderPixmap.getHeight(),
+                0, 0, pixmap.getWidth(), pixmap.getHeight());
+        borderPixmap.dispose();
+
+        // TODO: Corner borders
     }
 
     private void updateShapes(Vector2 newPosition, float newScale) {
@@ -186,21 +244,26 @@ class RenderableCard extends Card {
         horizontalRect.setPosition(cardRect.x, cardRect.y + scaledCornerRadius);
         horizontalRect.setSize(CARD_WIDTH * scale, (CARD_HEIGHT * scale) - (2 * scaledCornerRadius));
 
-        cornerCircles[0].set(cardRect.x + scaledCornerRadius,
+        cornerCircles[0].set(cardRect.x + scaledCornerRadius,                           // BOTTOM LEFT
                 cardRect.y + scaledCornerRadius,
                 scaledCornerRadius);
 
-        cornerCircles[1].set(cardRect.x + (CARD_WIDTH * scale) - scaledCornerRadius,
+        cornerCircles[1].set(cardRect.x + (CARD_WIDTH * scale) - scaledCornerRadius,    // BOTTOM RIGHT
                 cardRect.y + scaledCornerRadius,
                 scaledCornerRadius);
 
-        cornerCircles[2].set(cardRect.x + scaledCornerRadius,
+        cornerCircles[2].set(cardRect.x + (CARD_WIDTH * scale) - scaledCornerRadius,    // TOP RIGHT
                 cardRect.y + (CARD_HEIGHT * scale) - scaledCornerRadius,
                 scaledCornerRadius);
 
-        cornerCircles[3].set(cardRect.x + (CARD_WIDTH * scale) - scaledCornerRadius,
+        cornerCircles[3].set(cardRect.x + scaledCornerRadius,                           // TOP LEFT
                 cardRect.y + (CARD_HEIGHT * scale) - scaledCornerRadius,
                 scaledCornerRadius);
+    }
+
+    RenderableCard setFaceBackgroundColor(Color c) {
+        this.faceBackgroundColor = c;
+        return this;
     }
 
     RenderableCard setScale(float newScale) {
@@ -239,35 +302,36 @@ class RenderableCard extends Card {
 
     void render(SpriteBatch batch, ShapeRenderer renderer) {
         if(faceUp) {
-            if(faceSprites.get(cardNum()) == null) {
+            if(thisCardFaceSprite == null) {
                 loadFaceSpriteForCard(cardNum());
+                thisCardFaceSprite = faceSprites.get(cardNum());
             }
             renderFace(batch, renderer);
         } else {
             if(backSprite == null) {
                 loadBackSprite();
             }
-            renderBack(batch, renderer);
+            renderBack(batch);
         }
     }
 
     private void renderFace(SpriteBatch batch, ShapeRenderer renderer) {
-        renderFaceBackground(batch, renderer);
+        renderFaceBackground(renderer);
 
-        faceSprites.get(cardNum()).setSize(CARD_WIDTH * scale * designScale, CARD_HEIGHT * scale * designScale);
-        faceSprites.get(cardNum()).setPosition(cardRect.x + (0.5f * scale * (CARD_WIDTH - (CARD_WIDTH * designScale))), cardRect.y + (0.5f * scale * (CARD_HEIGHT - (CARD_HEIGHT * designScale))));
-        faceSprites.get(cardNum()).draw(batch);
+        batch.begin();
+
+        thisCardFaceSprite.setSize(CARD_WIDTH * scale, CARD_HEIGHT * scale);
+        thisCardFaceSprite.setPosition(cardRect.x + (0.5f * scale * (CARD_WIDTH - (CARD_WIDTH))), cardRect.y + (0.5f * scale * (CARD_HEIGHT - (CARD_HEIGHT))));
+        thisCardFaceSprite.draw(batch);
+
+        batch.end();
     }
 
-    private void renderFaceBackground(SpriteBatch batch, ShapeRenderer renderer) {
-        batch.end();
+    private void renderFaceBackground(ShapeRenderer renderer) {
         renderer.begin(ShapeRenderer.ShapeType.Filled);
-
-        renderBorder(renderer, faceBorderColor, faceBorderWidth);
 
         // Draw corner circles for rounded corners
         renderer.setColor(faceBackgroundColor);
-
         for(Circle cornerCircle : cornerCircles) {
             renderer.circle(cornerCircle.x, cornerCircle.y, cornerCircle.radius, 30);
         }
@@ -277,60 +341,14 @@ class RenderableCard extends Card {
         renderer.rect(horizontalRect.x, horizontalRect.y, horizontalRect.width, horizontalRect.height);
 
         renderer.end();
-        batch.begin();
     }
 
-    private void renderBack(SpriteBatch batch, ShapeRenderer renderer) {
-        batch.end();
-        renderer.begin(ShapeRenderer.ShapeType.Filled);
-
-        renderBorder(renderer, backBorderColor, backBorderWidth);
-
-        renderer.end();
+    private void renderBack(SpriteBatch batch) {
         batch.begin();
-
         backSprite.setSize(CARD_WIDTH * scale, CARD_HEIGHT * scale);
         backSprite.setPosition(cardRect.x, cardRect.y);
-
         backSprite.draw(batch);
-    }
-
-    private void renderBorder(ShapeRenderer renderer, Color borderColor, float borderWidth) {
-        // Drawing outer rectangle borders
-        renderer.setColor(borderColor);
-
-        // Vertical rectangle bottom border
-        renderer.rectLine(verticalRect.x,                // x1
-                verticalRect.y,                          // y1
-                verticalRect.x + verticalRect.width, // x2
-                verticalRect.y,                          // y2
-                borderWidth * 2);                 // width
-
-        // Vertical rectangle top border
-        renderer.rectLine(verticalRect.x,                 // x1
-                verticalRect.y + verticalRect.height, // y1
-                verticalRect.x + verticalRect.width,  // x2
-                verticalRect.y + verticalRect.height, // y2
-                borderWidth * 2);                  // width
-
-        // Horizontal rectangle left border
-        renderer.rectLine(horizontalRect.x,                   // x1
-                horizontalRect.y,                             // y1
-                horizontalRect.x,                             // x2
-                horizontalRect.y + horizontalRect.height, // y2
-                borderWidth * 2);                      // width
-
-        // Horizontal rectangle right border
-        renderer.rectLine(horizontalRect.x + horizontalRect.width, // x1
-                horizontalRect.y,                                      // y1
-                horizontalRect.x + horizontalRect.width,           // x2
-                horizontalRect.y + horizontalRect.height,          // y2
-                borderWidth * 2);                               // width
-
-        // Draw a slightly larger corner circle with black color for the border
-        for(Circle cornerCircle : cornerCircles) {
-            renderer.circle(cornerCircle.x, cornerCircle.y, cornerCircle.radius + borderWidth, 30);
-        }
+        batch.end();
     }
 
     @SuppressWarnings("unused")
