@@ -2,7 +2,6 @@ package com.sage.shengji;
 
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.sage.Card;
 import com.sage.CardList;
 import com.sage.Rank;
 import com.sage.Suit;
@@ -34,9 +33,9 @@ public class RenderableCardList extends CardList<RenderableCard> {
         }
     }
 
-    void render(SpriteBatch batch, ShapeRenderer renderer) {
+    void render(SpriteBatch batch) {
         for(RenderableCard c : this) {
-            c.render(batch, renderer);
+            c.render(batch);
         }
     }
 }

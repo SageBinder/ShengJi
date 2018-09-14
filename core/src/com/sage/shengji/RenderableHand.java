@@ -22,7 +22,7 @@ class RenderableHand extends RenderableCardList {
     }
 
     @Override
-    void render(SpriteBatch batch, ShapeRenderer renderer) {
+    void render(SpriteBatch batch) {
         float width = viewport.getWorldWidth() - 0.2f - (RenderableCard.CARD_WIDTH / 2);
         float pixelDivision = width / size();
 
@@ -30,23 +30,22 @@ class RenderableHand extends RenderableCardList {
             get(i).setScale(0.5f).setPosition(new Vector2((i * pixelDivision) + 0.1f, 0.2f));
         }
 
-        super.render(batch, renderer);
+        super.render(batch);
     }
 
-    boolean click(Vector2 clickPos) {
+    RenderableCard click(Vector2 clickPos) {
         return click(clickPos.x, clickPos.y);
     }
 
     @SuppressWarnings("WeakerAccess")
-    boolean click(float x, float y) {
+    RenderableCard click(float x, float y) {
         for(int i = size() - 1; i >= 0; i--) {
             RenderableCard c = get(i);
             if(c.containsPoint(x, y)) {
-                c.flip();
-                return true;
+                return c;
             }
         }
 
-        return false;
+        return null;
     }
 }

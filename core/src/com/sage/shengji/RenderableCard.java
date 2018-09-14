@@ -7,7 +7,6 @@ import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Circle;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
@@ -57,6 +56,7 @@ class RenderableCard extends Card {
     };
 
     private Color faceBackgroundColor = new Color(1, 1, 1, 1);
+    private Sprite thisCardFaceSprite = null;
 
     private static Color faceBorderColor = new Color(0, 0, 0, 1);
     private static Color backBorderColor = new Color(0.5f, 0.5f, 0.5f, 1);
@@ -64,10 +64,8 @@ class RenderableCard extends Card {
     private static FileHandle defaultSpriteFolder = Gdx.files.internal("playing_cards/");
     private static FileHandle spriteFolder = defaultSpriteFolder;
 
-    private static HashMap<Integer, Sprite> faceSprites = new HashMap<>();
+    private static HashMap<Integer, Pixmap> faceDesignPixmaps = new HashMap<>();
     private static Sprite backSprite = null;
-
-    private Sprite thisCardFaceSprite = null;
 
     private boolean faceUp = true;
 
@@ -89,22 +87,20 @@ class RenderableCard extends Card {
 
     static void setSpriteFolder(FileHandle newSpriteFolder) {
         spriteFolder = newSpriteFolder;
-        resetForNewSprites();
+        clearSprites();
     }
 
     static void useDefaultSpriteFolder() {
         spriteFolder = defaultSpriteFolder;
-        resetForNewSprites();
-    }
-
-    private static void resetForNewSprites() {
-        // This method encapsulation just in case additional logic needs to be added
         clearSprites();
     }
 
     private static void clearSprites() {
         backSprite = null;
-        faceSprites.clear();
+        for(Pixmap p : faceDesignPixmaps.values()) {
+            p.dispose();
+        }
+        faceDesignPixmaps.clear();
     }
 
     private static void loadBackSprite() {
@@ -116,20 +112,18 @@ class RenderableCard extends Card {
                 0, 0, resizedBackPixmap.getWidth(), resizedBackPixmap.getHeight());
 
         int cornerRadiusInPixels = (int)((unscaledCornerRadius / CARD_WIDTH) * CARD_WIDTH_IN_PIXELS);
-        Pixmap roundedCornersPixmap = roundPixmapCorners(resizedBackPixmap, cornerRadiusInPixels);
-
-        drawCurvedBorderOnPixmap(roundedCornersPixmap,
+        roundPixmapCorners(resizedBackPixmap, cornerRadiusInPixels);
+        drawCurvedBorderOnPixmap(resizedBackPixmap,
                 cornerRadiusInPixels,
                 backBorderThicknessInPixels,
                 backBorderColor);
-        backSprite = new Sprite(new Texture(roundedCornersPixmap));
+        backSprite = new Sprite(new Texture(resizedBackPixmap));
 
         originalBackPixmap.dispose();
         resizedBackPixmap.dispose();
-        roundedCornersPixmap.dispose();
     }
 
-    private static void loadFaceSpriteForCard(int cardNum) {
+    private static void loadFaceDesignTextureForCard(int cardNum) {
         String cardImageName;
 
         Suit suit = Card.getSuitFromCardNum(cardNum);
@@ -154,17 +148,16 @@ class RenderableCard extends Card {
                 faceBorderThicknessInPixels,
                 faceBorderColor);
 
-        faceSprites.put(cardNum, new Sprite(new Texture(originalScaledImagePixmap)));
+        faceDesignPixmaps.put(cardNum, originalScaledImagePixmap);
 
         originalUnscaledImagePixmap.dispose();
-        originalScaledImagePixmap.dispose();
     }
 
-    private static Pixmap roundPixmapCorners(Pixmap pixmap, int radius) {
-        Pixmap roundedPixmap = new Pixmap(pixmap.getWidth(), pixmap.getHeight(), pixmap.getFormat());
-
+    private static void roundPixmapCorners(Pixmap pixmap, int radius) {
         int pixmapHeight = pixmap.getHeight();
         int pixmapWidth = pixmap.getWidth();
+
+        Pixmap.setBlending(Pixmap.Blending.None);
 
         // These loops create the rounded rectangle pixmap by adding transparent pixels at the corners
         for(int x = 0; x < pixmapWidth; x++) {
@@ -184,7 +177,7 @@ class RenderableCard extends Card {
                         if(((i == 0 && y <= circleCenter_y) || (i == 1 && y >= circleCenter_y))
                                 && ((j == 0 && x <= circleCenter_x) || (j == 1 && x >= circleCenter_x))
                                 && Math.sqrt(Math.pow(x - circleCenter_x, 2) + Math.pow(y - circleCenter_y, 2)) >= radius) {
-                            roundedPixmap.drawPixel(x, y, 0);
+                            pixmap.drawPixel(x, y, 0);
 
                             // Since it was determined that pixel (x, y) should be transparent,
                             // the rest of the conditions shouldn't be checked, so exit the two innermost loops.
@@ -195,40 +188,36 @@ class RenderableCard extends Card {
 
                 // If all four condition checks failed, pixel (x, y) shouldn't be transparent,
                 // so add the pixel at (x, y) from the back image pixmap to the new pixmap
-                roundedPixmap.drawPixel(x, y, pixmap.getPixel(x, y));
+                pixmap.drawPixel(x, y, pixmap.getPixel(x, y));
             }
         }
-
-        return roundedPixmap;
     }
 
     private static void drawCurvedBorderOnPixmap(Pixmap pixmap, int radius, int borderThickness, Color color) {
-        Pixmap borderPixmap = new Pixmap(pixmap.getWidth(), pixmap.getHeight(), pixmap.getFormat());
-
         int pixmapHeight = pixmap.getHeight();
         int pixmapWidth = pixmap.getWidth();
 
-        borderPixmap.setColor(color);
+        Pixmap.setBlending(Pixmap.Blending.None);
 
-        System.out.println("Drawing rect: x = " + 0 + ", y = " + radius + ", width = " + borderThickness + ", height = " + (pixmapHeight - (2 * radius)));
+        pixmap.setColor(color);
+
         // Left border
-        borderPixmap.fillRectangle(0, radius, borderThickness, pixmapHeight - (2 * radius));
+        pixmap.fillRectangle(0, radius, borderThickness, pixmapHeight - (2 * radius));
 
         // Right border
-        borderPixmap.fillRectangle(pixmapWidth - borderThickness, radius, borderThickness, pixmapHeight - (2 * radius));
+        pixmap.fillRectangle(pixmapWidth - borderThickness, radius, borderThickness, pixmapHeight - (2 * radius));
 
         // Top border
-        borderPixmap.fillRectangle(radius, 0, pixmapWidth - (2 * radius), borderThickness);
+        pixmap.fillRectangle(radius, 0, pixmapWidth - (2 * radius), borderThickness);
 
         // Bottom border
-        borderPixmap.fillRectangle(radius, pixmapHeight - borderThickness, pixmapWidth - (2 * radius), borderThickness);
-
-        pixmap.drawPixmap(borderPixmap,
-                0, 0, borderPixmap.getWidth(), borderPixmap.getHeight(),
-                0, 0, pixmap.getWidth(), pixmap.getHeight());
-        borderPixmap.dispose();
+        pixmap.fillRectangle(radius, pixmapHeight - borderThickness, pixmapWidth - (2 * radius), borderThickness);
 
         // TODO: Corner borders
+    }
+
+    static void dispose() {
+        clearSprites();
     }
 
     private void updateShapes(Vector2 newPosition, float newScale) {
@@ -261,8 +250,80 @@ class RenderableCard extends Card {
                 scaledCornerRadius);
     }
 
-    RenderableCard setFaceBackgroundColor(Color c) {
-        this.faceBackgroundColor = c;
+    private void setupThisCardFaceSprite() {
+        if(faceDesignPixmaps.get(cardNum()) == null) {
+            loadFaceDesignTextureForCard(cardNum());
+        } else if(thisCardFaceSprite != null) {
+            return;
+        }
+        System.out.println("in here");
+        Pixmap thisCardFaceSpritePixmap = new Pixmap(CARD_WIDTH_IN_PIXELS, CARD_HEIGHT_IN_PIXELS, Pixmap.Format.RGBA8888);
+        Pixmap faceDesignPixmap = faceDesignPixmaps.get(cardNum());
+
+        Pixmap.setBlending(Pixmap.Blending.SourceOver);
+        thisCardFaceSpritePixmap.setColor(faceBackgroundColor);
+        thisCardFaceSpritePixmap.fill();
+
+        roundPixmapCorners(thisCardFaceSpritePixmap, (int)((unscaledCornerRadius / CARD_WIDTH) * CARD_WIDTH_IN_PIXELS));
+        drawCurvedBorderOnPixmap(thisCardFaceSpritePixmap,
+                (int)((unscaledCornerRadius / CARD_WIDTH) * CARD_WIDTH_IN_PIXELS),
+                faceBorderThicknessInPixels,
+                faceBorderColor);
+
+        Pixmap.setBlending(Pixmap.Blending.SourceOver);
+        thisCardFaceSpritePixmap.drawPixmap(faceDesignPixmap,
+                0, 0, faceDesignPixmap.getWidth(), faceDesignPixmap.getHeight(),
+                0, 0, thisCardFaceSpritePixmap.getWidth(), thisCardFaceSpritePixmap.getHeight());
+
+        thisCardFaceSprite = new Sprite(new Texture(thisCardFaceSpritePixmap));
+
+        thisCardFaceSpritePixmap.dispose();
+    }
+
+    void render(SpriteBatch batch) {
+        if(faceUp) {
+            setupThisCardFaceSprite();
+            batch.setColor(faceBackgroundColor);
+            renderFace(batch);
+        } else {
+            if(backSprite == null) {
+                loadBackSprite();
+            }
+            renderBack(batch);
+        }
+    }
+
+    private void renderFace(SpriteBatch batch) {
+        batch.begin();
+
+        thisCardFaceSprite.setSize(CARD_WIDTH * scale, CARD_HEIGHT * scale);
+        thisCardFaceSprite.setPosition(cardRect.x + (0.5f * scale * (CARD_WIDTH - (CARD_WIDTH))), cardRect.y + (0.5f * scale * (CARD_HEIGHT - (CARD_HEIGHT))));
+        thisCardFaceSprite.draw(batch);
+
+        batch.end();
+    }
+
+    private void renderBack(SpriteBatch batch) {
+        batch.begin();
+        backSprite.setSize(CARD_WIDTH * scale, CARD_HEIGHT * scale);
+        backSprite.setPosition(cardRect.x, cardRect.y);
+        backSprite.draw(batch);
+        batch.end();
+    }
+
+    @SuppressWarnings("unused")
+    boolean containsPoint(Vector2 point) {
+        return containsPoint(point.x, point.y);
+    }
+
+    @SuppressWarnings("WeakerAccess")
+    boolean containsPoint(float x, float y) {
+        return cardRect.contains(x, y) || Arrays.stream(cornerCircles).anyMatch(circle -> circle.contains(x, y));
+    }
+
+    RenderableCard setFaceColor(Color c) {
+        faceBackgroundColor = c;
+        thisCardFaceSprite = null;
         return this;
     }
 
@@ -288,6 +349,10 @@ class RenderableCard extends Card {
         return this;
     }
 
+    Color getFaceColor() {
+        return faceBackgroundColor;
+    }
+
     float getScale() {
         return scale;
     }
@@ -296,68 +361,7 @@ class RenderableCard extends Card {
         return cardRect.getPosition(new Vector2());
     }
 
-    boolean getFaceUp() {
+    boolean isFaceUp() {
         return faceUp;
-    }
-
-    void render(SpriteBatch batch, ShapeRenderer renderer) {
-        if(faceUp) {
-            if(thisCardFaceSprite == null) {
-                loadFaceSpriteForCard(cardNum());
-                thisCardFaceSprite = faceSprites.get(cardNum());
-            }
-            renderFace(batch, renderer);
-        } else {
-            if(backSprite == null) {
-                loadBackSprite();
-            }
-            renderBack(batch);
-        }
-    }
-
-    private void renderFace(SpriteBatch batch, ShapeRenderer renderer) {
-        renderFaceBackground(renderer);
-
-        batch.begin();
-
-        thisCardFaceSprite.setSize(CARD_WIDTH * scale, CARD_HEIGHT * scale);
-        thisCardFaceSprite.setPosition(cardRect.x + (0.5f * scale * (CARD_WIDTH - (CARD_WIDTH))), cardRect.y + (0.5f * scale * (CARD_HEIGHT - (CARD_HEIGHT))));
-        thisCardFaceSprite.draw(batch);
-
-        batch.end();
-    }
-
-    private void renderFaceBackground(ShapeRenderer renderer) {
-        renderer.begin(ShapeRenderer.ShapeType.Filled);
-
-        // Draw corner circles for rounded corners
-        renderer.setColor(faceBackgroundColor);
-        for(Circle cornerCircle : cornerCircles) {
-            renderer.circle(cornerCircle.x, cornerCircle.y, cornerCircle.radius, 30);
-        }
-
-        // Draw each rectangle
-        renderer.rect(verticalRect.x, verticalRect.y, verticalRect.width, verticalRect.height);
-        renderer.rect(horizontalRect.x, horizontalRect.y, horizontalRect.width, horizontalRect.height);
-
-        renderer.end();
-    }
-
-    private void renderBack(SpriteBatch batch) {
-        batch.begin();
-        backSprite.setSize(CARD_WIDTH * scale, CARD_HEIGHT * scale);
-        backSprite.setPosition(cardRect.x, cardRect.y);
-        backSprite.draw(batch);
-        batch.end();
-    }
-
-    @SuppressWarnings("unused")
-    boolean containsPoint(Vector2 point) {
-        return containsPoint(point.x, point.y);
-    }
-
-    @SuppressWarnings("WeakerAccess")
-    boolean containsPoint(float x, float y) {
-        return cardRect.contains(x, y) || Arrays.stream(cornerCircles).anyMatch(circle -> circle.contains(x, y));
     }
 }

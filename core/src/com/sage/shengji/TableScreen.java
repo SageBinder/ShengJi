@@ -13,6 +13,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 
 import java.util.ArrayList;
+import java.util.Random;
 
 class TableScreen extends InputAdapter implements Screen {
     static final float TABLE_WORLD_SIZE = 100f;
@@ -25,9 +26,11 @@ class TableScreen extends InputAdapter implements Screen {
 	private OrthographicCamera camera;
 
 	private RenderableHand hand;
-	private ArrayList<RenderableCard> cards = new ArrayList<>();
+	private ArrayList<RenderableCard> placedCards = new ArrayList<>();
 
 	private int currentCardNum = 0;
+
+	private Random random = new Random(69);
 
 	TableScreen(ShengJiGame game) {
 	    this.game = game;
@@ -41,7 +44,7 @@ class TableScreen extends InputAdapter implements Screen {
         viewport = new ExtendViewport(TABLE_WORLD_SIZE, TABLE_WORLD_SIZE, camera);
         hand  = new RenderableHand(viewport);
 
-        for(int i = 0; i < 52; i++) {
+        for(int i = 0; i < 2; i++) {
             hand.add(new RenderableCard());
         }
 
@@ -58,9 +61,9 @@ class TableScreen extends InputAdapter implements Screen {
         batch.setProjectionMatrix(camera.combined);
         renderer.setProjectionMatrix(camera.combined);
 
-        hand.render(batch, renderer);
-        for(RenderableCard c : cards) {
-            c.render(batch, renderer);
+        hand.render(batch);
+        for(RenderableCard c : placedCards) {
+            c.render(batch);
         }
     }
 
@@ -73,10 +76,44 @@ class TableScreen extends InputAdapter implements Screen {
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
         Vector2 clickCoordinates = new Vector2(viewport.unproject(new Vector2(screenX, screenY)));
 
-        if(!hand.click(clickCoordinates)) {
-            cards.add(new RenderableCard((++currentCardNum % 54)).setPosition(clickCoordinates).setScale(1f).setFaceUp(button == Input.Buttons.LEFT).setFaceBackgroundColor(new Color(0, 0.5f, 1, 1)));
+        for(int i = placedCards.size() - 1; i >= 0; i--) {
+            RenderableCard c = placedCards.get(i);
+            if(c.containsPoint(clickCoordinates)) {
+                if(button == Input.Buttons.LEFT && c.isFaceUp()) {
+                    c.setFaceColor(c.getFaceColor().sub(0.1f, 0.1f, 0.1f, 0.1f));
+                    if(c.getFaceColor().a == 0) {
+                        c.setFaceColor(new Color(random.nextFloat(), random.nextFloat(), random.nextFloat(), 1));
+                    }
+                    return true;
+                } else if(button == Input.Buttons.RIGHT) {
+                    c.flip();
+                    return true;
+                }
+
+                return false;
+            }
         }
 
+        RenderableCard c;
+        if((c = hand.click(clickCoordinates)) != null) {
+            if(button == Input.Buttons.LEFT && c.isFaceUp()) {
+                c.setFaceColor(c.getFaceColor().sub(0.1f, 0.1f, 0.1f, 0.1f));
+                if(c.getFaceColor().a == 0) {
+                    c.setFaceColor(new Color(1, 1, 1, 1));
+                }
+                return true;
+            } else if(button == Input.Buttons.RIGHT) {
+                c.flip();
+                return true;
+            }
+
+            return false;
+        }
+
+        placedCards.add(new RenderableCard((++currentCardNum % 54))
+                        .setPosition(clickCoordinates)
+                        .setScale(1f).setFaceUp(button == Input.Buttons.LEFT)
+                        .setFaceColor(new Color(0, 0.5f, 1, 1)));
         return true;
     }
 
@@ -98,5 +135,6 @@ class TableScreen extends InputAdapter implements Screen {
     @Override
 	public void dispose() {
 		batch.dispose();
+		RenderableCard.dispose();
 	}
 }
