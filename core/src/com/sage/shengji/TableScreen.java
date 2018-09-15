@@ -29,6 +29,7 @@ class TableScreen extends InputAdapter implements Screen {
 	private ArrayList<RenderableCard> placedCards = new ArrayList<>();
 
 	private int currentCardNum = 0;
+    private RenderableCard currentCard;
 
 	private Random random = new Random(69);
 
@@ -44,9 +45,11 @@ class TableScreen extends InputAdapter implements Screen {
         viewport = new ExtendViewport(TABLE_WORLD_SIZE, TABLE_WORLD_SIZE, camera);
         hand  = new RenderableHand(viewport);
 
-        for(int i = 0; i < 2; i++) {
+        for(int i = 0; i < 22; i++) {
             hand.add(new RenderableCard());
         }
+
+        currentCard = new RenderableCard(currentCardNum).setPosition(5f, TABLE_WORLD_SIZE / 2).setScale(0.8f);
 
         camera.position.set(camera.viewportWidth/2,camera.viewportHeight/2,0);
         Gdx.input.setInputProcessor(this);
@@ -61,6 +64,7 @@ class TableScreen extends InputAdapter implements Screen {
         batch.setProjectionMatrix(camera.combined);
         renderer.setProjectionMatrix(camera.combined);
 
+        currentCard.render(batch);
         hand.render(batch);
         for(RenderableCard c : placedCards) {
             c.render(batch);
@@ -88,6 +92,9 @@ class TableScreen extends InputAdapter implements Screen {
                 } else if(button == Input.Buttons.RIGHT) {
                     c.flip();
                     return true;
+                } else if(button == Input.Buttons.MIDDLE) {
+                    placedCards.remove(i);
+                    return true;
                 }
 
                 return false;
@@ -105,16 +112,31 @@ class TableScreen extends InputAdapter implements Screen {
             } else if(button == Input.Buttons.RIGHT) {
                 c.flip();
                 return true;
+            } else if(button == Input.Buttons.MIDDLE) {
+                placedCards.remove(c);
+                return true;
             }
 
             return false;
         }
 
-        placedCards.add(new RenderableCard((++currentCardNum % 54))
+        placedCards.add(new RenderableCard(currentCardNum)
                         .setPosition(clickCoordinates)
                         .setScale(1f).setFaceUp(button == Input.Buttons.LEFT)
-                        .setFaceColor(new Color(0, 0.5f, 1, 1)));
+                        .setFaceColor(new Color(1, 1, 1, 1)));
         return true;
+    }
+
+    @Override
+    public boolean scrolled(int amount) {
+	    currentCardNum -= amount;
+	    currentCardNum %= 54;
+	    if(currentCardNum < 0) {
+	        currentCardNum = 54 + currentCardNum;
+        }
+        currentCard = new RenderableCard(currentCardNum).setPosition(5f, TABLE_WORLD_SIZE / 2).setScale(0.8f);
+
+        return false;
     }
 
     @Override

@@ -1,7 +1,6 @@
 package com.sage;
 
 public enum Rank {
-    ACE,
     TWO,
     THREE,
     FOUR,
@@ -14,6 +13,7 @@ public enum Rank {
     JACK,
     QUEEN,
     KING,
+    ACE,
     JOKER;
 
     public static Rank currentTrumpRank;
