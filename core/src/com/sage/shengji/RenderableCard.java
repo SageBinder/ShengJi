@@ -19,6 +19,7 @@ import java.util.HashMap;
 
 import static com.sage.shengji.TableScreen.*;
 
+@SuppressWarnings("unused")
 class RenderableCard extends Card {
     @SuppressWarnings("WeakerAccess")
     static final int CARD_HEIGHT_IN_PIXELS = 350;
@@ -29,51 +30,7 @@ class RenderableCard extends Card {
     @SuppressWarnings("WeakerAccess")
     static final float CARD_HEIGHT = ((float) CARD_HEIGHT_IN_PIXELS / (float) CARD_WIDTH_IN_PIXELS) * CARD_WIDTH;
 
-    // Default variable values:
-    @SuppressWarnings("WeakerAccess")
-    static final float defaultCornerRadiusScale = 0.075f;
-    static final float defaultCornerRadius = defaultCornerRadiusScale * CARD_WIDTH;
-
-    static final int defaultFaceBorderThicknessInPixels = (int)(0.015f * CARD_WIDTH_IN_PIXELS);
-    @SuppressWarnings("WeakerAccess")
-    static final int defaultBackBorderThicknessInPixels = (int)(defaultCornerRadiusScale * CARD_WIDTH_IN_PIXELS);
-
-    static final float defaultFaceDesignHeightScale = 0.95f;
-    static final float defaultFaceDesignWidthScale = 0.95f;
-
-    static final float defaultBackDesignHeightScale = ((float)CARD_HEIGHT_IN_PIXELS - (2 * (float)defaultBackBorderThicknessInPixels)) / (float)CARD_HEIGHT_IN_PIXELS;
-    static final float defaultBackDesignWidthScale = ((float)CARD_WIDTH_IN_PIXELS - (2 * (float)defaultBackBorderThicknessInPixels)) / (float)CARD_WIDTH_IN_PIXELS;
-
-    static final float defaultScale = 1f;
-
-    static final Color defaultFaceBorderColor = new Color(0, 0, 0, 1);
-    static final Color defaultBackBorderColor = new Color(1, 1, 1, 1);
-
-    static final Color defaultFaceBackgroundColor = new Color(1, 1, 1, 1);
-
-    // Member variables:
-    private float cornerRadiusScale = 0.075f;
-    private float cornerRadius = cornerRadiusScale * CARD_WIDTH;
-
-    @SuppressWarnings("FieldCanBeLocal")
-    private int faceBorderThicknessInPixels = (int)(0.015f * CARD_WIDTH_IN_PIXELS);
-    @SuppressWarnings("FieldCanBeLocal")
-    private int backBorderThicknessInPixels = (int)(cornerRadiusScale * CARD_WIDTH_IN_PIXELS);
-
-    @SuppressWarnings("FieldCanBeLocal")
-    private float faceDesignHeightScale = 0.95f; // Proportion that the face (numbers, design etc.) is scaled with respect to the card's overall rectangle
-    @SuppressWarnings("FieldCanBeLocal")
-    private float faceDesignWidthScale = 0.95f;
-
-    private float backDesignHeightScale = ((float)CARD_HEIGHT_IN_PIXELS - (2 * (float)backBorderThicknessInPixels)) / (float)CARD_HEIGHT_IN_PIXELS;
-    private float backDesignWidthScale = ((float)CARD_WIDTH_IN_PIXELS - (2 * (float)backBorderThicknessInPixels)) / (float)CARD_WIDTH_IN_PIXELS;
-
-    private float scale = 1f; // Overall scale of the card with respect to the world
-
-    private Color faceBorderColor = new Color(0, 0, 0, 1);
-    private Color backBorderColor = new Color(1, 1, 1, 1);
-
-    private Color faceBackgroundColor = new Color(1, 1, 1, 1);
+    private final RenderableCardDesignFacets facets = new RenderableCardDesignFacets();
 
     // cardRect represents overall rectangle before rounding corners
     private Rectangle cardRect = new Rectangle();
@@ -168,16 +125,6 @@ class RenderableCard extends Card {
         resizedImagePixmap.drawPixmap(originalImagePixmap,
                 0, 0, originalImagePixmap.getWidth(), originalImagePixmap.getHeight(),
                 0, 0, resizedImagePixmap.getWidth(), resizedImagePixmap.getHeight());
-//
-//        resizedImagePixmap.drawPixmap(originalImagePixmap,
-//                0, 0, originalImagePixmap.getWidth(), originalImagePixmap.getHeight(),
-//                (int)(0.5f * (CARD_WIDTH_IN_PIXELS - (CARD_WIDTH_IN_PIXELS * faceDesignWidthScale))), (int)(0.5f * (CARD_HEIGHT_IN_PIXELS - (CARD_HEIGHT_IN_PIXELS * faceDesignHeightScale))),
-//                (int)(CARD_WIDTH_IN_PIXELS * faceDesignWidthScale), (int)(CARD_HEIGHT_IN_PIXELS * faceDesignHeightScale));
-//
-//        drawCurvedBorderOnPixmap(resizedImagePixmap,
-//                (int)((cornerRadius / CARD_WIDTH) * CARD_WIDTH_IN_PIXELS),
-//                faceBorderThicknessInPixels,
-//                faceBorderColor);
 
         faceDesignPixmaps.put(cardNum, resizedImagePixmap);
 
@@ -203,11 +150,12 @@ class RenderableCard extends Card {
                         // Bottom right corner: i == 1, j == 1
                         int circleCenter_y = (pixmapHeight * i) - (radius * (-1 + (i * 2)));
                         int circleCenter_x = (pixmapWidth * j) - (radius * (-1 + (j * 2)));
+                        double distance = Math.sqrt(Math.pow(x - circleCenter_x, 2) + Math.pow(y - circleCenter_y, 2));
 
                         // Using (<= and >=) as opposed to (< and >) doesn't seem to make any visual difference
                         if(((i == 0 && y <= circleCenter_y) || (i == 1 && y >= circleCenter_y))
                                 && ((j == 0 && x <= circleCenter_x) || (j == 1 && x >= circleCenter_x))
-                                && Math.sqrt(Math.pow(x - circleCenter_x, 2) + Math.pow(y - circleCenter_y, 2)) >= radius) {
+                                && distance >= radius) {
                             pixmap.drawPixel(x, y, 0);
 
                             // Since it was determined that pixel (x, y) should be transparent,
@@ -229,7 +177,6 @@ class RenderableCard extends Card {
         int pixmapWidth = pixmap.getWidth();
 
         Pixmap.setBlending(Pixmap.Blending.None);
-
         pixmap.setColor(color);
 
         // Left border
@@ -244,7 +191,36 @@ class RenderableCard extends Card {
         // Bottom border
         pixmap.fillRectangle(radius, pixmapHeight - borderThickness, pixmapWidth - (2 * radius), borderThickness);
 
-        // TODO: Corner borders
+        // This code is almost the exact same as the code in roundPixmapCorners()
+        for(int x = 0; x < pixmapWidth; x++) {
+            nextIter:
+            for(int y = 0; y < pixmapHeight; y++) {
+                // These two innermost loops check conditions for adding a border pixel for each of the four corners
+                for(int i = 0; i < 2; i++) {
+                    for(int j = 0; j < 2; j++) {
+                        // Top left corner: i == 0, j == 0
+                        // Bottom left corner: i == 1, j == 0
+                        // Top right corner: i == 0, j == 1
+                        // Bottom right corner: i == 1, j == 1
+                        int circleCenter_y = (pixmapHeight * i) - (radius * (-1 + (i * 2)));
+                        int circleCenter_x = (pixmapWidth * j) - (radius * (-1 + (j * 2)));
+                        double distance = Math.sqrt(Math.pow(x - circleCenter_x, 2) + Math.pow(y - circleCenter_y, 2));
+
+                        // Using (<= and >=) as opposed to (< and >) doesn't seem to make any visual difference
+                        if(((i == 0 && y <= circleCenter_y) || (i == 1 && y >= circleCenter_y))
+                                && ((j == 0 && x <= circleCenter_x) || (j == 1 && x >= circleCenter_x))
+                                && distance <= radius
+                                && distance >= radius - borderThickness) {
+                            pixmap.drawPixel(x, y, Color.rgba8888(color));
+
+                            // Since it was determined that pixel (x, y) is a border pixel,
+                            // the rest of the conditions shouldn't be checked, so exit the two innermost loops.
+                            continue nextIter;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     static void dispose() {
@@ -252,32 +228,32 @@ class RenderableCard extends Card {
     }
 
     private void updateShapes(Vector2 newPosition, float newScale) {
-        this.scale = newScale;
-        float scaledCornerRadius = cornerRadius * scale;
+        facets.scale = newScale;
+        float scaledCornerRadius = facets.getCornerRadius() * facets.scale;
 
-        cardRect.setSize(CARD_WIDTH * scale, CARD_HEIGHT * scale);
+        cardRect.setSize(CARD_WIDTH * facets.scale, CARD_HEIGHT * facets.scale);
         cardRect.setPosition(newPosition);
 
         verticalRect.setPosition(cardRect.x + scaledCornerRadius, cardRect.y);
-        verticalRect.setSize((CARD_WIDTH * scale) - (2 * scaledCornerRadius), CARD_HEIGHT * scale);
+        verticalRect.setSize((CARD_WIDTH * facets.scale) - (2 * scaledCornerRadius), CARD_HEIGHT * facets.scale);
 
         horizontalRect.setPosition(cardRect.x, cardRect.y + scaledCornerRadius);
-        horizontalRect.setSize(CARD_WIDTH * scale, (CARD_HEIGHT * scale) - (2 * scaledCornerRadius));
+        horizontalRect.setSize(CARD_WIDTH * facets.scale, (CARD_HEIGHT * facets.scale) - (2 * scaledCornerRadius));
 
         cornerCircles[0].set(cardRect.x + scaledCornerRadius,                           // BOTTOM LEFT
                 cardRect.y + scaledCornerRadius,
                 scaledCornerRadius);
 
-        cornerCircles[1].set(cardRect.x + (CARD_WIDTH * scale) - scaledCornerRadius,    // BOTTOM RIGHT
+        cornerCircles[1].set(cardRect.x + (CARD_WIDTH * facets.scale) - scaledCornerRadius,    // BOTTOM RIGHT
                 cardRect.y + scaledCornerRadius,
                 scaledCornerRadius);
 
-        cornerCircles[2].set(cardRect.x + (CARD_WIDTH * scale) - scaledCornerRadius,    // TOP RIGHT
-                cardRect.y + (CARD_HEIGHT * scale) - scaledCornerRadius,
+        cornerCircles[2].set(cardRect.x + (CARD_WIDTH * facets.scale) - scaledCornerRadius,    // TOP RIGHT
+                cardRect.y + (CARD_HEIGHT * facets.scale) - scaledCornerRadius,
                 scaledCornerRadius);
 
         cornerCircles[3].set(cardRect.x + scaledCornerRadius,                           // TOP LEFT
-                cardRect.y + (CARD_HEIGHT * scale) - scaledCornerRadius,
+                cardRect.y + (CARD_HEIGHT * facets.scale) - scaledCornerRadius,
                 scaledCornerRadius);
     }
 
@@ -290,23 +266,20 @@ class RenderableCard extends Card {
         Pixmap faceDesignPixmap = faceDesignPixmaps.get(cardNum());
 
         Pixmap.setBlending(Pixmap.Blending.SourceOver);
-        thisCardFaceSpritePixmap.setColor(faceBackgroundColor);
+        thisCardFaceSpritePixmap.setColor(facets.faceBackgroundColor);
         thisCardFaceSpritePixmap.fill();
 
-        roundPixmapCorners(thisCardFaceSpritePixmap, (int)((cornerRadius / CARD_WIDTH) * CARD_WIDTH_IN_PIXELS));
+        roundPixmapCorners(thisCardFaceSpritePixmap, (int)((facets.getCornerRadius() / CARD_WIDTH) * CARD_WIDTH_IN_PIXELS));
         drawCurvedBorderOnPixmap(thisCardFaceSpritePixmap,
-                (int)((cornerRadius / CARD_WIDTH) * CARD_WIDTH_IN_PIXELS),
-                faceBorderThicknessInPixels,
-                faceBorderColor);
+                (int)((facets.getCornerRadius() / CARD_WIDTH) * CARD_WIDTH_IN_PIXELS),
+                facets.faceBorderThicknessInPixels,
+                facets.faceBorderColor);
 
         Pixmap.setBlending(Pixmap.Blending.SourceOver);
         thisCardFaceSpritePixmap.drawPixmap(faceDesignPixmap,
                 0, 0, faceDesignPixmap.getWidth(), faceDesignPixmap.getHeight(),
-                (int)(0.5f * (CARD_WIDTH_IN_PIXELS - (CARD_WIDTH_IN_PIXELS * faceDesignWidthScale))), (int)(0.5f * (CARD_HEIGHT_IN_PIXELS - (CARD_HEIGHT_IN_PIXELS * faceDesignHeightScale))),
-                (int)(CARD_WIDTH_IN_PIXELS * faceDesignWidthScale), (int)(CARD_HEIGHT_IN_PIXELS * faceDesignHeightScale));
-//        thisCardFaceSpritePixmap.drawPixmap(faceDesignPixmap,
-//                0, 0, faceDesignPixmap.getWidth(), faceDesignPixmap.getHeight(),
-//                0, 0, thisCardFaceSpritePixmap.getWidth(), thisCardFaceSpritePixmap.getHeight());
+                (int)(0.5f * (CARD_WIDTH_IN_PIXELS - (CARD_WIDTH_IN_PIXELS * facets.faceDesignWidthScale))), (int)(0.5f * (CARD_HEIGHT_IN_PIXELS - (CARD_HEIGHT_IN_PIXELS * facets.faceDesignHeightScale))),
+                (int)(CARD_WIDTH_IN_PIXELS * facets.faceDesignWidthScale), (int)(CARD_HEIGHT_IN_PIXELS * facets.faceDesignHeightScale));
 
         thisCardFaceSprite = new Sprite(new Texture(thisCardFaceSpritePixmap));
 
@@ -317,22 +290,22 @@ class RenderableCard extends Card {
         Pixmap originalBackPixmap = new Pixmap(spriteFolder.child("back.png"));
         Pixmap resizedBackPixmap = new Pixmap(CARD_WIDTH_IN_PIXELS, CARD_HEIGHT_IN_PIXELS, originalBackPixmap.getFormat());
 
-//        resizedBackPixmap.drawPixmap(originalBackPixmap,
-//                0, 0, originalBackPixmap.getWidth(), originalBackPixmap.getHeight(),
-//                0, 0, resizedBackPixmap.getWidth(), resizedBackPixmap.getHeight());
+        Pixmap.setBlending(Pixmap.Blending.SourceOver);
+        resizedBackPixmap.setColor(facets.backBackgroundColor);
+        resizedBackPixmap.fill();
 
         resizedBackPixmap.drawPixmap(originalBackPixmap,
                 0, 0,
                 originalBackPixmap.getWidth(), originalBackPixmap.getHeight(),
-                (int)(0.5f * (CARD_WIDTH_IN_PIXELS - (CARD_WIDTH_IN_PIXELS * backDesignWidthScale))), (int)(0.5f * (CARD_HEIGHT_IN_PIXELS - (CARD_HEIGHT_IN_PIXELS * backDesignHeightScale))),
-                (int)(CARD_WIDTH_IN_PIXELS * backDesignWidthScale), (int)(CARD_HEIGHT_IN_PIXELS * backDesignHeightScale));
+                (int)(0.5f * (CARD_WIDTH_IN_PIXELS - (CARD_WIDTH_IN_PIXELS * facets.backDesignWidthScale))), (int)(0.5f * (CARD_HEIGHT_IN_PIXELS - (CARD_HEIGHT_IN_PIXELS * facets.backDesignHeightScale))),
+                (int)(CARD_WIDTH_IN_PIXELS * facets.backDesignWidthScale), (int)(CARD_HEIGHT_IN_PIXELS * facets.backDesignHeightScale));
 
-        int cornerRadiusInPixels = (int)((cornerRadius / CARD_WIDTH) * CARD_WIDTH_IN_PIXELS);
+        int cornerRadiusInPixels = (int)((facets.getCornerRadius() / CARD_WIDTH) * CARD_WIDTH_IN_PIXELS);
         roundPixmapCorners(resizedBackPixmap, cornerRadiusInPixels);
         drawCurvedBorderOnPixmap(resizedBackPixmap,
                 cornerRadiusInPixels,
-                backBorderThicknessInPixels,
-                backBorderColor);
+                facets.backBorderThicknessInPixels,
+                facets.backBorderColor);
         thisCardBackSprite = new Sprite(new Texture(resizedBackPixmap));
 
         originalBackPixmap.dispose();
@@ -356,8 +329,8 @@ class RenderableCard extends Card {
     private void renderFace(SpriteBatch batch) {
         batch.begin();
 
-        thisCardFaceSprite.setSize(CARD_WIDTH * scale, CARD_HEIGHT * scale);
-        thisCardFaceSprite.setPosition(cardRect.x + (0.5f * scale * (CARD_WIDTH - (CARD_WIDTH))), cardRect.y + (0.5f * scale * (CARD_HEIGHT - (CARD_HEIGHT))));
+        thisCardFaceSprite.setSize(CARD_WIDTH * facets.scale, CARD_HEIGHT * facets.scale);
+        thisCardFaceSprite.setPosition(cardRect.x + (0.5f * facets.scale * (CARD_WIDTH - (CARD_WIDTH))), cardRect.y + (0.5f * facets.scale * (CARD_HEIGHT - (CARD_HEIGHT))));
         thisCardFaceSprite.draw(batch);
 
         batch.end();
@@ -365,7 +338,7 @@ class RenderableCard extends Card {
 
     private void renderBack(SpriteBatch batch) {
         batch.begin();
-        thisCardBackSprite.setSize(CARD_WIDTH * scale, CARD_HEIGHT * scale);
+        thisCardBackSprite.setSize(CARD_WIDTH * facets.scale, CARD_HEIGHT * facets.scale);
         thisCardBackSprite.setPosition(cardRect.x, cardRect.y);
         thisCardBackSprite.draw(batch);
         batch.end();
@@ -383,102 +356,99 @@ class RenderableCard extends Card {
 
     // Face value setters:
     RenderableCard setFaceDesignScale(float scale) {
-        faceDesignHeightScale = scale;
-        faceDesignWidthScale = scale;
+        facets.setFaceDesignScale(scale);
         thisCardFaceSprite = null;
         return this;
     }
 
     RenderableCard setFaceDesignHeightScale(float scale) {
-        faceDesignHeightScale = scale;
+        facets.faceDesignHeightScale = facets.scale;
         thisCardFaceSprite = null;
         return this;
     }
 
     RenderableCard setFaceDesignWidthScale(float scale) {
-        faceDesignWidthScale = scale;
+        facets.faceDesignWidthScale = facets.scale;
         thisCardFaceSprite = null;
         return this;
     }
 
     RenderableCard setFaceBackgroundColor(Color faceBackgroundColor) {
-        this.faceBackgroundColor = faceBackgroundColor;
+        facets.faceBackgroundColor = faceBackgroundColor;
         thisCardFaceSprite = null;
         return this;
     }
 
     RenderableCard setFaceBorderColor(Color faceBorderColor) {
-        this.faceBorderColor = faceBorderColor;
+        facets.faceBorderColor = faceBorderColor;
         thisCardFaceSprite = null;
         return this;
     }
 
     RenderableCard setFaceBorderThicknessRelativeToHeight(float borderScale) {
-        faceBorderThicknessInPixels = (int)(borderScale * CARD_HEIGHT_IN_PIXELS);
+        facets.faceBorderThicknessInPixels = (int)(borderScale * CARD_HEIGHT_IN_PIXELS);
         thisCardFaceSprite = null;
         return this;
     }
 
     RenderableCard setFaceBorderThicknessRelativeToWidth(float borderScale) {
-        faceBorderThicknessInPixels = (int)(borderScale * CARD_WIDTH_IN_PIXELS);
+        facets.faceBorderThicknessInPixels = (int)(borderScale * CARD_WIDTH_IN_PIXELS);
         thisCardFaceSprite = null;
         return this;
     }
 
     RenderableCard setFaceBorderThicknessInPixels(int faceBorderThicknessInPixels) {
-        this.faceBorderThicknessInPixels = faceBorderThicknessInPixels;
+        facets.faceBorderThicknessInPixels = faceBorderThicknessInPixels;
         thisCardFaceSprite = null;
         return this;
     }
 
     // Back value setters:
     RenderableCard setBackDesignScale(float scale) {
-        backDesignHeightScale = scale;
-        backDesignWidthScale = scale;
+        facets.setBackDesignScale(scale);
         thisCardBackSprite = null;
         return this;
     }
 
     RenderableCard setBackDesignHeightScale(float backDesignHeightScale) {
-        this.backDesignHeightScale = backDesignHeightScale;
+        facets.backDesignHeightScale = backDesignHeightScale;
         thisCardBackSprite = null;
         return this;
     }
 
     RenderableCard setBackDesignWidthScale(float backDesignWidthScale) {
-        this.backDesignWidthScale = backDesignWidthScale;
+        facets.backDesignWidthScale = backDesignWidthScale;
         thisCardBackSprite = null;
         return this;
     }
 
     RenderableCard setBackBorderColor(Color backBorderColor) {
-        this.backBorderColor = backBorderColor;
+        facets.backBorderColor = backBorderColor;
         thisCardBackSprite = null;
         return this;
     }
 
     RenderableCard setBackBorderThicknessRelativeToHeight(float borderScale) {
-        backBorderThicknessInPixels = (int)(borderScale * CARD_HEIGHT_IN_PIXELS);
+        facets.backBorderThicknessInPixels = (int)(borderScale * CARD_HEIGHT_IN_PIXELS);
         thisCardBackSprite = null;
         return this;
     }
 
     RenderableCard setBackBorderThicknessRelativeToWidth(float borderScale) {
-        this.backBorderThicknessInPixels = (int)(borderScale * CARD_WIDTH_IN_PIXELS);
+        facets.backBorderThicknessInPixels = (int)(borderScale * CARD_WIDTH_IN_PIXELS);
         thisCardBackSprite = null;
         return this;
     }
 
     RenderableCard setBackBorderThicknessInPixels(int backBorderThicknessInPixels) {
-        this.backBorderThicknessInPixels = backBorderThicknessInPixels;
+        facets.backBorderThicknessInPixels = backBorderThicknessInPixels;
         thisCardBackSprite = null;
         return this;
     }
 
     // Shared value setters:
     RenderableCard setCornerRadiusScale(float cornerRadiusScale) {
-        this.cornerRadiusScale = cornerRadiusScale;
-        cornerRadius = cornerRadiusScale * CARD_WIDTH;
+        facets.setCornerRadiusScale(cornerRadiusScale);
         thisCardFaceSprite = null;
         thisCardBackSprite = null;
         return this;
@@ -490,22 +460,23 @@ class RenderableCard extends Card {
     }
 
     RenderableCard setFaceColor(Color c) {
-        faceBackgroundColor = c;
+        facets.faceBackgroundColor = c;
         thisCardFaceSprite = null;
         return this;
     }
 
     RenderableCard setScale(float newScale) {
-        this.scale = newScale;
+        facets.scale = newScale;
         updateShapes(cardRect.getPosition(new Vector2()), newScale);
         return this;
     }
 
     RenderableCard setPosition(Vector2 newPosition) {
-        updateShapes(newPosition, scale);
+        updateShapes(newPosition, facets.scale);
         return this;
     }
 
+    @SuppressWarnings("SameParameterValue")
     RenderableCard setPosition(float x, float y) {
         return setPosition(new Vector2(x, y));
     }
@@ -517,11 +488,11 @@ class RenderableCard extends Card {
     }
 
     Color getFaceColor() {
-        return faceBackgroundColor;
+        return facets.faceBackgroundColor;
     }
 
     float getScale() {
-        return scale;
+        return facets.scale;
     }
 
     Vector2 getPosition() {
