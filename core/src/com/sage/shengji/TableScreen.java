@@ -84,9 +84,9 @@ class TableScreen extends InputAdapter implements Screen {
             RenderableCard c = placedCards.get(i);
             if(c.containsPoint(clickCoordinates)) {
                 if(button == Input.Buttons.LEFT && c.isFaceUp()) {
-                    c.getFacets().setFaceBackgroundColor(c.getFacets().getFaceBackgroundColor().sub(0.1f, 0.1f, 0.1f, 0.1f));
-                    if(c.getFacets().getFaceBackgroundColor().a == 0) {
-                        c.getFacets().setFaceBackgroundColor(new Color(random.nextFloat(), random.nextFloat(), random.nextFloat(), 1));
+                    c.setFaceBackgroundColor(c.getFaceBackgroundColor().sub(0.1f, 0.1f, 0.1f, 0.1f));
+                    if(c.getFaceBackgroundColor().a == 0) {
+                        c.setFaceBackgroundColor(new Color(random.nextFloat(), random.nextFloat(), random.nextFloat(), 1));
                     }
                     return true;
                 } else if(button == Input.Buttons.RIGHT) {

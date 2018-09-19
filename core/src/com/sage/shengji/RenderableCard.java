@@ -7,17 +7,15 @@ import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.math.Rectangle;
-import com.badlogic.gdx.math.Vector2;
 import com.sage.Card;
 import com.sage.Rank;
 import com.sage.Suit;
 
 import java.util.HashMap;
 
-import static com.sage.shengji.TableScreen.*;
+import static com.sage.shengji.TableScreen.TABLE_WORLD_SIZE;
 
-class RenderableCard extends Card {
+class RenderableCard extends AbstractRenderableCard<RenderableCard> {
     @SuppressWarnings("WeakerAccess")
     static final int CARD_HEIGHT_IN_PIXELS = 350;
     @SuppressWarnings("WeakerAccess")
@@ -27,8 +25,6 @@ class RenderableCard extends Card {
     @SuppressWarnings("WeakerAccess")
     static final float CARD_HEIGHT = ((float) CARD_HEIGHT_IN_PIXELS / (float) CARD_WIDTH_IN_PIXELS) * CARD_WIDTH;
 
-    private RenderableCardDesignFacets facets = new RenderableCardDesignFacets(this);
-
     private static FileHandle defaultSpriteFolder = Gdx.files.internal("playing_cards/");
     private static FileHandle spriteFolder = defaultSpriteFolder;
 
@@ -37,10 +33,6 @@ class RenderableCard extends Card {
 
     private Sprite thisCardBackSprite = null;
     private Sprite thisCardFaceSprite = null;
-
-    private boolean faceUp = true;
-    private boolean isSelected = false;
-    private boolean selectable = true;
 
     RenderableCard(Rank rank, Suit suit) {
         super(rank, suit);
@@ -221,20 +213,20 @@ class RenderableCard extends Card {
         Pixmap faceDesignPixmap = faceDesignPixmaps.get(cardNum());
 
         Pixmap.setBlending(Pixmap.Blending.SourceOver);
-        resizedFacePixmap.setColor(facets.getFaceBackgroundColor());
+        resizedFacePixmap.setColor(getFaceBackgroundColor());
         resizedFacePixmap.fill();
 
-        roundPixmapCorners(resizedFacePixmap, (int)((facets.getCornerRadius() / CARD_WIDTH) * CARD_WIDTH_IN_PIXELS));
+        roundPixmapCorners(resizedFacePixmap, (int) ((getCornerRadius() / CARD_WIDTH) * CARD_WIDTH_IN_PIXELS));
         drawCurvedBorderOnPixmap(resizedFacePixmap,
-                (int)((facets.getCornerRadius() / CARD_WIDTH) * CARD_WIDTH_IN_PIXELS),
-                facets.getFaceBorderThicknessInPixels(),
-                facets.getFaceBorderColor());
+                (int) ((getCornerRadius() / CARD_WIDTH) * CARD_WIDTH_IN_PIXELS),
+                getFaceBorderThicknessInPixels(),
+                getFaceBorderColor());
 
         Pixmap.setBlending(Pixmap.Blending.SourceOver);
         resizedFacePixmap.drawPixmap(faceDesignPixmap,
                 0, 0, faceDesignPixmap.getWidth(), faceDesignPixmap.getHeight(),
-                (int)(0.5f * (CARD_WIDTH_IN_PIXELS - (CARD_WIDTH_IN_PIXELS * facets.getFaceDesignWidthScale()))), (int)(0.5f * (CARD_HEIGHT_IN_PIXELS - (CARD_HEIGHT_IN_PIXELS * facets.getFaceDesignHeightScale()))),
-                (int)(CARD_WIDTH_IN_PIXELS * facets.getFaceDesignWidthScale()), (int)(CARD_HEIGHT_IN_PIXELS * facets.getFaceDesignHeightScale()));
+                (int) (0.5f * (CARD_WIDTH_IN_PIXELS - (CARD_WIDTH_IN_PIXELS * getFaceDesignWidthScale()))), (int) (0.5f * (CARD_HEIGHT_IN_PIXELS - (CARD_HEIGHT_IN_PIXELS * getFaceDesignHeightScale()))),
+                (int) (CARD_WIDTH_IN_PIXELS * getFaceDesignWidthScale()), (int) (CARD_HEIGHT_IN_PIXELS * getFaceDesignHeightScale()));
 
         thisCardFaceSprite = new Sprite(new Texture(resizedFacePixmap));
 
@@ -249,28 +241,28 @@ class RenderableCard extends Card {
         Pixmap resizedBackPixmap = new Pixmap(CARD_WIDTH_IN_PIXELS, CARD_HEIGHT_IN_PIXELS, backPixmap.getFormat());
 
         Pixmap.setBlending(Pixmap.Blending.SourceOver);
-        resizedBackPixmap.setColor(facets.getBackBackgroundColor());
+        resizedBackPixmap.setColor(getBackBackgroundColor());
         resizedBackPixmap.fill();
 
         resizedBackPixmap.drawPixmap(backPixmap,
                 0, 0,
                 backPixmap.getWidth(), backPixmap.getHeight(),
-                (int)(0.5f * (CARD_WIDTH_IN_PIXELS - (CARD_WIDTH_IN_PIXELS * facets.getBackDesignWidthScale()))), (int)(0.5f * (CARD_HEIGHT_IN_PIXELS - (CARD_HEIGHT_IN_PIXELS * facets.getBackDesignHeightScale()))),
-                (int)(CARD_WIDTH_IN_PIXELS * facets.getBackDesignWidthScale()), (int)(CARD_HEIGHT_IN_PIXELS * facets.getBackDesignHeightScale()));
+                (int) (0.5f * (CARD_WIDTH_IN_PIXELS - (CARD_WIDTH_IN_PIXELS * getBackDesignWidthScale()))), (int) (0.5f * (CARD_HEIGHT_IN_PIXELS - (CARD_HEIGHT_IN_PIXELS * getBackDesignHeightScale()))),
+                (int) (CARD_WIDTH_IN_PIXELS * getBackDesignWidthScale()), (int) (CARD_HEIGHT_IN_PIXELS * getBackDesignHeightScale()));
 
-        int cornerRadiusInPixels = (int)((facets.getCornerRadius() / CARD_WIDTH) * CARD_WIDTH_IN_PIXELS);
+        int cornerRadiusInPixels = (int) ((getCornerRadius() / CARD_WIDTH) * CARD_WIDTH_IN_PIXELS);
         roundPixmapCorners(resizedBackPixmap, cornerRadiusInPixels);
         drawCurvedBorderOnPixmap(resizedBackPixmap,
                 cornerRadiusInPixels,
-                facets.getBackBorderThicknessInPixels(),
-                facets.getBackBorderColor());
+                getBackBorderThicknessInPixels(),
+                getBackBorderColor());
         thisCardBackSprite = new Sprite(new Texture(resizedBackPixmap));
 
         resizedBackPixmap.dispose();
     }
 
     void render(SpriteBatch batch) {
-        if(faceUp) {
+        if(isFaceUp()) {
             if(thisCardFaceSprite == null) {
                 setupThisCardFaceSprite();
             }
@@ -286,9 +278,9 @@ class RenderableCard extends Card {
     private void renderFace(SpriteBatch batch) {
         batch.begin();
 
-        thisCardFaceSprite.setSize(facets.getCardRect().width, facets.getCardRect().height);
-        thisCardFaceSprite.setPosition(facets.getCardRect().x,
-                facets.getCardRect().y + ((isSelected ? 1 : 0) * facets.getHeightChangeOnSelect() * getScale()));
+        thisCardFaceSprite.setSize(getWidth(), getHeight());
+        thisCardFaceSprite.setPosition(getX(),
+                getY() + ((isSelected() ? 1 : 0) * getHeightChangeOnSelect() * getScale()));
         thisCardFaceSprite.draw(batch);
 
         batch.end();
@@ -296,150 +288,15 @@ class RenderableCard extends Card {
 
     private void renderBack(SpriteBatch batch) {
         batch.begin();
-        thisCardBackSprite.setSize(CARD_WIDTH * facets.getScale(), CARD_HEIGHT * facets.getScale());
-        thisCardBackSprite.setPosition(facets.getCardRect().x,
-                facets.getCardRect().y + ((isSelected ? 1 : 0) * facets.getHeightChangeOnSelect() * getScale()));
+        thisCardBackSprite.setSize(CARD_WIDTH * getScale(), CARD_HEIGHT * getScale());
+        thisCardBackSprite.setPosition(getX(),
+                getY() + ((isSelected() ? 1 : 0) * getHeightChangeOnSelect() * getScale()));
         thisCardBackSprite.draw(batch);
         batch.end();
     }
 
-    @SuppressWarnings("unused")
-    boolean containsPoint(Vector2 point) {
-        return containsPoint(point.x, point.y);
-    }
-
-    @SuppressWarnings("WeakerAccess")
-    boolean containsPoint(float x, float y) {
-        return (!isSelected &&
-                facets.getCardRect().contains(x, y))
-                || (isSelected && new Rectangle(facets.getCardRect().x, facets.getCardRect().y + (facets.getHeightChangeOnSelect() * getScale()), getWidth(), getHeight())
-                .contains(x, y));
-    }
-
-    RenderableCard setFaceUp(boolean faceUp) {
-        this.faceUp = faceUp;
-        return this;
-    }
-
-    boolean isFaceUp() {
-        return faceUp;
-    }
-
-    RenderableCard setSelectable(boolean selectable) {
-        this.selectable = selectable;
-        return this;
-    }
-
-    RenderableCard setSelected(boolean selected) {
-        if(isSelected == selected || !selectable) {
-            return this;
-        }
-        isSelected = selected;
-
-        if(isSelected) {
-            facets.setFaceBackgroundColor(new Color(facets.getFaceBackgroundColor().sub(0.5f, 0.5f, 0.5f, 0)));
-        } else {
-            facets.setFaceBackgroundColor(new Color(RenderableCardDesignFacets.defaultFaceBackgroundColor));
-        }
-
-        return this;
-    }
-
-    RenderableCard toggleSelected() {
-        return setSelected(!isSelected);
-    }
-
-    boolean isSelected() {
-        return isSelected;
-    }
-
-    @SuppressWarnings("UnusedReturnValue")
-    RenderableCard flip() {
-        faceUp = !faceUp;
-        return this;
-    }
-
-    void facetsChanged() {
+    void displayParametersChanged() {
         thisCardFaceSprite = null;
         thisCardBackSprite = null;
-    }
-
-    RenderableCard setFacets(RenderableCardDesignFacets facets) {
-        if(!facets.cardEquals(this)) {
-            this.facets = new RenderableCardDesignFacets(facets, this);
-        } else {
-            this.facets = facets;
-        }
-        facetsChanged();
-
-        return this;
-    }
-
-    RenderableCard setScale(float newScale) {
-        facets.setScale(newScale);
-        return this;
-    }
-
-    RenderableCard setWidth(float width) {
-        facets.setWidth(width);
-        return this;
-    }
-
-    RenderableCard setHeight(float height) {
-        facets.setHeight(height);
-        return this;
-    }
-
-    RenderableCard setX(float x) {
-        facets.setX(x);
-        return this;
-    }
-
-    RenderableCard setY(float y) {
-        facets.setY(y);
-        return this;
-    }
-
-    RenderableCard setPosition(Vector2 newPosition) {
-        facets.setPosition(newPosition);
-        return this;
-    }
-
-    @SuppressWarnings("SameParameterValue")
-    RenderableCard setPosition(float x, float y) {
-        facets.setPosition(x, y);
-        return this;
-    }
-
-    RenderableCardDesignFacets getFacets() {
-        return facets;
-    }
-
-    float getScale() {
-        return facets.getScale();
-    }
-
-    float getX() {
-        return facets.getX();
-    }
-
-    float getY() {
-        return facets.getY();
-    }
-
-    float getHeight() {
-        return facets.getHeight();
-    }
-
-    float getWidth() {
-        return facets.getWidth();
-    }
-
-    Vector2 getPosition() {
-        return facets.getPosition();
-    }
-
-    Rectangle getCardRect() {
-        return facets.getCardRect();
     }
 }

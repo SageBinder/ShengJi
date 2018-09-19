@@ -1,15 +1,10 @@
 package com.sage.shengji;
 
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 
 import java.util.ArrayList;
-import java.util.Collections;
-
-import static com.sage.shengji.RenderableCard.CARD_HEIGHT;
-import static com.sage.shengji.RenderableCard.CARD_WIDTH;
 
 class RenderableHand extends RenderableCardList {
     private ExtendViewport viewport;
@@ -33,7 +28,7 @@ class RenderableHand extends RenderableCardList {
         float pixelDivision = width / size();
 
         for(int i = 0; i < size(); i++) {
-            (get(i).getFacets()).setScale(0.5f).setPosition(new Vector2((i * pixelDivision) + 0.1f, 0.2f));
+            get(i).setScale(0.5f).setPosition(new Vector2((i * pixelDivision) + 0.1f, 0.2f));
         }
 
         super.render(batch);
