@@ -8,12 +8,18 @@ import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import java.util.ArrayList;
 import java.util.Collections;
 
+import static com.sage.shengji.RenderableCard.CARD_HEIGHT;
+import static com.sage.shengji.RenderableCard.CARD_WIDTH;
+
 class RenderableHand extends RenderableCardList {
     private ExtendViewport viewport;
+
+    private float maxWidth, maxHeight;
 
     RenderableHand(ExtendViewport viewport) {
         super();
         this.viewport = viewport;
+        maxWidth = viewport.getWorldWidth();
     }
 
     RenderableHand(ArrayList<RenderableCard> cards, ExtendViewport viewport) {
@@ -27,7 +33,7 @@ class RenderableHand extends RenderableCardList {
         float pixelDivision = width / size();
 
         for(int i = 0; i < size(); i++) {
-            get(i).setScale(0.5f).setPosition(new Vector2((i * pixelDivision) + 0.1f, 0.2f));
+            (get(i).getFacets()).setScale(0.5f).setPosition(new Vector2((i * pixelDivision) + 0.1f, 0.2f));
         }
 
         super.render(batch);
@@ -47,5 +53,18 @@ class RenderableHand extends RenderableCardList {
         }
 
         return null;
+    }
+
+    boolean toggleSelectedFromClick(Vector2 clickPos) {
+        return toggleSelectedFromClick(clickPos.x, clickPos.y);
+    }
+
+    boolean toggleSelectedFromClick(float x, float y) {
+        RenderableCard c = click(x, y);
+        if(c != null) {
+            c.toggleSelected();
+            return true;
+        }
+        return false;
     }
 }

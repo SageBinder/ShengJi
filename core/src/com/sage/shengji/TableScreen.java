@@ -84,9 +84,9 @@ class TableScreen extends InputAdapter implements Screen {
             RenderableCard c = placedCards.get(i);
             if(c.containsPoint(clickCoordinates)) {
                 if(button == Input.Buttons.LEFT && c.isFaceUp()) {
-                    c.setFaceColor(c.getFaceColor().sub(0.1f, 0.1f, 0.1f, 0.1f));
-                    if(c.getFaceColor().a == 0) {
-                        c.setFaceColor(new Color(random.nextFloat(), random.nextFloat(), random.nextFloat(), 1));
+                    c.getFacets().setFaceBackgroundColor(c.getFacets().getFaceBackgroundColor().sub(0.1f, 0.1f, 0.1f, 0.1f));
+                    if(c.getFacets().getFaceBackgroundColor().a == 0) {
+                        c.getFacets().setFaceBackgroundColor(new Color(random.nextFloat(), random.nextFloat(), random.nextFloat(), 1));
                     }
                     return true;
                 } else if(button == Input.Buttons.RIGHT) {
@@ -104,16 +104,10 @@ class TableScreen extends InputAdapter implements Screen {
         RenderableCard c;
         if((c = hand.click(clickCoordinates)) != null) {
             if(button == Input.Buttons.LEFT && c.isFaceUp()) {
-                c.setFaceColor(c.getFaceColor().sub(0.1f, 0.1f, 0.1f, 0.1f));
-                if(c.getFaceColor().a == 0) {
-                    c.setFaceColor(new Color(1, 1, 1, 1));
-                }
+                c.toggleSelected();
                 return true;
             } else if(button == Input.Buttons.RIGHT) {
                 c.flip();
-                return true;
-            } else if(button == Input.Buttons.MIDDLE) {
-                placedCards.remove(c);
                 return true;
             }
 
@@ -122,8 +116,7 @@ class TableScreen extends InputAdapter implements Screen {
 
         placedCards.add(new RenderableCard(currentCardNum)
                         .setPosition(clickCoordinates)
-                        .setScale(1f).setFaceUp(button == Input.Buttons.LEFT)
-                        .setFaceColor(new Color(1, 1, 1, 1)));
+                        .setScale(1f).setFaceUp(button == Input.Buttons.LEFT));
         return true;
     }
 
