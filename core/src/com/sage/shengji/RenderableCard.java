@@ -13,7 +13,7 @@ import com.sage.Suit;
 
 import java.util.HashMap;
 
-import static com.sage.shengji.TableScreen.TABLE_WORLD_SIZE;
+import static com.sage.shengji.PlaygroundScreen.TABLE_WORLD_SIZE;
 
 class RenderableCard extends AbstractRenderableCard<RenderableCard> {
     @SuppressWarnings("WeakerAccess")

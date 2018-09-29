@@ -4,6 +4,7 @@ import com.badlogic.gdx.Game;
 import com.badlogic.gdx.graphics.Color;
 import com.sage.server.ShengJiServer;
 
+// TODO: Rendering part of player code
 public class ShengJiGame extends Game {
     static final Color BACKGROUND_COLOR = new Color(0, 0.2f, 0.11f, 1);
 
@@ -12,15 +13,15 @@ public class ShengJiGame extends Game {
 
     @Override
     public void create() {
-        setScreen(new TableScreen(this));
+        showPlaygroundScreen();
     }
 
     void showStartScreen() {
         setScreen(new StartScreen(this));
     }
 
-    void showTableScreen() {
-        setScreen(new TableScreen(this));
+    void showPlaygroundScreen() {
+        setScreen(new PlaygroundScreen(this));
     }
 
     void showCreateGameScreen() {
@@ -39,9 +40,12 @@ public class ShengJiGame extends Game {
         setScreen(new LobbyScreen(this));
     }
 
-    void openClient(int port, String serverIP, String name) {
-        this.client = new ShengJiClient(port, serverIP, name, this);
+    void startGame(int port, String serverIP, String name) {
+        GameState gameState = new GameState();
+        this.client = new ShengJiClient(port, serverIP, name, this, gameState);
         client.start();
+
+        setScreen(new GameScreen(this, gameState));
     }
 
     void openServer(int port, int numPlayers) {

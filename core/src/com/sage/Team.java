@@ -1,15 +1,15 @@
-package com.sage.server;
+package com.sage;
 
 public enum Team {
     COLLECTORS(1), KEEPERS(0), NO_TEAM(-1);
 
-    int teamNum;
+    public int teamNum;
 
     Team(int i) {
         teamNum = i;
     }
 
-    int getTeamNum() {
+    public int getTeamNum() {
         return teamNum;
     }
 }

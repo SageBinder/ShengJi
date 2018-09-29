@@ -8,20 +8,18 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 
 import java.util.ArrayList;
 import java.util.Random;
 
-class TableScreen extends InputAdapter implements Screen {
+class PlaygroundScreen extends InputAdapter implements Screen {
     static final float TABLE_WORLD_SIZE = 100f;
 
     private ShengJiGame game;
 
 	private SpriteBatch batch;
-	private ShapeRenderer renderer;
 	private ExtendViewport viewport;
 	private OrthographicCamera camera;
 
@@ -33,17 +31,16 @@ class TableScreen extends InputAdapter implements Screen {
 
 	private Random random = new Random(69);
 
-	TableScreen(ShengJiGame game) {
+	PlaygroundScreen(ShengJiGame game) {
 	    this.game = game;
     }
 
     @Override
     public void show() {
         batch = new SpriteBatch();
-        renderer = new ShapeRenderer();
         camera = new OrthographicCamera();
         viewport = new ExtendViewport(TABLE_WORLD_SIZE, TABLE_WORLD_SIZE, camera);
-        hand  = new RenderableHand(viewport);
+        hand  = new RenderableHand();
 
         for(int i = 0; i < 22; i++) {
             hand.add(new RenderableCard());
@@ -62,10 +59,9 @@ class TableScreen extends InputAdapter implements Screen {
 
         viewport.apply();
         batch.setProjectionMatrix(camera.combined);
-        renderer.setProjectionMatrix(camera.combined);
 
         currentCard.render(batch);
-        hand.render(batch);
+        hand.render(batch, viewport);
         for(RenderableCard c : placedCards) {
             c.render(batch);
         }
@@ -102,7 +98,7 @@ class TableScreen extends InputAdapter implements Screen {
         }
 
         RenderableCard c;
-        if((c = hand.click(clickCoordinates)) != null) {
+        if((c = hand.getClickedCard(clickCoordinates)) != null) {
             if(button == Input.Buttons.LEFT && c.isFaceUp()) {
                 c.toggleSelected();
                 return true;

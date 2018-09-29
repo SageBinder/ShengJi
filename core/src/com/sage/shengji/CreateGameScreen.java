@@ -98,7 +98,7 @@ class CreateGameScreen extends InputAdapter implements Screen {
                 }
 
                 game.openServer(port, numPlayers);
-                game.openClient(port, "127.0.0.1", name);
+                game.startGame(port, "127.0.0.1", name);
 
                 game.showLobbyScreen();
             }

@@ -1,6 +1,7 @@
 package com.sage.server;
 
 public class ServerCodes { // Codes are negative so as to not clash with the sending of card information
+    // Calling codes:
     public static final int INVALID_CALL = -1;
     public static final int NO_CALL = -2;
     public static final int SUCCESSFUL_CALL = -3;
@@ -8,12 +9,15 @@ public class ServerCodes { // Codes are negative so as to not clash with the sen
     public static final int WAIT_FOR_OTHER_PLAYER_CALL = -5;
     public static final int WAIT_FOR_CALL_WINNER = -6;
 
-    public static final int WAIT_FOR_KITTY = -100;
-    public static final int WAIT_FOR_HAND = -101;
-    public static final int SEND_KITTY_REPLACEMENTS = -102;
-    public static final int SEND_FRIEND_CARDS = -102;
-    public static final int WAIT_FOR_FRIEND_CARDS = -103;
+    // Game setup codes:
+    public static final int WAIT_FOR_PLAYER_ORDER = -100;
+    public static final int WAIT_FOR_KITTY = -101;
+    public static final int WAIT_FOR_HAND = -102;
+    public static final int SEND_KITTY_REPLACEMENTS = -103;
+    public static final int SEND_FRIEND_CARDS = -104;
+    public static final int WAIT_FOR_FRIEND_CARDS = -105;
 
+    // Game codes:
     public static final int SEND_PLAY_LENGTH = -200;
     public static final int WAIT_FOR_PLAY_LENGTH = -201;
     public static final int SEND_PLAY = -202;
@@ -27,5 +31,9 @@ public class ServerCodes { // Codes are negative so as to not clash with the sen
     public static final int WAIT_FOR_COLLECTED_POINTS = -210;
     public static final int WAIT_FOR_CALLING_NUMBERS = -211;
     public static final int ROUND_OVER = -212;
-    public static final int WAIT_FOR_PLAYER_ORDER = -213;
+
+    // Lobby codes
+    public static final int JOIN_SUCCESSFUL = -300;
+    public static final int CONNECTION_DENIED = -301;
+    public static final int WAIT_FOR_PLAYERS_LIST = -302;
 }

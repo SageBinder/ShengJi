@@ -1,7 +1,6 @@
 package com.sage.shengji;
 
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.sage.CardList;
 import com.sage.Rank;
 import com.sage.Suit;

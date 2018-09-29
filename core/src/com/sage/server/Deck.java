@@ -24,7 +24,7 @@ class Deck extends ServerCardList {
         remove(toDeal);
     }
 
-    void dealAllRandomly(ArrayList<Player> players) {
+    void dealAllRandomly(PlayerList players) {
         while(size() > 0) {
             for(Player p : players) {
                 dealRandomToPlayer(p);

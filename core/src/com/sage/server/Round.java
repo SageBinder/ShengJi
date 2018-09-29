@@ -2,23 +2,24 @@ package com.sage.server;
 
 import com.sage.Rank;
 import com.sage.Suit;
+import com.sage.Team;
 
 import java.util.ArrayList;
 import java.util.Collections;
 
 class Round {
-    private ArrayList<Player> players = new ArrayList<>();
+    private PlayerList players;
 
-    Round(ArrayList<Player> players) {
-        this.players.addAll(players);
+    Round(PlayerList players) {
+        this.players = players;
     }
 
     void playNewRound() {
         // Reorganize "seating"
         Collections.shuffle(players);
-        Player.sendIntToAll(players, ServerCodes.WAIT_FOR_PLAYER_ORDER);
+        players.sendIntToAll(ServerCodes.WAIT_FOR_PLAYER_ORDER);
         for(Player p : players) {
-            Player.sendIntToAll(players, p.getPlayerNum());
+            players.sendIntToAll(p.getPlayerNum());
         }
 
 
@@ -46,10 +47,10 @@ class Round {
                 pointCardsCollected.addAll(trickResult.getPointCards());
             }
 
-            Player.sendIntToAll(players, ServerCodes.WAIT_FOR_TRICK_WINNER);
-            Player.sendIntToAll(players, trickWinner.getPlayerNum());
-            Player.sendIntToAll(players, ServerCodes.WAIT_FOR_TRICK_POINT_CARDS);
-            Player.sendCardsToAll(players, trickResult.getPointCards());
+            players.sendIntToAll(ServerCodes.WAIT_FOR_TRICK_WINNER);
+            players.sendIntToAll(trickWinner.getPlayerNum());
+            players.sendIntToAll(ServerCodes.WAIT_FOR_TRICK_POINT_CARDS);
+            players.sendCardsToAll(trickResult.getPointCards());
 
             winningPlay = trickResult.getWinningPlay();
         }
@@ -63,15 +64,15 @@ class Round {
             totalPointsCollected += kittyPointsMultiplier * (kitty.getTotalPoints());
         }
         // Send total collected points to all players
-        Player.sendIntToAll(players, ServerCodes.WAIT_FOR_COLLECTED_POINTS);
-        Player.sendIntToAll(players, totalPointsCollected);
+        players.sendIntToAll(ServerCodes.WAIT_FOR_COLLECTED_POINTS);
+        players.sendIntToAll(totalPointsCollected);
 
         // Send kitty to all players
-        Player.sendIntToAll(players, ServerCodes.WAIT_FOR_KITTY);
-        Player.sendCardsToAll(players, kitty);
+        players.sendIntToAll(ServerCodes.WAIT_FOR_KITTY);
+        players.sendCardsToAll(kitty);
 
         // Send round winners to all players
-        Player.sendIntToAll(players, ServerCodes.WAIT_FOR_ROUND_WINNERS);
+        players.sendIntToAll(ServerCodes.WAIT_FOR_ROUND_WINNERS);
         Team winningTeam;
         if(totalPointsCollected >= numPointsNeeded) {
             winningTeam = Team.COLLECTORS;
@@ -80,18 +81,18 @@ class Round {
         }
         for(Player p : players) {
             if(p.getTeam() == winningTeam) {
-                Player.sendIntToAll(players, p.getPlayerNum());
+                players.sendIntToAll(p.getPlayerNum());
                 p.increaseCallRank(1); // TODO: calculate whether or not winners should go up 2 or 3 ranks
             }
         }
 
         // Send new calling numbers to all players
-        Player.sendIntToAll(players, ServerCodes.WAIT_FOR_CALLING_NUMBERS);
+        players.sendIntToAll(ServerCodes.WAIT_FOR_CALLING_NUMBERS);
         for(Player p : players) {
-            Player.sendIntToAll(players, p.getPlayerNum());
-            Player.sendIntToAll(players, p.getCallRank());
+            players.sendIntToAll(p.getPlayerNum());
+            players.sendIntToAll(p.getCallRank());
         }
-        Player.sendIntToAll(players, ServerCodes.ROUND_OVER);
+        players.sendIntToAll(ServerCodes.ROUND_OVER);
     }
 
     private ServerCardList getKittyFromDeck(Deck deck) {
@@ -111,8 +112,9 @@ class Round {
 
     private void dealDeckToPlayers(Deck deck) {
         deck.dealAllRandomly(players);
-        Player.sendIntToAll(players, ServerCodes.WAIT_FOR_HAND);
+        players.sendIntToAll(ServerCodes.WAIT_FOR_HAND);
         for(Player p : players) {
+            p.sendInt(p.getHand().size());
             p.sendCards(p.getHand());
         }
     }
@@ -240,8 +242,8 @@ class Round {
             caller = players.get(0);
         }
 
-        Player.sendIntToAll(players, ServerCodes.WAIT_FOR_CALL_WINNER);
-        Player.sendIntToAll(players, caller.getPlayerNum());
+        players.sendIntToAll(ServerCodes.WAIT_FOR_CALL_WINNER);
+        players.sendIntToAll(caller.getPlayerNum());
         return caller;
     }
 }

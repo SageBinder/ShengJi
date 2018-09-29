@@ -7,23 +7,15 @@ import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import java.util.ArrayList;
 
 class RenderableHand extends RenderableCardList {
-    private ExtendViewport viewport;
-
-    private float maxWidth, maxHeight;
-
-    RenderableHand(ExtendViewport viewport) {
+    RenderableHand() {
         super();
-        this.viewport = viewport;
-        maxWidth = viewport.getWorldWidth();
     }
 
-    RenderableHand(ArrayList<RenderableCard> cards, ExtendViewport viewport) {
+    RenderableHand(ArrayList<RenderableCard> cards) {
         super(cards);
-        this.viewport = viewport;
     }
 
-    @Override
-    void render(SpriteBatch batch) {
+    void render(SpriteBatch batch, ExtendViewport viewport) {
         float width = viewport.getWorldWidth() - 0.2f - (RenderableCard.CARD_WIDTH / 2);
         float pixelDivision = width / size();
 
@@ -34,12 +26,12 @@ class RenderableHand extends RenderableCardList {
         super.render(batch);
     }
 
-    RenderableCard click(Vector2 clickPos) {
-        return click(clickPos.x, clickPos.y);
+    RenderableCard getClickedCard(Vector2 clickPos) {
+        return getClickedCard(clickPos.x, clickPos.y);
     }
 
     @SuppressWarnings("WeakerAccess")
-    RenderableCard click(float x, float y) {
+    RenderableCard getClickedCard(float x, float y) {
         for(int i = size() - 1; i >= 0; i--) {
             RenderableCard c = get(i);
             if(c.containsPoint(x, y)) {
@@ -55,7 +47,7 @@ class RenderableHand extends RenderableCardList {
     }
 
     boolean toggleSelectedFromClick(float x, float y) {
-        RenderableCard c = click(x, y);
+        RenderableCard c = getClickedCard(x, y);
         if(c != null) {
             c.toggleSelected();
             return true;

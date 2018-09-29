@@ -3,11 +3,10 @@ package com.sage.server;
 import com.badlogic.gdx.net.Socket;
 import com.sage.Rank;
 import com.sage.Suit;
+import com.sage.Team;
 
 import java.io.*;
-import java.util.ArrayList;
 
-@SuppressWarnings("StatementWithEmptyBody")
 class Player {
     private int playerNum;
     private Hand hand = new Hand();
@@ -21,24 +20,6 @@ class Player {
     private BufferedWriter bufferedWriter;
 
     private int callRank = 2;
-
-    static void sendStringToAll(ArrayList<Player> players, String message) {
-        for(Player p : players) {
-            p.sendString(message);
-        }
-    }
-
-    static void sendIntToAll(ArrayList<Player> players, int i) {
-        for(Player p : players) {
-            p.sendInt(i);
-        }
-    }
-
-    static void sendCardsToAll(ArrayList<Player> players, ServerCardList cards) {
-        for(Player p : players) {
-            p.sendCards(cards);
-        }
-    }
 
     Player(int playerNum, String name, Socket s) {
         this.s = s;
@@ -67,13 +48,14 @@ class Player {
             return Integer.parseInt(readLine());
         } catch(NullPointerException e) {
             e.printStackTrace();
-            return -1; // TODO: NullPointerException may be thrown here if this player disconnects
+            return -666; // TODO: NullPointerException may be thrown here if this player disconnects
         }
     }
 
     String readLine() {
         try {
             String line;
+            //noinspection StatementWithEmptyBody
             while((line = bufferedReader.readLine()).trim().isEmpty()); // This empty while loop just ignores empty strings
             return line;
         } catch(IOException e) {
@@ -85,6 +67,7 @@ class Player {
     void sendString(String string) {
         try {
             bufferedWriter.write(string);
+            bufferedWriter.write("\n");
             bufferedWriter.flush();
         } catch(IOException e) {
             e.printStackTrace();
@@ -93,7 +76,8 @@ class Player {
 
     void sendInt(int i) {
         try {
-            bufferedWriter.write(i);
+            bufferedWriter.write(Integer.toString(i));
+            bufferedWriter.write("\n");
             bufferedWriter.flush();
         } catch(IOException e) {
             e.printStackTrace();

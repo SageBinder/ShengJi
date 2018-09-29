@@ -1,14 +1,15 @@
 package com.sage.server;
 
 import com.sage.Rank;
+import com.sage.Team;
 
 import java.util.ArrayList;
 
 class Trick {
-    private ArrayList<Player> players = new ArrayList<>();
+    private PlayerList players = new PlayerList();
     private ServerCardList friendCards = new ServerCardList();
 
-    Trick(ArrayList<Player> players, ServerCardList friendCards) {
+    Trick(PlayerList players, ServerCardList friendCards) {
         this.players.addAll(players);
         this.friendCards.addAll(friendCards);
     }
@@ -64,9 +65,9 @@ class Trick {
                     if(turnPlayer.getTeam() != Team.COLLECTORS) {
                         if(turnPlay.containsAny(friendCards)) {
                             turnPlayer.setTeam(Team.KEEPERS);
-                            Player.sendIntToAll(players, ServerCodes.WAIT_FOR_NEW_PLAYER_TEAM);
-                            Player.sendIntToAll(players, turnPlayer.getPlayerNum());
-                            Player.sendIntToAll(players, turnPlayer.getTeam().getTeamNum());
+                            players.sendIntToAll(ServerCodes.WAIT_FOR_NEW_PLAYER_TEAM);
+                            players.sendIntToAll(turnPlayer.getPlayerNum());
+                            players.sendIntToAll(turnPlayer.getTeam().getTeamNum());
                         }
 
                         for(ServerCard c : turnPlay) {
@@ -75,9 +76,9 @@ class Trick {
                                 for(Player p : players) {
                                     if(p.getTeam() == Team.NO_TEAM) {
                                         p.setTeam(Team.COLLECTORS);
-                                        Player.sendIntToAll(players, ServerCodes.WAIT_FOR_NEW_PLAYER_TEAM);
-                                        Player.sendIntToAll(players, p.getPlayerNum());
-                                        Player.sendIntToAll(players, p.getTeam().getTeamNum());
+                                        players.sendIntToAll(ServerCodes.WAIT_FOR_NEW_PLAYER_TEAM);
+                                        players.sendIntToAll(p.getPlayerNum());
+                                        players.sendIntToAll(p.getTeam().getTeamNum());
                                     }
                                 }
                                 break;
@@ -85,8 +86,8 @@ class Trick {
                         }
                     }
 
-                    Player.sendIntToAll(players, ServerCodes.WAIT_FOR_PLAYER_IN_LEAD);
-                    Player.sendIntToAll(players, winningPlay.getPlayer().getPlayerNum());
+                    players.sendIntToAll(ServerCodes.WAIT_FOR_PLAYER_IN_LEAD);
+                    players.sendIntToAll(winningPlay.getPlayer().getPlayerNum());
 
                     turnPlayer.removeFromHand(turnPlay);
                     break;
