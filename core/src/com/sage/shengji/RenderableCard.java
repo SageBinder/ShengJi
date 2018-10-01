@@ -204,7 +204,6 @@ class RenderableCard extends AbstractRenderableCard<RenderableCard> {
         resetPixmaps();
     }
 
-    // TODO: Change order of this method to draw facePixmap first, then round corners and draw border after
     private void setupThisCardFaceSprite() {
         if(faceDesignPixmaps.get(cardNum()) == null) {
             loadFaceDesignPixmapForCard(cardNum());
