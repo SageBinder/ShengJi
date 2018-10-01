@@ -1,8 +1,6 @@
 package com.sage.server;
 
 import com.sage.Card;
-import com.sage.Rank;
-import com.sage.Suit;
 
 class ServerCard extends Card {
     private int hierarchicalValue;

@@ -41,45 +41,39 @@ public class ShengJiServer extends Thread {
         Thread manageNewConnectionsThread = new Thread(this::manageNewConnections);
         Thread manageDisconnectionsThread = new Thread(this::manageDisconnections);
         Thread manageHostCommunicationThread = new Thread(this::manageHostCommunication);
-        manageNewConnectionsThread.start();
-        manageDisconnectionsThread.start();
-        manageHostCommunicationThread.start();
-        try {
-            manageNewConnectionsThread.join();
-            manageDisconnectionsThread.join();
-            manageHostCommunicationThread.join();
-        } catch(InterruptedException e) {
-            e.printStackTrace();
-        }
 
         // Once roundStarted is set to true, all three threads should exit
 
+        RoundRunner roundRunner;
         synchronized(playersLock) {
-            Round round = new Round(players);
-            while(!endGame) {
-                round.playNewRound();
+            roundRunner = new RoundRunner(players);
+        }
+        do {
+            if(!manageNewConnectionsThread.isAlive()) {
+                manageNewConnectionsThread.start();
+            }
+            if(!manageDisconnectionsThread.isAlive()) {
+                manageDisconnectionsThread.start();
+            }
+            if(!manageHostCommunicationThread.isAlive()) {
+                manageHostCommunicationThread.start();
+            }
+            try {
+                manageNewConnectionsThread.join();
+                manageDisconnectionsThread.join();
+                manageHostCommunicationThread.join();
+            } catch(InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            synchronized(playersLock) {
+                roundRunner.setPlayers(players);
+                roundRunner.playNewRound();
                 for(Player p : players) {
                     p.resetForNewRound();
                 }
-
-                if(!manageNewConnectionsThread.isAlive()) {
-                    manageNewConnectionsThread.start();
-                }
-                if(!manageDisconnectionsThread.isAlive()) {
-                    manageDisconnectionsThread.start();
-                }
-                if(!manageHostCommunicationThread.isAlive()) {
-                    manageHostCommunicationThread.start();
-                }
-                try {
-                    manageNewConnectionsThread.join();
-                    manageDisconnectionsThread.join();
-                    manageHostCommunicationThread.join();
-                } catch(InterruptedException e) {
-                    e.printStackTrace();
-                }
             }
-        }
+        } while(!endGame);
 
         // manageNewConnectionsThread might still be waiting on a blocking call to serverSocket.accept() at this point.
         // Disposing the serverSocket should unblock that call.

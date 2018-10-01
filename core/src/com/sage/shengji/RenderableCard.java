@@ -8,8 +8,8 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.sage.Card;
-import com.sage.Rank;
-import com.sage.Suit;
+import com.sage.server.Rank;
+import com.sage.server.Suit;
 
 import java.util.HashMap;
 
@@ -125,8 +125,8 @@ class RenderableCard extends AbstractRenderableCard<RenderableCard> {
                         // Bottom left corner: i == 1, j == 0
                         // Top right corner: i == 0, j == 1
                         // Bottom right corner: i == 1, j == 1
-                        int circleCenter_y = (pixmapHeight * i) - (radius * (-1 + (i * 2)));
-                        int circleCenter_x = (pixmapWidth * j) - (radius * (-1 + (j * 2)));
+                        int circleCenter_y = i == 0 ? radius : pixmapHeight - radius;
+                        int circleCenter_x = j == 0 ? radius : pixmapWidth - radius;
                         double distance = Math.sqrt(Math.pow(x - circleCenter_x, 2) + Math.pow(y - circleCenter_y, 2));
 
                         // Using (<= and >=) as opposed to (< and >) doesn't seem to make any visual difference
@@ -179,8 +179,8 @@ class RenderableCard extends AbstractRenderableCard<RenderableCard> {
                         // Bottom left corner: i == 1, j == 0
                         // Top right corner: i == 0, j == 1
                         // Bottom right corner: i == 1, j == 1
-                        int circleCenter_y = (pixmapHeight * i) - (radius * (-1 + (i * 2)));
-                        int circleCenter_x = (pixmapWidth * j) - (radius * (-1 + (j * 2)));
+                        int circleCenter_y = i == 0 ? radius : pixmapHeight - radius;
+                        int circleCenter_x = j == 0 ? radius : pixmapWidth - radius;
                         double distance = Math.sqrt(Math.pow(x - circleCenter_x, 2) + Math.pow(y - circleCenter_y, 2));
 
                         // Using (<= and >=) as opposed to (< and >) doesn't seem to make any visual difference
@@ -204,6 +204,7 @@ class RenderableCard extends AbstractRenderableCard<RenderableCard> {
         resetPixmaps();
     }
 
+    // TODO: Change order of this method to draw facePixmap first, then round corners and draw border after
     private void setupThisCardFaceSprite() {
         if(faceDesignPixmaps.get(cardNum()) == null) {
             loadFaceDesignPixmapForCard(cardNum());
@@ -216,17 +217,16 @@ class RenderableCard extends AbstractRenderableCard<RenderableCard> {
         resizedFacePixmap.setColor(getFaceBackgroundColor());
         resizedFacePixmap.fill();
 
+        resizedFacePixmap.drawPixmap(faceDesignPixmap,
+                0, 0, faceDesignPixmap.getWidth(), faceDesignPixmap.getHeight(),
+                (int) (0.5f * (CARD_WIDTH_IN_PIXELS - (CARD_WIDTH_IN_PIXELS * getFaceDesignWidthScale()))), (int) (0.5f * (CARD_HEIGHT_IN_PIXELS - (CARD_HEIGHT_IN_PIXELS * getFaceDesignHeightScale()))),
+                (int) (CARD_WIDTH_IN_PIXELS * getFaceDesignWidthScale()), (int) (CARD_HEIGHT_IN_PIXELS * getFaceDesignHeightScale()));
+
         roundPixmapCorners(resizedFacePixmap, (int) ((getCornerRadius() / CARD_WIDTH) * CARD_WIDTH_IN_PIXELS));
         drawCurvedBorderOnPixmap(resizedFacePixmap,
                 (int) ((getCornerRadius() / CARD_WIDTH) * CARD_WIDTH_IN_PIXELS),
                 getFaceBorderThicknessInPixels(),
                 getFaceBorderColor());
-
-        Pixmap.setBlending(Pixmap.Blending.SourceOver);
-        resizedFacePixmap.drawPixmap(faceDesignPixmap,
-                0, 0, faceDesignPixmap.getWidth(), faceDesignPixmap.getHeight(),
-                (int) (0.5f * (CARD_WIDTH_IN_PIXELS - (CARD_WIDTH_IN_PIXELS * getFaceDesignWidthScale()))), (int) (0.5f * (CARD_HEIGHT_IN_PIXELS - (CARD_HEIGHT_IN_PIXELS * getFaceDesignHeightScale()))),
-                (int) (CARD_WIDTH_IN_PIXELS * getFaceDesignWidthScale()), (int) (CARD_HEIGHT_IN_PIXELS * getFaceDesignHeightScale()));
 
         thisCardFaceSprite = new Sprite(new Texture(resizedFacePixmap));
 
@@ -256,6 +256,7 @@ class RenderableCard extends AbstractRenderableCard<RenderableCard> {
                 cornerRadiusInPixels,
                 getBackBorderThicknessInPixels(),
                 getBackBorderColor());
+
         thisCardBackSprite = new Sprite(new Texture(resizedBackPixmap));
 
         resizedBackPixmap.dispose();

@@ -1,5 +1,6 @@
 package com.sage.shengji;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Net;
 import com.badlogic.gdx.net.NetJavaSocketImpl;
 import com.badlogic.gdx.net.SocketHints;
@@ -44,16 +45,16 @@ class ShengJiClient extends Thread {
         }
         sendString(playerName);
 
-
+        gameState.setClient(this);
         while(socket.isConnected() && !quit) {
             int serverCode = readInt();
 
             while(serverCode > -1) {
                 serverCode = readInt();
-                System.out.println("Oh shit, server code is > -1. This should never happen. IT'S BORKED.");
+                Gdx.app.log("ShengJiClient.run","Oh shit, server code is > -1. This should never happen. IT'S BORKED.");
             }
 
-            gameState.update(serverCode, this);
+            gameState.update(serverCode);
         }
 
         socket.dispose();
@@ -90,6 +91,15 @@ class ShengJiClient extends Thread {
             writer.write(s);
         } catch(IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    boolean readyToRead() {
+        try {
+            return reader.ready();
+        } catch(IOException e) {
+            e.printStackTrace();
+            return false;
         }
     }
 }

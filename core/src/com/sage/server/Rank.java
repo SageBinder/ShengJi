@@ -1,4 +1,4 @@
-package com.sage;
+package com.sage.server;
 
 public enum Rank {
     TWO,
@@ -16,13 +16,13 @@ public enum Rank {
     ACE,
     JOKER;
 
-    public static Rank currentTrumpRank;
+    static Rank currentTrumpRank;
 
-    public static void setCurrentTrumpRank(Rank rank) {
+    static void setCurrentTrumpRank(Rank rank) {
         currentTrumpRank = rank;
     }
 
-    public boolean isTrumpRank() {
+    boolean isTrumpRank() {
         return this == currentTrumpRank;
     }
 

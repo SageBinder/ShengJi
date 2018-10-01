@@ -1,8 +1,6 @@
 package com.sage.server;
 
 import com.badlogic.gdx.net.Socket;
-import com.sage.Rank;
-import com.sage.Suit;
 import com.sage.Team;
 
 import java.io.*;
@@ -91,9 +89,6 @@ class Player {
     }
 
     boolean isValidCall(ServerCard c) {
-//        if(c.suit == Suit.BIG_JOKER || c.suit == Suit.SMALL_JOKER) {
-//            return false;
-//        }
         return callRank == c.rank().toInt() && hand.contains(c) && !(c.suit() == Suit.BIG_JOKER || c.suit() == Suit.SMALL_JOKER);
     }
 
@@ -108,14 +103,6 @@ class Player {
     void setCallRank(int newCallRank) {
         callRank = newCallRank;
     }
-
-//    void setPlay(Play newPlay) {
-//        currentPlay = newPlay;
-//    }
-//
-//    Play getPlay() {
-//        return currentPlay;
-//    }
 
     void setHand(Hand newHand) {
         hand = newHand;

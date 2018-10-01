@@ -2,8 +2,8 @@ package com.sage.shengji;
 
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.sage.CardList;
-import com.sage.Rank;
-import com.sage.Suit;
+import com.sage.server.Rank;
+import com.sage.server.Suit;
 
 import java.util.ArrayList;
 import java.util.Iterator;

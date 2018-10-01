@@ -1,4 +1,4 @@
-package com.sage;
+package com.sage.server;
 
 public enum Suit {
     HEARTS,
@@ -8,17 +8,17 @@ public enum Suit {
     SMALL_JOKER,
     BIG_JOKER;
 
-    public static Suit currentTrumpSuit;
+    static Suit currentTrumpSuit;
 
-    public static void setCurrentTrumpSuit(Suit suit) {
+    static void setCurrentTrumpSuit(Suit suit) {
         currentTrumpSuit = suit;
     }
 
-    public static Suit getCurrentTrumpSuit() {
+    static Suit getCurrentTrumpSuit() {
         return currentTrumpSuit;
     }
 
-    public Suit getEffectiveSuit() {
+    Suit getEffectiveSuit() {
         if(this == Suit.BIG_JOKER || this == Suit.SMALL_JOKER) {
             return Suit.getCurrentTrumpSuit();
         } else {
@@ -26,7 +26,7 @@ public enum Suit {
         }
     }
 
-    public boolean isTrumpSuit() {
+    boolean isTrumpSuit() {
         return this == currentTrumpSuit || this == SMALL_JOKER || this == BIG_JOKER;
     }
 

@@ -1,16 +1,18 @@
 package com.sage.server;
 
-import com.sage.Rank;
-import com.sage.Suit;
 import com.sage.Team;
 
 import java.util.ArrayList;
 import java.util.Collections;
 
-class Round {
+class RoundRunner {
     private PlayerList players;
 
-    Round(PlayerList players) {
+    RoundRunner(PlayerList players) {
+        setPlayers(players);
+    }
+
+    void setPlayers(PlayerList players) {
         this.players = players;
     }
 
@@ -31,8 +33,10 @@ class Round {
         final int numPointsNeeded = 40 * numFullDecks;
         ServerCardList pointCardsCollected = new ServerCardList();
 
-        dealDeckToPlayers(deck);
         Player caller = establishCaller();
+
+        dealDeckToPlayers(deck);
+
         kitty = sendKittyToCallerAndGetNewKitty(kitty, caller);
         friendCards = getFriendCardsAndSendToOtherPlayers(caller);
 
@@ -213,7 +217,7 @@ class Round {
                                     }
                                 }
                             } else {
-                                p.sendInt(ServerCodes.INVALID_CALL); // -1 indicates invalid call, 0 indicates someone else called (or p chose not to call), 1 indicates successful call
+                                p.sendInt(ServerCodes.INVALID_CALL);
                             }
                         }
                     }

@@ -1,5 +1,6 @@
 package com.sage.shengji;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
@@ -15,21 +16,37 @@ class GameState {
 
     private SpriteBatch batch = new SpriteBatch();
 
-    volatile boolean calling = false;
+    private int currentServerCode = 0; // The render method will use this to determine next user interaction
+                                       // (i.e make play, make call, invalid play, invalid call, etc.)
 
     synchronized void render(Viewport viewport) {
         batch.setProjectionMatrix(viewport.getCamera().combined);
     }
 
-    synchronized void update(int serverCode, ShengJiClient client) {
-        updater.update(serverCode, client);
+    synchronized void update(int serverCode) {
+        updater.update(serverCode);
+    }
+
+    synchronized void setClient(ShengJiClient client) {
+        updater.setClient(client);
     }
 
     private class GameStateUpdater {
         ShengJiClient client;
+        int serverCode = 0;
 
-        void update(int serverCode, ShengJiClient client) {
+        void setClient(ShengJiClient client) {
             this.client = client;
+        }
+
+        void update(int serverCode) throws NullPointerException {
+            if(!client.readyToRead()) {
+                Gdx.app.log("GameState.GameStateUpdater.update", "client read not ready. This shouldn't happen.");
+                return;
+            }
+
+            this.serverCode = serverCode;
+            GameState.this.currentServerCode = serverCode;
 
             switch(serverCode) {
                 case INVALID_CALL:
@@ -143,11 +160,9 @@ class GameState {
         // CALLING CODES:
 
         private void invalidCall() {
-
         }
 
         private void noCall() {
-
         }
 
         private void successfulCall() {

@@ -1,5 +1,8 @@
 package com.sage;
 
+import com.sage.server.Rank;
+import com.sage.server.Suit;
+
 import java.util.Random;
 
 public class Card {
@@ -21,9 +24,9 @@ public class Card {
     }
 
     public Card(Card c) {
-        this.suit = c.suit();
-        this.rank = c.rank();
-        this.cardNum = c.cardNum();
+        this.suit = c.suit;
+        this.rank = c.rank;
+        this.cardNum = c.cardNum;
     }
 
     // Sets this card to be a random card

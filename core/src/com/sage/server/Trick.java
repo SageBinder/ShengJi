@@ -1,6 +1,5 @@
 package com.sage.server;
 
-import com.sage.Rank;
 import com.sage.Team;
 
 import java.util.ArrayList;

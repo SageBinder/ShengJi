@@ -5,8 +5,8 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.sage.Card;
-import com.sage.Rank;
-import com.sage.Suit;
+import com.sage.server.Rank;
+import com.sage.server.Suit;
 
 import static com.sage.shengji.RenderableCard.*;
 

@@ -1,5 +1,8 @@
 package com.sage;
 
+import com.sage.server.Rank;
+import com.sage.server.Suit;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Random;
