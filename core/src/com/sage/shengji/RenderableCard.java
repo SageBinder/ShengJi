@@ -13,7 +13,7 @@ import com.sage.server.Suit;
 
 import java.util.HashMap;
 
-import static com.sage.shengji.PlaygroundScreen.TABLE_WORLD_SIZE;
+import static com.sage.shengji.ShengJiGame.TABLE_WORLD_SIZE;
 
 class RenderableCard extends AbstractRenderableCard<RenderableCard> {
     @SuppressWarnings("WeakerAccess")
@@ -288,10 +288,12 @@ class RenderableCard extends AbstractRenderableCard<RenderableCard> {
 
     private void renderBack(SpriteBatch batch) {
         batch.begin();
-        thisCardBackSprite.setSize(CARD_WIDTH * getScale(), CARD_HEIGHT * getScale());
+
+        thisCardBackSprite.setSize(getWidth(), getHeight());
         thisCardBackSprite.setPosition(getX(),
                 getY() + ((isSelected() ? 1 : 0) * getHeightChangeOnSelect() * getScale()));
         thisCardBackSprite.draw(batch);
+
         batch.end();
     }
 

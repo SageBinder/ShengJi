@@ -14,9 +14,9 @@ import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import java.util.ArrayList;
 import java.util.Random;
 
-class PlaygroundScreen extends InputAdapter implements Screen {
-    static final float TABLE_WORLD_SIZE = 100f;
+import static com.sage.shengji.ShengJiGame.TABLE_WORLD_SIZE;
 
+class PlaygroundScreen extends InputAdapter implements Screen {
     private ShengJiGame game;
 
 	private SpriteBatch batch;

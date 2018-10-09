@@ -4,12 +4,14 @@ import com.badlogic.gdx.net.Socket;
 import com.sage.Team;
 
 import java.io.*;
+import java.util.Collections;
 
 class Player {
     private int playerNum;
     private Hand hand = new Hand();
-//    private Play currentPlay;
     private Team team = Team.NO_TEAM;
+
+    private ServerCardList points = new ServerCardList();
 
     private Socket s;
 
@@ -29,7 +31,8 @@ class Player {
 
     void resetForNewRound() {
         team = Team.NO_TEAM;
-        hand = new Hand();
+        hand.clear();
+        points.clear();
     }
 
     boolean readyToRead() {
@@ -92,6 +95,15 @@ class Player {
         return callRank == c.rank().toInt() && hand.contains(c) && !(c.suit() == Suit.BIG_JOKER || c.suit() == Suit.SMALL_JOKER);
     }
 
+    boolean isValidKitty(ServerCardList newKitty) {
+        for(ServerCard c : newKitty) {
+            if(Collections.frequency(hand, c) < Collections.frequency(newKitty, c)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     void increaseCallRank(int amount) {
         callRank += amount;
     }
@@ -124,6 +136,12 @@ class Player {
         hand.add(c);
     }
 
+    void addToHand(ServerCardList cards) {
+        for(ServerCard c : cards) {
+            addToHand(c);
+        }
+    }
+
     void addToHand(Rank rank, Suit suit) {
         hand.add(rank, suit);
     }
@@ -144,6 +162,22 @@ class Player {
         for(ServerCard c : cardList) {
             removeFromHand(c);
         }
+    }
+
+    void addPointCard(ServerCard c) {
+        points.add(c);
+    }
+
+    void addPointCards(ServerCardList points) {
+        this.points.addAll(points);
+    }
+
+    void clearPoints() {
+        points.clear();
+    }
+
+    ServerCardList getPoints() {
+        return points;
     }
 
     String getName() {

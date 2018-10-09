@@ -1,9 +1,11 @@
 package com.sage.server;
 
 import com.sage.Team;
+import com.sage.shengji.ClientCodes;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Random;
 
 class RoundRunner {
     private PlayerList players;
@@ -19,7 +21,9 @@ class RoundRunner {
     void playNewRound() {
         // Reorganize "seating"
         Collections.shuffle(players);
+        players.sendIntToAll(ServerCodes.ROUND_START);
         players.sendIntToAll(ServerCodes.WAIT_FOR_PLAYER_ORDER);
+        players.sendIntToAll(players.size());
         for(Player p : players) {
             players.sendIntToAll(p.getPlayerNum());
         }
@@ -33,7 +37,7 @@ class RoundRunner {
         final int numPointsNeeded = 40 * numFullDecks;
         ServerCardList pointCardsCollected = new ServerCardList();
 
-        Player caller = establishCaller();
+        Player caller = establishCaller(kitty);
 
         dealDeckToPlayers(deck);
 
@@ -44,16 +48,26 @@ class RoundRunner {
         Player trickWinner = caller;
         Play winningPlay = null;
         while(players.get(0).getHand().size() > 0) {
-            Trick trick = new Trick(players, friendCards);
-            TrickResult trickResult = trick.startNewTrick(trickWinner);
+            TrickRunner trickRunner = new TrickRunner(players, friendCards);
+            TrickResult trickResult = trickRunner.startNewTrick(trickWinner);
+
             trickWinner = trickResult.getWinner();
-            if(trickWinner.getTeam() == Team.COLLECTORS) {
-                pointCardsCollected.addAll(trickResult.getPointCards());
+            if(trickWinner.getTeam() != Team.KEEPERS) {
+                trickWinner.addPointCards(trickResult.getPointCards());
             }
+
+            players.forEach(player -> { // If any player became a collector during that trick, the player's points become
+                if(player.getTeam() == Team.COLLECTORS) { // the collector's points.
+                    pointCardsCollected.addAll(player.getPoints());
+                    player.clearPoints();
+                }
+            });
 
             players.sendIntToAll(ServerCodes.WAIT_FOR_TRICK_WINNER);
             players.sendIntToAll(trickWinner.getPlayerNum());
+
             players.sendIntToAll(ServerCodes.WAIT_FOR_TRICK_POINT_CARDS);
+            players.sendIntToAll(trickResult.getPointCards().size());
             players.sendCardsToAll(trickResult.getPointCards());
 
             winningPlay = trickResult.getWinningPlay();
@@ -128,16 +142,26 @@ class RoundRunner {
 
         // Send caller cards in kitty
         caller.sendInt(ServerCodes.WAIT_FOR_KITTY);
+        caller.sendInt(kitty.size());
         caller.sendCards(kitty);
         for(ServerCard card : kitty) {
             caller.addToHand(new ServerCard(card.cardNum()));
         }
 
-        // Get cards that caller put in kitty and remove them from their hand
-        caller.sendInt(ServerCodes.SEND_KITTY_REPLACEMENTS);
-        for(int i = 0; i < kitty.size(); i++) {
-            newKitty.add(new ServerCard(caller.readInt()));
-            caller.removeFromHand(newKitty.get(i).cardNum());
+        // Get cards that caller put in kitty and remove those cards from their hand
+        caller.sendInt(ServerCodes.SEND_KITTY);
+        while(true) {
+            for(int i = 0; i < kitty.size(); i++) {
+                newKitty.add(new ServerCard(caller.readInt()));
+            }
+
+            if(caller.isValidKitty(newKitty)) {
+                caller.removeFromHand(newKitty);
+                break;
+            } else {
+                caller.sendInt(ServerCodes.INVALID_KITTY);
+                newKitty.clear();
+            }
         }
 
         return newKitty;
@@ -145,9 +169,12 @@ class RoundRunner {
 
     private ServerCardList getFriendCardsAndSendToOtherPlayers(Player caller) {
         // Get friend cards from caller
-        caller.sendInt(ServerCodes.SEND_FRIEND_CARDS);
         ServerCardList friendCards = new ServerCardList();
-        for(int i = 0; i < players.size() / 2; i++) {
+        int numFriendCards = players.size() / 2;
+
+        caller.sendInt(ServerCodes.SEND_FRIEND_CARDS);
+        caller.sendInt(numFriendCards);
+        for(int i = 0; i < numFriendCards; i++) {
             friendCards.add(new ServerCard(caller.readInt()));
         }
 
@@ -155,6 +182,7 @@ class RoundRunner {
         for(Player p : players) {
             if(p != caller) {
                 p.sendInt(ServerCodes.WAIT_FOR_FRIEND_CARDS);
+                p.sendInt(friendCards.size());
                 p.sendCards(friendCards);
             }
         }
@@ -168,7 +196,7 @@ class RoundRunner {
     volatile private int numNoCallPlayers = 0;
 
     // TODO: Make sure synchronization in this method is correct
-    private Player establishCaller() {
+    private Player establishCaller(ServerCardList kitty) {
         ArrayList<Thread> threads = new ArrayList<>();
 
         // Creates a thread for each player listening for their call.
@@ -185,8 +213,7 @@ class RoundRunner {
                         if(p.readyToRead()) { // As a way to avoid the blocking call to readLine(),
                             try {                   // check first if the bufferedReader has input available
                                 callCardNum = Integer.parseInt(p.readLine());
-                                // A value of -1 means the player does not want to call.
-                                if(callCardNum == -1) {
+                                if(callCardNum == ClientCodes.NO_CALL) {
                                     p.sendInt(ServerCodes.NO_CALL);
                                     synchronized(lock) {
                                         numNoCallPlayers++;
@@ -198,24 +225,25 @@ class RoundRunner {
                                 p.sendInt(ServerCodes.INVALID_CALL);
                                 continue;
                             }
-                            if(p.isValidCall(new ServerCard(callCardNum)) && numCallCards > highestNumCallCards) {
+
+                            ServerCard callCard = new ServerCard(callCardNum);
+                            if(p.isValidCall(callCard) && numCallCards > highestNumCallCards) {
                                 synchronized(lock) {
                                     highestNumCallCards = numCallCards;
-                                    if(caller != null) { // Send previous caller SEND_CALL code to check if they want to overtake the new call
-                                        caller.sendInt(ServerCodes.SEND_CALL);
-                                    }
                                     caller = p;
-                                    p.sendInt(ServerCodes.SUCCESSFUL_CALL);
-                                    Rank.setCurrentTrumpRank(ServerCard.getRankFromCardNum(callCardNum));
-                                    Suit.setCurrentTrumpSuit(ServerCard.getSuitFromCardNum(callCardNum));
+                                    caller.sendInt(ServerCodes.SUCCESSFUL_CALL);
+                                    Rank.setCurrentTrumpRank(callCard.rank());
+                                    Suit.setCurrentTrumpSuit(callCard.suit());
 
                                     for(Player p1 : players) {
                                         if(p1 != caller) {
-                                            p1.sendInt(ServerCodes.WAIT_FOR_OTHER_PLAYER_CALL);
+                                            p1.sendInt(ServerCodes.WAIT_FOR_NEW_WINNING_CALL);
                                             p1.sendString(caller.getPlayerNum() + "\n" + callCardNum + "\n" + numCallCards);
                                         }
                                     }
                                 }
+                            } else if(p.isValidCall(callCard)) {
+                                p.sendInt(ServerCodes.UNSUCCESSFUL_CALL);
                             } else {
                                 p.sendInt(ServerCodes.INVALID_CALL);
                             }
@@ -242,12 +270,21 @@ class RoundRunner {
             }
         }
 
-        if(caller == null) { // TODO: if no one calls, do something other than this
-            caller = players.get(0);
+        if(caller == null) {
+            caller = players.get(new Random(69).nextInt(players.size()));
+            players.sendIntToAll(ServerCodes.NO_ONE_CALLED);
+            players.sendIntToAll(caller.getPlayerNum());
+            for(ServerCard c : kitty) {
+                if(!c.isJoker()) {
+                    players.sendIntToAll(c.cardNum());
+                    break;
+                }
+            }
+        } else {
+            players.sendIntToAll(ServerCodes.WAIT_FOR_CALL_WINNER);
+            players.sendIntToAll(caller.getPlayerNum());
         }
 
-        players.sendIntToAll(ServerCodes.WAIT_FOR_CALL_WINNER);
-        players.sendIntToAll(caller.getPlayerNum());
         return caller;
     }
 }

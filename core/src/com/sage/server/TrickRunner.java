@@ -4,11 +4,11 @@ import com.sage.Team;
 
 import java.util.ArrayList;
 
-class Trick {
+class TrickRunner {
     private PlayerList players = new PlayerList();
     private ServerCardList friendCards = new ServerCardList();
 
-    Trick(PlayerList players, ServerCardList friendCards) {
+    TrickRunner(PlayerList players, ServerCardList friendCards) {
         this.players.addAll(players);
         this.friendCards.addAll(friendCards);
     }
@@ -19,36 +19,36 @@ class Trick {
         Play basePlay = null;
         Play winningPlay;
 
-        // Get number of cards in play
-        turnPlayer.sendInt(ServerCodes.SEND_PLAY_LENGTH);
-        int numCardsInPlay = startingPlayer.readInt();
+        players.sendIntToAll(ServerCodes.TRICK_START);
 
-        // Send number of cards in play to other players
-        for(Player p : players) {
-            if(p != turnPlayer) {
-                p.sendInt(ServerCodes.WAIT_FOR_PLAY_LENGTH);
-                p.sendInt(numCardsInPlay);
-            }
-        }
-
-        // Get the plays made by each player
+        int numCardsInPlay = 0;
         int playOrderIndex = 0;
         do {
-            // Get the play made by turn player
+            players.sendIntToAll(ServerCodes.WAIT_FOR_TURN_PLAYER);
+            players.sendIntToAll(turnPlayer.getPlayerNum());
+
             while(true) {
                 Play turnPlay;
                 ServerCardList cardsInPlay = new ServerCardList();
-                turnPlayer.sendInt(ServerCodes.SEND_PLAY);
+
+                if(playOrderIndex == 0) {
+                    turnPlayer.sendInt(ServerCodes.SEND_BASE_PLAY);
+                    numCardsInPlay = turnPlayer.readInt();
+                } else {
+                    turnPlayer.sendInt(ServerCodes.SEND_PLAY);
+                    turnPlayer.sendInt(numCardsInPlay);
+                }
+
+                turnPlayer.sendInt(numCardsInPlay);
                 for(int i = 0; i < numCardsInPlay; i++) {
                     cardsInPlay.add(new ServerCard(turnPlayer.readInt()));
                 }
-                // basePlay == null if the turnPlayer is the starting player
-                turnPlay = new Play(playOrderIndex, cardsInPlay, turnPlayer, basePlay);
 
+                turnPlay = new Play(playOrderIndex, cardsInPlay, turnPlayer, basePlay);
                 if(turnPlay.isLegal()) {
                     plays.add(turnPlay);
                     winningPlay = getWinningPlay(plays);
-                    if(turnPlayer == startingPlayer) {
+                    if(playOrderIndex == 0) {
                         basePlay = turnPlay;
                     }
 
@@ -56,14 +56,17 @@ class Trick {
                     for(Player p : players) {
                         if(p != turnPlayer) {
                             p.sendInt(ServerCodes.WAIT_FOR_PLAY);
+                            p.sendInt(turnPlay.size());
                             p.sendCards(turnPlay);
                         }
                     }
 
                     // Check if any teams were established during that play, and send to all players
                     if(turnPlayer.getTeam() != Team.COLLECTORS) {
-                        if(turnPlay.containsAny(friendCards)) {
+                        if(turnPlay.containsAny(friendCards) && turnPlayer.getTeam() == Team.NO_TEAM) {
                             turnPlayer.setTeam(Team.KEEPERS);
+                            turnPlayer.clearPoints(); // Once a player becomes a keeper, their points are discarded
+
                             players.sendIntToAll(ServerCodes.WAIT_FOR_NEW_PLAYER_TEAM);
                             players.sendIntToAll(turnPlayer.getPlayerNum());
                             players.sendIntToAll(turnPlayer.getTeam().getTeamNum());
@@ -94,8 +97,8 @@ class Trick {
                     turnPlayer.sendInt(ServerCodes.INVALID_PLAY);
                 }
             }
-            turnPlayer = getNextPlayer(turnPlayer);
 
+            turnPlayer = getNextPlayer(turnPlayer);
             playOrderIndex++;
         } while(turnPlayer != startingPlayer);
 

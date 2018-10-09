@@ -135,7 +135,7 @@ public class ShengJiServer extends Thread {
     private void manageDisconnections() {
         while(!roundStarted) {
             synchronized(playersLock) {
-                if(players.removeIf(p->!p.socketIsConnected())) {
+                if(players.removeIf(p -> !p.socketIsConnected())) {
                     // "Compress" player nums ([0, 1, 2, 4, 5] -> [0, 1, 2, 3, 4])
                     for(Player p : players) {
                         p.setPlayerNum(players.indexOf(p));

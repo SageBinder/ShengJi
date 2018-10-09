@@ -37,4 +37,8 @@ public class RenderableCardList extends CardList<RenderableCard> {
             c.render(batch);
         }
     }
+
+    void setAllSelected(boolean selected) {
+        forEach(c -> c.setSelected(selected));
+    }
 }

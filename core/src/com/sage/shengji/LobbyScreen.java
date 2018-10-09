@@ -4,39 +4,36 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.scenes.scene2d.Stage;
-import com.badlogic.gdx.scenes.scene2d.ui.List;
-import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
 public class LobbyScreen implements Screen {
     private ShengJiGame game;
+    private GameState gameState;
+    private ShengJiClient client;
 
     private Viewport viewport;
     private Stage stage;
     private Table table;
-    private List<String> playersList;
 
-    LobbyScreen(ShengJiGame game) {
+    LobbyScreen(ShengJiGame game, GameState gameState, ShengJiClient client) {
         this.game = game;
-    }
+        this.gameState = gameState;
+        this.client = client;
 
-    @Override
-    public void show() {
         stage = new Stage();
         viewport = new ExtendViewport(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         stage.setViewport(viewport);
 
-        Skin skin = new Skin(Gdx.files.internal("uiskin.json"));
-
-        playersList = new List<>(skin);
-
-
-
         table = new Table();
 
         stage.addActor(table);
+    }
+
+    @Override
+    public void show() {
+        game.showGameScreen(gameState); // Default to showing gameScreen for now just to test gameScreen
     }
 
     @Override
@@ -47,7 +44,7 @@ public class LobbyScreen implements Screen {
 
     @Override
     public void resize(int width, int height) {
-
+        viewport.update(width, height, true);
     }
 
     @Override

@@ -8,30 +8,25 @@ class PlayerList extends ArrayList<Player> {
     }
 
     void sendIntToAll(int num) {
-        for(Player p : this) {
-            p.sendInt(num);
-        }
+        forEach(p -> p.sendInt(num));
     }
 
     void sendStringToAll(String str) {
-        for(Player p : this) {
-            p.sendString(str);
-        }
+        forEach(p -> p.sendString(str));
     }
 
     void sendCardsToAll(ServerCardList cards) {
-        for(Player p : this) {
-            p.sendCards(cards);
-        }
+        forEach(p -> p.sendCards(cards));
     }
 
     Player getPlayerFromPlayerNum(int playerNum) {
-        for(Player p : this) {
-            if(p.getPlayerNum() == playerNum) {
-                return p;
-            }
-        }
+//        for(Player p : this) {
+//            if(p.getPlayerNum() == playerNum) {
+//                return p;
+//            }
+//        }
+//        return null;
 
-        return null;
+        return stream().filter(player -> player.getPlayerNum() == playerNum).findFirst().orElse(null);
     }
 }

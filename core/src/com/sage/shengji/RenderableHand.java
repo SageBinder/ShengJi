@@ -1,12 +1,21 @@
 package com.sage.shengji;
 
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.utils.viewport.ExtendViewport;
+import com.badlogic.gdx.utils.viewport.Viewport;
 
 import java.util.ArrayList;
 
 class RenderableHand extends RenderableCardList {
+    private HandClickListener clickListener = (c, button)->{
+        if(button == Input.Buttons.LEFT) {
+            c.toggleSelected();
+        } else if(button == Input.Buttons.RIGHT) {
+            c.flip();
+        }
+    };
+
     RenderableHand() {
         super();
     }
@@ -15,7 +24,7 @@ class RenderableHand extends RenderableCardList {
         super(cards);
     }
 
-    void render(SpriteBatch batch, ExtendViewport viewport) {
+    void render(SpriteBatch batch, Viewport viewport) {
         float width = viewport.getWorldWidth() - 0.2f - (RenderableCard.CARD_WIDTH / 2);
         float pixelDivision = width / size();
 
@@ -42,16 +51,23 @@ class RenderableHand extends RenderableCardList {
         return null;
     }
 
-    boolean toggleSelectedFromClick(Vector2 clickPos) {
-        return toggleSelectedFromClick(clickPos.x, clickPos.y);
+    void click(Vector2 pos, int button) {
+        click(pos.x, pos.y, button);
     }
 
-    boolean toggleSelectedFromClick(float x, float y) {
+    void click(float x, float y, int button) {
         RenderableCard c = getClickedCard(x, y);
+
         if(c != null) {
-            c.toggleSelected();
-            return true;
+            clickListener.click(c, button);
         }
-        return false;
+    }
+
+    void setOnClick(HandClickListener onClick) {
+        this.clickListener = onClick;
+    }
+
+    interface HandClickListener {
+        void click(RenderableCard c, int button);
     }
 }

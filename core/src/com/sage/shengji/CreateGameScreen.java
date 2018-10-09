@@ -3,6 +3,8 @@ package com.sage.shengji;
 import com.badlogic.gdx.*;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
@@ -27,34 +29,45 @@ class CreateGameScreen extends InputAdapter implements Screen {
 
     CreateGameScreen(ShengJiGame game) {
         this.game = game;
-    }
 
-    @Override
-    public void show() {
         stage = new Stage();
         viewport = new ExtendViewport(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         stage.setViewport(viewport);
 
-        Skin skin = new Skin(Gdx.files.internal("uiskin.json"));
+        var generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/OpenSans-Bold.ttf"));
+        var parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
+        parameter.size = 15;
 
-        TextField portField = new TextField("", skin);
+        BitmapFont font = generator.generateFont(parameter);
+        generator.dispose();
+        Skin skin = new Skin(Gdx.files.internal("uiskin.json"));
+        TextField.TextFieldStyle textFieldStyle = skin.get(TextField.TextFieldStyle.class);
+        textFieldStyle.font = font;
+
+        Label.LabelStyle labelStyle = skin.get(Label.LabelStyle.class);
+        labelStyle.font = font;
+
+        TextButton.TextButtonStyle textButtonStyle = skin.get(TextButton.TextButtonStyle.class);
+        textButtonStyle.font = font;
+
+        TextField portField = new TextField("", textFieldStyle);
         portField.setTextFieldFilter(new TextField.TextFieldFilter.DigitsOnlyFilter());
         portField.setMessageText("Enter port");
         portField.setDisabled(false);
 
-        TextField numPlayersField = new TextField("", skin);
+        TextField numPlayersField = new TextField("", textFieldStyle);
         numPlayersField.setMessageText("# of players");
         numPlayersField.setTextFieldFilter(new TextField.TextFieldFilter.DigitsOnlyFilter());
         numPlayersField.setDisabled(false);
 
-        TextField nameField = new TextField("", skin);
+        TextField nameField = new TextField("", textFieldStyle);
         nameField.setMessageText("Enter name");
         nameField.setDisabled(false);
 
-        Label errorLabel = new Label("", skin);
+        Label errorLabel = new Label("", labelStyle);
         errorLabel.setColor(new Color(1f, 0.2f, 0.2f, 1));
 
-        TextButton createGameButton = new TextButton("Start game", skin);
+        TextButton createGameButton = new TextButton("Start game", textButtonStyle);
         createGameButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
@@ -97,15 +110,13 @@ class CreateGameScreen extends InputAdapter implements Screen {
                     return;
                 }
 
-                game.openServer(port, numPlayers);
-                game.startGame(port, "127.0.0.1", name);
-
-                game.showLobbyScreen();
+                game.startGameServer(port, numPlayers);
+                game.joinGame(port, "127.0.0.1", name);
             }
         });
 
 
-        Label IPLabel = new Label("Determining your IP...", skin);
+        Label IPLabel = new Label("Determining your IP...", labelStyle);
         IPLabel.setAlignment(Align.center);
         Thread ipGetterThread = new Thread(()->{
             try {
@@ -150,6 +161,11 @@ class CreateGameScreen extends InputAdapter implements Screen {
         inputMultiplexer.addProcessor(this);
 
         Gdx.input.setInputProcessor(inputMultiplexer);
+    }
+
+    @Override
+    public void show() {
+
     }
 
     @Override

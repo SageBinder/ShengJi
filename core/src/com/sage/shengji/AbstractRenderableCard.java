@@ -112,8 +112,8 @@ abstract class AbstractRenderableCard<T extends AbstractRenderableCard> extends 
     boolean containsPoint(float x, float y) {
         return (!isSelected &&
                 cardRect.contains(x, y))
-                || (isSelected && new Rectangle(getX(), getY() + (getHeightChangeOnSelect() * getScale()), getWidth(), getHeight())
-                .contains(x, y));
+                || (isSelected &&
+                new Rectangle(getX(), getY() + (getHeightChangeOnSelect() * getScale()), getWidth(), getHeight()).contains(x, y));
     }
 
     // --- SETTERS ---
@@ -169,6 +169,11 @@ abstract class AbstractRenderableCard<T extends AbstractRenderableCard> extends 
     T setFaceBorderThicknessInPixels(int faceBorderThicknessInPixels) {
         this.faceBorderThicknessInPixels = faceBorderThicknessInPixels;
         displayParametersChanged();
+        return (T) this;
+    }
+
+    T setFaceUp(boolean faceUp) {
+        this.faceUp = faceUp;
         return (T) this;
     }
 
@@ -277,16 +282,26 @@ abstract class AbstractRenderableCard<T extends AbstractRenderableCard> extends 
         return (T) this;
     }
 
-    // General value getters:
-    float getCornerRadiusScale() {
-        return cornerRadiusScale;
-    }
-
     // General value setters:
     T setCornerRadiusScale(float cornerRadiusScale) {
         this.cornerRadiusScale = cornerRadiusScale;
         cornerRadius = cornerRadiusScale * CARD_WIDTH;
         displayParametersChanged();
+        return (T) this;
+    }
+
+    T setSelected(boolean selected) {
+        if(isSelected == selected || !selectable) {
+            return (T) this;
+        }
+        isSelected = selected;
+
+        if(isSelected) {
+            setFaceBackgroundColor(new Color(getFaceBackgroundColor().sub(0.5f, 0.5f, 0.5f, 0)));
+        } else {
+            setFaceBackgroundColor(new Color(defaultFaceBackgroundColor));
+        }
+
         return (T) this;
     }
 
@@ -337,11 +352,6 @@ abstract class AbstractRenderableCard<T extends AbstractRenderableCard> extends 
         return backBackgroundColor;
     }
 
-    T setFaceUp(boolean faceUp) {
-        this.faceUp = faceUp;
-        return (T) this;
-    }
-
     float getCornerRadius() {
         return cornerRadius;
     }
@@ -370,22 +380,12 @@ abstract class AbstractRenderableCard<T extends AbstractRenderableCard> extends 
         return cardRect.getPosition(new Vector2());
     }
 
-    boolean isSelected() {
-        return isSelected;
+    // General value getters:
+    float getCornerRadiusScale() {
+        return cornerRadiusScale;
     }
 
-    T setSelected(boolean selected) {
-        if(isSelected == selected || !selectable) {
-            return (T) this;
-        }
-        isSelected = selected;
-
-        if(isSelected) {
-            setFaceBackgroundColor(new Color(getFaceBackgroundColor().sub(0.5f, 0.5f, 0.5f, 0)));
-        } else {
-            setFaceBackgroundColor(new Color(defaultFaceBackgroundColor));
-        }
-
-        return (T) this;
+    boolean isSelected() {
+        return isSelected;
     }
 }

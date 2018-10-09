@@ -9,6 +9,8 @@ class Player {
     private Team team = Team.NO_TEAM;
     private int callRank = 2;
 
+    private final RenderableCardList points = new RenderableCardList();
+
     Player(int playerNum, String name) {
         this.name = name;
         this.playerNum = playerNum;
@@ -38,6 +40,18 @@ class Player {
 
     void setPlay(RenderablePlay newPlay) {
         play.addAll(newPlay);
+    }
+
+    void addToPlay(RenderableCard c) {
+        play.add(c);
+    }
+
+    void addAllToPlay(RenderableCardList list) {
+        play.addAll(list);
+    }
+
+    void clearPlay() {
+        play.clear();
     }
 
     RenderablePlay getPlay() {

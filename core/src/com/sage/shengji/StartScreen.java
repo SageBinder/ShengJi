@@ -4,9 +4,6 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
@@ -14,7 +11,6 @@ import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
-import com.badlogic.gdx.utils.viewport.StretchViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
 class StartScreen extends InputAdapter implements Screen {
@@ -38,11 +34,7 @@ class StartScreen extends InputAdapter implements Screen {
 
     StartScreen(ShengJiGame game) {
         this.game = game;
-    }
 
-    @Override
-    public void show() {
-        // TODO: Use table layout instead of placing buttons
         stage = new Stage();
         viewport = new ExtendViewport(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         stage.setViewport(viewport);
@@ -76,6 +68,11 @@ class StartScreen extends InputAdapter implements Screen {
 
         updateButtons();
         Gdx.input.setInputProcessor(stage);
+    }
+
+    @Override
+    public void show() {
+
     }
 
     @Override

@@ -23,6 +23,12 @@ class ShengJiClient extends Thread {
 
     private boolean quit = false;
 
+    private volatile boolean waitingForServerCode = true;
+    private final Object waitingForServerCodeLock = new Object();
+
+    private volatile int consumableServerCode = 0;
+    private final Object consumableServerCodeLock = new Object();
+
     ShengJiClient(int PORT, String serverIP, String playerName, ShengJiGame game, GameState gameState) {
         this.PORT = PORT;
         this.serverIP = serverIP;
@@ -45,19 +51,33 @@ class ShengJiClient extends Thread {
         }
         sendString(playerName);
 
-        gameState.setClient(this);
         while(socket.isConnected() && !quit) {
-            int serverCode = readInt();
+            while(!waitingForServerCode) {
+                try {
+                    Thread.sleep(500);
+                } catch(InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
 
+            int serverCode = readInt();
             while(serverCode > -1) {
                 serverCode = readInt();
                 Gdx.app.log("ShengJiClient.run","Oh shit, server code is > -1. This should never happen. IT'S BORKED.");
             }
 
-            gameState.update(serverCode);
+            synchronized(waitingForServerCodeLock) {
+                waitingForServerCode = false;
+
+            }
+            synchronized(consumableServerCodeLock) {
+                consumableServerCode = serverCode;
+            }
         }
 
-        socket.dispose();
+        if(socket.isConnected()) {
+            socket.dispose();
+        }
     }
 
     int readInt() {
@@ -80,7 +100,8 @@ class ShengJiClient extends Thread {
 
     void sendInt(int i) {
         try {
-            writer.write(Integer.toString(i));
+            writer.write(Integer.toString(i) + "\n");
+            writer.flush();
         } catch(IOException e) {
             e.printStackTrace();
         }
@@ -88,7 +109,8 @@ class ShengJiClient extends Thread {
 
     void sendString(String s) {
         try {
-            writer.write(s);
+            writer.write(s + "\n");
+            writer.flush();
         } catch(IOException e) {
             e.printStackTrace();
         }
@@ -101,5 +123,30 @@ class ShengJiClient extends Thread {
             e.printStackTrace();
             return false;
         }
+    }
+
+    int consumeServerCode() {
+        synchronized(consumableServerCodeLock) {
+            int returnValue = consumableServerCode;
+            consumableServerCode = 0;
+            return returnValue;
+        }
+    }
+
+    void waitForServerCode() {
+        synchronized(waitingForServerCodeLock) {
+            waitingForServerCode = true;
+        }
+    }
+
+    void quit() {
+        try {
+            reader.close();
+            writer.close();
+            socket.dispose();
+        } catch(IOException e) {
+            e.printStackTrace();
+        }
+        quit = true;
     }
 }
