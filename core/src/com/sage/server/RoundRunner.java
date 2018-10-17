@@ -1,11 +1,13 @@
 package com.sage.server;
 
+import com.badlogic.gdx.Gdx;
 import com.sage.Team;
 import com.sage.shengji.ClientCodes;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 class RoundRunner {
     private PlayerList players;
@@ -29,7 +31,7 @@ class RoundRunner {
         }
 
 
-        int numFullDecks = players.size() / 2;
+        int numFullDecks = Math.max(players.size() / 2, 1);
         Deck deck = new Deck(numFullDecks);
         ServerCardList kitty = getKittyFromDeck(deck);
         ServerCardList friendCards;
@@ -37,13 +39,11 @@ class RoundRunner {
         final int numPointsNeeded = 40 * numFullDecks;
         ServerCardList pointCardsCollected = new ServerCardList();
 
-        Player caller = establishCaller(kitty);
-
         dealDeckToPlayers(deck);
+        Player caller = establishCaller(kitty);
 
         kitty = sendKittyToCallerAndGetNewKitty(kitty, caller);
         friendCards = getFriendCardsAndSendToOtherPlayers(caller);
-
 
         Player trickWinner = caller;
         Play winningPlay = null;
@@ -76,40 +76,52 @@ class RoundRunner {
         int totalPointsCollected = pointCardsCollected.getTotalPoints();
         int kittyPointsMultiplier;
 
-        assert winningPlay != null : "This should never happen";
+        try {
+            assert winningPlay != null;
+        } catch(AssertionError e) {
+            e.printStackTrace();
+            Gdx.app.log("Server.RoundRunner.playNewRound()", "assert winningPlay != null FAILED. SHOULDN'T FUCKING HAPPEN.\n" +
+                    "Returning now because at this point it's way fucked.");
+            return;
+        }
+
+
         kittyPointsMultiplier = winningPlay.size();
         if(winningPlay.getPlayer().getTeam() == Team.COLLECTORS) {
             totalPointsCollected += kittyPointsMultiplier * (kitty.getTotalPoints());
         }
         // Send total collected points to all players
-        players.sendIntToAll(ServerCodes.WAIT_FOR_COLLECTED_POINTS);
+        players.sendIntToAll(ServerCodes.WAIT_FOR_NUM_COLLECTED_POINTS);
         players.sendIntToAll(totalPointsCollected);
 
         // Send kitty to all players
         players.sendIntToAll(ServerCodes.WAIT_FOR_KITTY);
         players.sendCardsToAll(kitty);
 
-        // Send round winners to all players
-        players.sendIntToAll(ServerCodes.WAIT_FOR_ROUND_WINNERS);
         Team winningTeam;
         if(totalPointsCollected >= numPointsNeeded) {
             winningTeam = Team.COLLECTORS;
         } else {
             winningTeam = Team.KEEPERS;
         }
-        for(Player p : players) {
-            if(p.getTeam() == winningTeam) {
-                players.sendIntToAll(p.getPlayerNum());
-                p.increaseCallRank(1); // TODO: calculate whether or not winners should go up 2 or 3 ranks
-            }
-        }
+
+        PlayerList roundWinners = new PlayerList();
+        roundWinners.addAll(players.stream().filter(p -> p.getTeam() == winningTeam).collect(Collectors.toList()));
+        roundWinners.forEach(p -> p.increaseCallRank(1)); // TODO: calculate whether or not winners should go up 2 or 3 ranks
+
+        // Send round winners to all players
+        players.sendIntToAll(ServerCodes.WAIT_FOR_ROUND_WINNERS);
+        players.sendIntToAll(roundWinners.size());
+        roundWinners.forEach(p -> players.sendIntToAll(p.getPlayerNum()));
 
         // Send new calling numbers to all players
         players.sendIntToAll(ServerCodes.WAIT_FOR_CALLING_NUMBERS);
-        for(Player p : players) {
+        players.sendIntToAll(players.size());
+        players.forEach(p -> {
             players.sendIntToAll(p.getPlayerNum());
             players.sendIntToAll(p.getCallRank());
-        }
+        });
+
         players.sendIntToAll(ServerCodes.ROUND_OVER);
     }
 
@@ -212,7 +224,7 @@ class RoundRunner {
                         }
                         if(p.readyToRead()) { // As a way to avoid the blocking call to readLine(),
                             try {                   // check first if the bufferedReader has input available
-                                callCardNum = Integer.parseInt(p.readLine());
+                                callCardNum = p.readInt();
                                 if(callCardNum == ClientCodes.NO_CALL) {
                                     p.sendInt(ServerCodes.NO_CALL);
                                     synchronized(lock) {
@@ -220,14 +232,19 @@ class RoundRunner {
                                     }
                                     return;
                                 }
-                                numCallCards = Integer.parseInt(p.readLine());
-                            } catch(NumberFormatException e) {
-                                p.sendInt(ServerCodes.INVALID_CALL);
+                                numCallCards = p.readInt();
+                            } catch(NullPointerException | NumberFormatException e) {
+                                p.sendInt(ServerCodes.SEND_CALL);
+                                continue;
+                            }
+
+                            if(callCardNum < 0 || numCallCards < 0) {
+                                p.sendInt(ServerCodes.SEND_CALL);
                                 continue;
                             }
 
                             ServerCard callCard = new ServerCard(callCardNum);
-                            if(p.isValidCall(callCard) && numCallCards > highestNumCallCards) {
+                            if(p.isValidCall(callCard, numCallCards) && numCallCards > highestNumCallCards) {
                                 synchronized(lock) {
                                     highestNumCallCards = numCallCards;
                                     caller = p;
@@ -242,7 +259,7 @@ class RoundRunner {
                                         }
                                     }
                                 }
-                            } else if(p.isValidCall(callCard)) {
+                            } else if(p.isValidCall(callCard, numCallCards)) {
                                 p.sendInt(ServerCodes.UNSUCCESSFUL_CALL);
                             } else {
                                 p.sendInt(ServerCodes.INVALID_CALL);

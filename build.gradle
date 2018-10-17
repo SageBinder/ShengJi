@@ -36,6 +36,9 @@ project(":desktop") {
 
     compileJava.options.fork = true
     compileJava.options.forkOptions.executable = "C:\\Program Files\\Java\\jdk-10.0.2\\bin\\javac.exe"
+    sourceCompatibility = 10
+    targetCompatibility = 10
+    compileJava.options.compilerArgs.addAll(['--release', '10', '-Xlint'])
 
     dependencies {
         compile project(":core")

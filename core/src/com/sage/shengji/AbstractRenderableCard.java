@@ -11,7 +11,7 @@ import com.sage.server.Suit;
 import static com.sage.shengji.RenderableCard.*;
 
 @SuppressWarnings("unchecked")
-abstract class AbstractRenderableCard<T extends AbstractRenderableCard> extends Card {
+abstract class AbstractRenderableCard<T extends AbstractRenderableCard<T>> extends Card {
     // Default variable values:
     @SuppressWarnings("WeakerAccess")
     static final float defaultCornerRadiusScale = 0.075f;

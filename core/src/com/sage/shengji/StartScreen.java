@@ -25,14 +25,14 @@ class StartScreen extends InputAdapter implements Screen {
     private static final Vector2 OPTIONS_BUTTON_POS = new Vector2((WORLD_SIZE - BUTTON_WIDTH) * 0.5f,
             (WORLD_SIZE * (1f / 6f)) - (BUTTON_HEIGHT * 0.5f));
     
-    private ShengJiGame game;
+    private ScreenManager game;
 
     private Viewport viewport;
 
     private Stage stage;
     private TextButton createButton, joinButton, optionsButton;
 
-    StartScreen(ShengJiGame game) {
+    StartScreen(ScreenManager game) {
         this.game = game;
 
         stage = new Stage();
@@ -77,7 +77,7 @@ class StartScreen extends InputAdapter implements Screen {
 
     @Override
     public void render(float delta) {
-        Gdx.gl.glClearColor(ShengJiGame.BACKGROUND_COLOR.r, ShengJiGame.BACKGROUND_COLOR.g, ShengJiGame.BACKGROUND_COLOR.b, 1);
+        Gdx.gl.glClearColor(ScreenManager.BACKGROUND_COLOR.r, ScreenManager.BACKGROUND_COLOR.g, ScreenManager.BACKGROUND_COLOR.b, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         stage.act(delta);

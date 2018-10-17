@@ -1,16 +1,20 @@
 package com.sage.server;
 
+import com.badlogic.gdx.Gdx;
+
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 
+// This class honestly should be immutable but I don't feel like doing that right now
 class Play extends ServerCardList {
-    private int playOrder;
-    private int playHierarchicalNum; // This value is 0 if the play is a trash play, otherwise it's hierarchicalNum of the lowest card in the play
-    private int[] playStructure; // playStructure represents the number of cards in each group (groups ordered by ascending hierarchicalValue)
-    private Suit basePlaySuit;
-    private Play trickBasePlay;
-    private Player belongsTo;
+    private final int playOrder;
+    private final int playHierarchicalNum; // This value is 0 if the play is a trash play, otherwise it's hierarchicalNum of the lowest card in the play
+    private final int[] playStructure; // playStructure represents the number of cards in each group (groups ordered by ascending hierarchicalValue)
+    private final Suit basePlayEffectiveSuit;
+    private final Play trickBasePlay;
+    private final Player belongsTo;
 
     Play(int playOrder, ServerCardList cardsInPlay, Player belongsTo, Play basePlay) {
         super(cardsInPlay);
@@ -19,7 +23,7 @@ class Play extends ServerCardList {
 
         // If this is the first play in the trick, set it as base play
         this.trickBasePlay = playOrder == 0 ? this : basePlay;
-        this.basePlaySuit = playOrder == 0 ? get(0).suit().getEffectiveSuit() : trickBasePlay.getBasePlaySuit().getEffectiveSuit();
+        this.basePlayEffectiveSuit = playOrder == 0 ? get(0).suit().getEffectiveSuit() : trickBasePlay.getBasePlayEffectiveSuit().getEffectiveSuit();
 
         sort();
         ArrayList<ServerCardList> groupedPlay = groupPlay();
@@ -40,8 +44,9 @@ class Play extends ServerCardList {
 
             cardGroupsHashMap.get(cardNum).add(c);
         }
+
         ArrayList<ServerCardList> cardGroups = new ArrayList<>(cardGroupsHashMap.values());
-        cardGroups.sort((c1, c2)->{
+        cardGroups.sort((c1, c2) -> {
             Integer c1value = c1.get(0).getHierarchicalValue();
             Integer c2value = c2.get(0).getHierarchicalValue();
 
@@ -54,38 +59,67 @@ class Play extends ServerCardList {
     private int getPlayHierarchicalValue(ArrayList<ServerCardList> cardGroups) {
         // Each ServerCardList in cardGroups contains identical cards, and cardGroups is sorted by ascending hierarchicalValue
 
-        // If the first group isn't in a valid suit, it's a trash play
-        if(!cardGroups.get(0).get(0).isTrump()
-                || cardGroups.get(0).get(0).getEffectiveSuit() != basePlaySuit) {
-            return 0; // If the first group isn't valid, it's a trash play. All other groups will be checked against the first group
+        // These checks make sure this play complies with the base play. If this play IS the base play, then obviously
+        // it complies with itself.
+        if(this != trickBasePlay) {
+
+            // playStructure of card groups (when groups are both sorted in ascending order) should be equivalent
+            if(!Arrays.equals(playStructure, trickBasePlay.playStructure)) {
+                return 0;
+            }
+
+            // The number of cards in this play should obviously be the same as the number of cards in the base play
+            if(this.size() != trickBasePlay.size()) {
+                return 0;
+            }
+
+            // If the first group isn't in a valid suit, it's a trash play.
+            // If first group is a trump suit, it still may be a non-trash play.
+            // All other groups will be checked against the first group to ensure that the entire play is the same suit
+            if(!cardGroups.get(0).get(0).isTrump() && cardGroups.get(0).get(0).getEffectiveSuit() != basePlayEffectiveSuit) {
+                return 0;
+            }
+
+            // At this point all we know is that the FIRST GROUP suit matches the base play's suit, that the number of cards
+            // in this play is equal to the number of cards in the base play, and that the play structures are identical.
+            // The hierarchy values still may not be valid (meaning, they may not be consecutive)
         }
 
         if(cardGroups.size() == 1) { // If there's only one group, it contains identical cards and is a valid play (suit of first group is already confirmed to be valid)
             return get(0).getHierarchicalValue();
         }
 
-        // Checks if group lengths and hierarchical values are consecutive, and if suit is valid
-        int lastGroupHierarchy = cardGroups.get(0).get(0).getHierarchicalValue();
-        int lastGroupLength = cardGroups.get(0).size();
+        // IMPORTANT: At this point we know only the first card group complies with the base play's suit. We need to
+        // make sure all the other groups in this play match the first group's suit.
+
+        // Checks if hierarchical values are consecutive, and if suit of every group is valid.
+        int lastGroupHierarchicalValue = cardGroups.get(0).get(0).getHierarchicalValue();
         for(ServerCardList group : cardGroups) {
-            if(group.size() != lastGroupLength // If group length isn't consecutive, it's a trash play
-                    || group.size() != lastGroupLength + 1
-                    || group.size() != lastGroupLength - 1
-                    || group.size() == 1) { // If length of group is 1, it's a trash play
+            // This check is theoretically only needed if this play is a base play, as a base play shouldn't have any
+            // group with size() == 1, and we already know that this play follows the base play's structure.
+
+            // If length of a group is 1, it's a trash play, but ONLY because we know there's more than one group
+            if(group.size() == 1) {
+                if(this != trickBasePlay) {
+                    Gdx.app.log("Play.getPlayHierarchicalValue", "This play isn't the base play, matched " +
+                            "the base play's play structure, but has a group of size 1. This shouldn't happen because " +
+                            "the base play shouldn't have been allowed with a group size of 1 (at this point it is " +
+                            "known that the play has more than one group.");
+                }
                 return 0;
             }
 
-            // If the hierarchical value isn't consecutive, it's a trash play
-            if(group.get(0).getHierarchicalValue() != lastGroupHierarchy + 1) {
+            // If the hierarchical value isn't consecutive, it's a trash play.
+            if(group.get(0).getHierarchicalValue() != lastGroupHierarchicalValue + 1) {
                 return 0;
             }
 
+            // If any group has a different suit than the the first group, it's a trash play
             if(group.get(0).getEffectiveSuit() != cardGroups.get(0).get(0).getEffectiveSuit()) {
-                return 0; // If any group has a different suit than the the first group, it's a trash play
+                return 0;
             }
 
-            lastGroupLength = group.size();
-            lastGroupHierarchy = group.get(0).getHierarchicalValue();
+            lastGroupHierarchicalValue = group.get(0).getHierarchicalValue();
         }
 
         // At this point we know the play is a valid play, in either the base or trump suit.
@@ -98,7 +132,7 @@ class Play extends ServerCardList {
     private int[] getPlayStructure(ArrayList<ServerCardList> cardGroups) {
         int[] playStructure = new int[cardGroups.size()];
         for(int i = 0; i < cardGroups.size(); i++) {
-            playStructure[i] = cardGroups.size();
+            playStructure[i] = cardGroups.get(i).size();
         }
         return playStructure;
     }
@@ -115,8 +149,8 @@ class Play extends ServerCardList {
         return playStructure;
     }
 
-    Suit getBasePlaySuit() {
-        return basePlaySuit;
+    Suit getBasePlayEffectiveSuit() {
+        return basePlayEffectiveSuit;
     }
 
     Player getPlayer() {
@@ -125,7 +159,8 @@ class Play extends ServerCardList {
 
     // TODO: isLegal() function
     boolean isLegal() {
-        return true;
+        // You cannot start a trick with a trash play
+        return trickBasePlay != this || playHierarchicalNum != 0;
     }
 
     void sort() {

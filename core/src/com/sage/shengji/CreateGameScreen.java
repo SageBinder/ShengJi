@@ -3,6 +3,7 @@ package com.sage.shengji;
 import com.badlogic.gdx.*;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.scenes.scene2d.Actor;
@@ -22,21 +23,32 @@ class CreateGameScreen extends InputAdapter implements Screen {
     private static int MAX_PLAYERS = 10;
     private static int MAX_NAME_LENGTH = 24;
 
-    private ShengJiGame game;
+    private float textProportion = 1f / 7f;
+    private float viewportScale = 5f;
+
+    private ScreenManager game;
     private Stage stage;
     private Table table;
     private Viewport viewport;
 
-    CreateGameScreen(ShengJiGame game) {
+    CreateGameScreen(ScreenManager game) {
         this.game = game;
 
+        float viewportHeight = Gdx.graphics.getHeight() * viewportScale;
+        float viewportWidth = Gdx.graphics.getWidth() * viewportScale;
+
+        int textSize = (int)(Math.max(Gdx.graphics.getHeight(), Gdx.graphics.getWidth()) * textProportion);
+
         stage = new Stage();
-        viewport = new ExtendViewport(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        viewport = new ExtendViewport(viewportWidth, viewportHeight);
         stage.setViewport(viewport);
 
         var generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/OpenSans-Bold.ttf"));
         var parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
-        parameter.size = 15;
+        parameter.size = textSize;
+        parameter.hinting = FreeTypeFontGenerator.Hinting.Medium;
+        parameter.minFilter = Texture.TextureFilter.Linear;
+        parameter.magFilter = Texture.TextureFilter.Linear;
 
         BitmapFont font = generator.generateFont(parameter);
         generator.dispose();
@@ -128,31 +140,39 @@ class CreateGameScreen extends InputAdapter implements Screen {
         });
 
         table = new Table();
-        table.setFillParent(true);
 //        table.setDebug(true);
-
-        table.add(IPLabel).fillX().padBottom(30).align(Align.center).colspan(2);
+        table.add(IPLabel).align(Align.center).colspan(2);
         ipGetterThread.start();
 
-        table.row().fill();
-        table.add(new Label("Enter port: ", skin));
-        table.add(portField);
+        table.row().fillX().padTop(viewportHeight / 35f);
+//        HorizontalGroup portGroup = new HorizontalGroup();
+//        Label portLabel = new Label("Port: ", labelStyle);
+//        portLabel.setFillParent(true);
+//        portGroup.addActor(portLabel);
+//        portField.setFillParent(true);
+//        portGroup.addActor(portField);
+        table.add(new Label("Port: ", labelStyle));
+        table.add(portField).prefWidth(viewportWidth / 5);
 
-        table.row().padTop(10).fill();
-        table.add(new Label("Enter number of players: ", skin));
+        table.row().padTop(viewportHeight / 120f).fillX();
+        table.add(new Label("Number of players: ", labelStyle));
         table.add(numPlayersField);
 
-        table.row().padTop(10).fill();
-        table.add(new Label("Enter name: ", skin));
+        table.row().padTop(viewportHeight / 120f).fillX();
+        table.add(new Label("Your name: ", labelStyle));
         table.add(nameField);
 
-        table.row().padTop(10).fill();
+        table.row().padTop(viewportHeight / 120f).fillX();
         table.add(errorLabel).colspan(2);
 
-        table.row().pad(70, 20, 20, 20).fill();
+        table.row().padTop(viewportHeight / 20f).fillX();
         table.add(createGameButton).colspan(2);
 
-        table.top().padTop(60);
+        table.top().padTop(viewportHeight / 5f);
+
+        table.setFillParent(true);
+
+        table.setWidth(viewportWidth / 2);
 
         stage.addActor(table);
 
@@ -170,7 +190,7 @@ class CreateGameScreen extends InputAdapter implements Screen {
 
     @Override
     public void render(float delta) {
-        Gdx.gl.glClearColor(ShengJiGame.BACKGROUND_COLOR.r, ShengJiGame.BACKGROUND_COLOR.g, ShengJiGame.BACKGROUND_COLOR.b, 1);
+        Gdx.gl.glClearColor(ScreenManager.BACKGROUND_COLOR.r, ScreenManager.BACKGROUND_COLOR.g, ScreenManager.BACKGROUND_COLOR.b, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         stage.act(delta);
@@ -182,6 +202,7 @@ class CreateGameScreen extends InputAdapter implements Screen {
         viewport.update(width, height, true);
         table.setFillParent(true);
         table.invalidate();
+
     }
 
     @Override

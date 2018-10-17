@@ -1,5 +1,6 @@
 package com.sage.server;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.net.Socket;
 import com.sage.Team;
 
@@ -40,48 +41,59 @@ class Player {
             return bufferedReader.ready();
         } catch(IOException e) {
             e.printStackTrace();
+            s.dispose();
             return false;
         }
     }
 
-    int readInt() {
+    Integer readInt() {
         try {
-            return Integer.parseInt(readLine());
-        } catch(NullPointerException e) {
+            Integer i = Integer.parseInt(readLine());
+            Gdx.app.log("Server.Player.readInt()", "READ INT: " + i);
+            return i; // readLine() will return null is player has disconnected
+        } catch(NumberFormatException e) {
             e.printStackTrace();
-            return -666; // TODO: NullPointerException may be thrown here if this player disconnects
+            return null;
         }
     }
 
     String readLine() {
         try {
-            String line;
-            //noinspection StatementWithEmptyBody
-            while((line = bufferedReader.readLine()).trim().isEmpty()); // This empty while loop just ignores empty strings
+            String line = bufferedReader.readLine();
+            Gdx.app.log("Server.Player.readLine()", "READ STRING: " + line);
+            if(line == null) {
+                s.dispose();
+            }
+
             return line;
         } catch(IOException e) {
             e.printStackTrace();
+            s.dispose();
             return null;
         }
     }
 
     void sendString(String string) {
         try {
+            Gdx.app.log("Server.Player.sendString()", "SENDING STRING: " + string);
             bufferedWriter.write(string);
             bufferedWriter.write("\n");
             bufferedWriter.flush();
         } catch(IOException e) {
             e.printStackTrace();
+            s.dispose();
         }
     }
 
     void sendInt(int i) {
         try {
+            Gdx.app.log("Server.Player.sendInt()", "SENDING INT: " + i);
             bufferedWriter.write(Integer.toString(i));
             bufferedWriter.write("\n");
             bufferedWriter.flush();
         } catch(IOException e) {
             e.printStackTrace();
+            s.dispose();
         }
     }
 
@@ -91,8 +103,9 @@ class Player {
         }
     }
 
-    boolean isValidCall(ServerCard c) {
-        return callRank == c.rank().toInt() && hand.contains(c) && !(c.suit() == Suit.BIG_JOKER || c.suit() == Suit.SMALL_JOKER);
+    boolean isValidCall(ServerCard c, int numCallCards) {
+        return callRank == c.rank().toInt() && hand.stream().filter(card -> card == c).count() >= numCallCards
+                && !(c.suit() == Suit.BIG_JOKER || c.suit() == Suit.SMALL_JOKER);
     }
 
     boolean isValidKitty(ServerCardList newKitty) {

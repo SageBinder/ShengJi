@@ -34,7 +34,7 @@ public class ServerCodes { // Codes are negative so as to not clash with the sen
     public static final int WAIT_FOR_TRICK_WINNER = -208;
     public static final int WAIT_FOR_TRICK_POINT_CARDS = -209;
     public static final int WAIT_FOR_ROUND_WINNERS = -210;
-    public static final int WAIT_FOR_COLLECTED_POINTS = -211;
+    public static final int WAIT_FOR_NUM_COLLECTED_POINTS = -211;
     public static final int WAIT_FOR_CALLING_NUMBERS = -212;
     public static final int ROUND_OVER = -213;
 
@@ -42,4 +42,6 @@ public class ServerCodes { // Codes are negative so as to not clash with the sen
     public static final int JOIN_SUCCESSFUL = -300;
     public static final int CONNECTION_DENIED = -301;
     public static final int WAIT_FOR_PLAYERS_LIST = -302;
+
+    public static final int PING = -400;
 }

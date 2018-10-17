@@ -6,4 +6,6 @@ public class ClientCodes {
 
     // Format for sending calling rank will be "[playerNum]\n[newCallingRank]"
     public static final int WAIT_FOR_NEW_CALLING_RANK = -100;
+
+    public static final int PING = -200;
 }

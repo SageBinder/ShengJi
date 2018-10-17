@@ -2,131 +2,96 @@ package com.sage.shengji;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputProcessor;
-import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.scenes.scene2d.Event;
-import com.badlogic.gdx.scenes.scene2d.EventListener;
-import com.badlogic.gdx.scenes.scene2d.Stage;
-import com.badlogic.gdx.scenes.scene2d.ui.Skin;
-import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.scenes.scene2d.Actor;
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.viewport.Viewport;
+import com.sage.Team;
 import com.sage.server.ServerCodes;
 
 import static com.sage.server.ServerCodes.*;
 
 class GameState implements InputProcessor {
-    private ShengJiGame game;
+    private ScreenManager game;
 
     private GameStateUpdater updater = new GameStateUpdater();
 
-    private PlayerList players = new PlayerList();
-    private int[] playerOrder;
+    PlayerList players = new PlayerList();
+    int[] playerOrder;
 
-    private Player turnPlayer;
+    PlayerList roundWinners = new PlayerList();
 
-    private Player thisPlayer;
-    private final RenderableHand hand = new RenderableHand();
+    Player turnPlayer;
+    Player lastTrickWinner;
+    Player leadingPlayer;
 
-    private final RenderableCardList collectedCards = new RenderableCardList();
+    Player thisPlayer;
+    final RenderableHand hand = new RenderableHand();
+    boolean thisPlayerIsHost = false;
 
-    private final RenderableCardList kitty = new RenderableCardList();
+    final RenderableCardList collectedPointCards = new RenderableCardList();
+    int numCollectedPoints = 0;
 
-    private final RenderableCardList friendCards = new RenderableCardList();
+    final RenderableCardList kitty = new RenderableCardList();
 
-    private RenderableCard trumpCard;
+    final RenderableCardList friendCards = new RenderableCardList();
 
-    private BitmapFont messageFont;
-    private String message = "";
+    RenderableCard trumpCard;
 
-    private SpriteBatch batch = new SpriteBatch();
+    String message = "";
+    String buttonText = "";
+
+    ChangeListener buttonAction = new ChangeListener() {
+        @Override
+        public void changed(ChangeEvent event, Actor actor) {
+        }
+    };
+    boolean buttonIsEnabled = false;
 
     private Viewport viewport;
 
-    private Stage stage;
-    private TextButton sendButton;
+    int lastServerPrompt = ServerCodes.ROUND_OVER;
 
-    private int lastServerPrompt = ServerCodes.ROUND_OVER;
-
-    // TODO: I don't think any of these methods still need to be synchronized but I'm not sure
-
-    GameState(ShengJiGame game) {
+    GameState(ScreenManager game) {
         this.game = game;
 
-        for(int i = 0; i < 10; i++) {
-            hand.add(new RenderableCard());
-        }
-
-        var generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/OpenSans-Bold.ttf"));
-        var parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
-        parameter.size = 15;
-
-        Skin skin = new Skin(Gdx.files.internal("uiskin.json"));
-
-        var textButtonStyle = skin.get(TextButton.TextButtonStyle.class);
-        textButtonStyle.font = generator.generateFont(parameter);
-
-        messageFont = generator.generateFont(parameter);
-
-        generator.dispose();
-
-        stage = new Stage();
-        sendButton = new TextButton("Send", textButtonStyle);
-
-        stage.addActor(sendButton);
+//        for(int i = 0; i < 10; i++) {
+//            hand.add(new RenderableCard());
+//        }
     }
 
-    synchronized void render(float delta) {
-        stage.act(delta);
-        stage.draw();
-        messageFont.draw(batch, message, viewport.getWorldWidth() / 2, viewport.getWorldHeight() / 2);
-
-        batch.setProjectionMatrix(viewport.getCamera().combined);
-
-
-        if(lastServerPrompt == INVALID_KITTY || lastServerPrompt == SEND_KITTY) {
-            kitty.render(batch);
-        }
-
-        hand.render(batch, viewport);
-    }
-
-    synchronized void setViewport(Viewport viewport) {
+    void setViewport(Viewport viewport) {
         this.viewport = viewport;
-        stage.setViewport(viewport);
     }
 
-    synchronized void update(ShengJiClient client) {
+    boolean update(ShengJiClient client) {
         int serverCode = client.consumeServerCode();
         if(serverCode != 0) {
             updater.update(serverCode, client);
             client.waitForServerCode();
+            return true;
         }
+
+        return false;
     }
 
     @Override
     public boolean keyDown(int keycode) {
-        stage.keyDown(keycode);
         return false;
     }
 
     @Override
     public boolean keyUp(int keycode) {
-        stage.keyUp(keycode);
         return false;
     }
 
     @Override
     public boolean keyTyped(char character) {
-        stage.keyTyped(character);
         return false;
     }
 
     @Override
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-        stage.touchDown(screenX, screenY, pointer, button);
-
         Vector2 clickPos = viewport.unproject(new Vector2(screenX, screenY));
         hand.click(clickPos, button);
 
@@ -135,34 +100,30 @@ class GameState implements InputProcessor {
 
     @Override
     public boolean touchUp(int screenX, int screenY, int pointer, int button) {
-        stage.touchUp(screenX, screenY, pointer, button);
         return false;
     }
 
     @Override
     public boolean touchDragged(int screenX, int screenY, int pointer) {
-        stage.touchDragged(screenX, screenY, pointer);
         return false;
     }
 
     @Override
     public boolean mouseMoved(int screenX, int screenY) {
-        stage.mouseMoved(screenX, screenY);
         return false;
     }
 
     @Override
     public boolean scrolled(int amount) {
-        stage.scrolled(amount);
         return false;
     }
 
     private class GameStateUpdater {
         private ShengJiClient client;
 
-        private final EventListener sendCallEventListener = new EventListener() {
+        private final ChangeListener sendCallChangeListener = new ChangeListener() {
             @Override
-            public boolean handle(Event event) {
+            public void changed(ChangeEvent event, Actor actor) {
                 if(hand.stream().noneMatch(RenderableCard::isSelected) && thisPlayer.getPlay().isEmpty()) {
                     client.sendInt(ClientCodes.NO_CALL);
                 } else {
@@ -181,14 +142,12 @@ class GameState implements InputProcessor {
                 }
 
                 hand.setAllSelected(false);
-
-                return true;
             }
         };
 
-        private final EventListener sendKittyEventListener = new EventListener() {
+        private final ChangeListener sendKittyChangeListener = new ChangeListener() {
             @Override
-            public boolean handle(Event event) {
+            public void changed(ChangeEvent event, Actor actor) {
                 hand.forEach(card -> {
                     if(card.isSelected()) {
                         client.sendInt(card.cardNum());
@@ -197,13 +156,14 @@ class GameState implements InputProcessor {
 
                 // TODO: Temporarily store removed cards in case kitty is invalid
                 hand.removeIf(AbstractRenderableCard::isSelected);
-                return true;
+
+                disableButton();
             }
         };
 
-        private final EventListener sendPlayEventListener = new EventListener() {
+        private final ChangeListener sendPlayChangeListener = new ChangeListener() {
             @Override
-            public boolean handle(Event event) {
+            public void changed(ChangeEvent event, Actor actor) {
                 hand.forEach(card -> {
                     if(card.isSelected()) {
                         card.setSelected(false);
@@ -214,24 +174,22 @@ class GameState implements InputProcessor {
                 hand.removeAll(thisPlayer.getPlay());
 
                 disableButton();
-
-                return true;
             }
         };
 
-        private final EventListener sendBasePlayEventListener = new EventListener() {
+        private final ChangeListener sendBasePlayChangeListener = new ChangeListener() {
             @Override
-            public boolean handle(Event event) {
+            public void changed (ChangeEvent event, Actor actor) {
                 client.sendInt((int)hand.stream().filter(AbstractRenderableCard::isSelected).count());
 
-                return sendPlayEventListener.handle(event);
+                sendPlayChangeListener.handle(event);
             }
         };
 
         void update(int serverCode, ShengJiClient client) throws NullPointerException {
             this.client = client;
             if(!client.readyToRead()) {
-                Gdx.app.log("GameState.GameStateUpdater.update", "client read not ready. This shouldn't happen.");
+                Gdx.app.log("Shengji.GameStateUpdater.update", "client read not ready. This usually shouldn't happen.");
                 return;
             }
 
@@ -265,6 +223,7 @@ class GameState implements InputProcessor {
                 // Game setup codes:
                 case ROUND_START:
                     roundStart();
+                    break;
                 case WAIT_FOR_PLAYER_ORDER:
                     waitForPlayerOrder();
                     break;
@@ -293,6 +252,7 @@ class GameState implements InputProcessor {
                 // Game codes:
                 case TRICK_START:
                     trickStart();
+                    break;
                 case SEND_BASE_PLAY:
                     sendBasePlay();
                     break;
@@ -323,7 +283,7 @@ class GameState implements InputProcessor {
                 case WAIT_FOR_ROUND_WINNERS:
                     waitForRoundWinners();
                     break;
-                case WAIT_FOR_COLLECTED_POINTS:
+                case WAIT_FOR_NUM_COLLECTED_POINTS:
                     waitForCollectedPoints();
                     break;
                 case WAIT_FOR_CALLING_NUMBERS:
@@ -338,7 +298,7 @@ class GameState implements InputProcessor {
                     waitForPlayersList();
                     break;
                 default:
-                    Gdx.app.log("GameState.Updater.update",
+                    Gdx.app.log("Shengji.GameState.Updater.update",
                             "GameState update switch went to default. This really really really shouldn't happen");
                     break;
             }
@@ -365,8 +325,16 @@ class GameState implements InputProcessor {
                 players.add(new Player(playerNum, name, callRank));
             }
 
+            int hostPlayerNum = client.readInt();
+            Player host = players.getPlayerFromPlayerNum(hostPlayerNum);
+
+            players.forEach(p -> p.setHost(false));
+            host.setHost(true);
+
             GameState.this.players = players;
             thisPlayer = players.getPlayerFromPlayerNum(thisPlayerNum);
+
+            thisPlayerIsHost = thisPlayer == host;
 
             disableButton();
         }
@@ -380,8 +348,8 @@ class GameState implements InputProcessor {
             hand.addAll(thisPlayer.getPlay());
             thisPlayer.clearPlay();
 
-            sendButton.setText("Send call");
-            enableButton(sendCallEventListener);
+            buttonText = "Send call";
+            enableButton(sendCallChangeListener);
         }
 
         private void noCall() {
@@ -401,8 +369,8 @@ class GameState implements InputProcessor {
             hand.addAll(thisPlayer.getPlay());
             thisPlayer.clearPlay();
 
-            sendButton.setText("Send call");
-            enableButton(sendCallEventListener);
+            buttonText = "Send call";
+            enableButton(sendCallChangeListener);
         }
 
         private void successfulCall() {
@@ -415,16 +383,16 @@ class GameState implements InputProcessor {
                 }
             });
 
-            enableButton(sendCallEventListener);
+            enableButton(sendCallChangeListener);
         }
 
         private void sendCall() {
             message = "Make your call";
             lastServerPrompt = ServerCodes.SEND_CALL;
 
-            sendButton.setText("Send call");
+            buttonText = "Send call";
 
-            enableButton(sendCallEventListener);
+            enableButton(sendCallChangeListener);
         }
 
         private void waitForNewWinningCall() {
@@ -454,7 +422,6 @@ class GameState implements InputProcessor {
 
             message = "Call winner: " + callWinner.getName();
 
-            sendButton.clearListeners();
             disableButton();
         }
 
@@ -464,13 +431,33 @@ class GameState implements InputProcessor {
 
             message = "No one called, " + startingPlayer.getName() + " will start";
 
-            sendButton.clearListeners();
             disableButton();
         }
 
         // GAME SETUP CODES:
 
         private void roundStart() {
+            playerOrder = null;
+
+            roundWinners.clear();
+            kitty.clear();
+            collectedPointCards.clear();
+            hand.clear();
+            friendCards.clear();
+
+            numCollectedPoints = 0;
+
+            turnPlayer = null;
+            lastTrickWinner = null;
+            leadingPlayer = null;
+
+
+
+            message = "";
+
+            trumpCard = null;
+
+            disableButton();
             game.showGameScreen(GameState.this);
         }
 
@@ -519,18 +506,18 @@ class GameState implements InputProcessor {
             message = "Select cards to put in kitty";
             lastServerPrompt = ServerCodes.SEND_KITTY;
 
-            sendButton.setText("Confirm kitty");
+            buttonText = "Confirm kitty";
 
-            enableButton(sendKittyEventListener);
+            enableButton(sendKittyChangeListener);
         }
 
         private void invalidKitty() {
             message = "Invalid kitty!";
             lastServerPrompt = ServerCodes.INVALID_KITTY;
 
-            sendButton.setText("Confirm kitty");
+            buttonText = "Confirm kitty";
 
-            enableButton(sendKittyEventListener);
+            enableButton(sendKittyChangeListener);
         }
 
         private void sendFriendCards() {
@@ -571,9 +558,9 @@ class GameState implements InputProcessor {
             message = "Your turn";
             lastServerPrompt = ServerCodes.SEND_BASE_PLAY;
 
-            sendButton.setText("Send play");
+            buttonText = "Send play";
 
-            enableButton(sendBasePlayEventListener);
+            enableButton(sendBasePlayChangeListener);
         }
 
         // Should send to server:
@@ -582,9 +569,9 @@ class GameState implements InputProcessor {
             message = "Your turn";
             lastServerPrompt = ServerCodes.SEND_PLAY;
 
-            sendButton.setText("Send play");
+            buttonText = "Send play";
 
-            enableButton(sendPlayEventListener);
+            enableButton(sendPlayChangeListener);
         }
 
         private void waitForTurnPlayer() {
@@ -617,47 +604,109 @@ class GameState implements InputProcessor {
         }
 
         private void waitForNewPlayerTeam() {
+            Player p = players.getPlayerFromPlayerNum(client.readInt());
+            int teamNum = client.readInt();
+            Team newTeam = Team.getTeamFromTeamNum(teamNum);
+
+            p.setTeam(newTeam);
+
+            // I don't think newTeam will ever be NO_TEAM but I'm not sure
+            if(newTeam == Team.COLLECTORS) {
+                collectedPointCards.addAll(p.getPoints());
+                p.clearPoints();
+            } else if(newTeam == Team.KEEPERS) {
+                p.clearPoints();
+            }
 
         }
 
         private void waitForPlayerInLead() {
-
+            leadingPlayer = players.getPlayerFromPlayerNum(client.readInt());
         }
 
         private void waitForTrickWinner() {
+            lastTrickWinner = players.getPlayerFromPlayerNum(client.readInt());
 
+            String teamString = lastTrickWinner.getTeam() == Team.COLLECTORS ? "(collector)"
+                    : lastTrickWinner.getTeam() == Team.KEEPERS ? "(keeper)"
+                    : "(no team)";
+            message = lastTrickWinner.getName() + " " + teamString + " won the trick!";
+
+            players.forEach(Player::clearPlay);
+
+            disableButton();
         }
 
         private void waitForTrickPointCards() {
+            int numCards = client.readInt();
+            RenderableCardList pointCards = new RenderableCardList();
 
+            for(int i = 0; i < numCards; i++) {
+                pointCards.add(new RenderableCard(client.readInt()));
+            }
+
+            if(lastTrickWinner.getTeam() == Team.NO_TEAM) {
+                lastTrickWinner.addToPoints(pointCards);
+            } else if(lastTrickWinner.getTeam() == Team.COLLECTORS) {
+                collectedPointCards.addAll(pointCards);
+            }
+
+            disableButton();
         }
 
         private void waitForRoundWinners() {
+            int numWinners = client.readInt();
 
+            roundWinners.clear();
+            for(int i = 0; i < numWinners; i++) {
+                roundWinners.add(players.getPlayerFromPlayerNum(client.readInt()));
+            }
+
+            message = "Winners: ";
+            roundWinners.forEach(p -> message += roundWinners.lastIndexOf(p) == roundWinners.size() - 1
+                    ? p.getName() + ", "
+                    : p.getName());
+
+            disableButton();
         }
 
         private void waitForCollectedPoints() {
+            numCollectedPoints = client.readInt();
 
+            disableButton();
         }
 
         private void waitForCallingNumbers() {
+            int numPlayers = client.readInt();
 
+            for(int i = 0; i < numPlayers; i++) {
+                int playerNum = client.readInt();
+                int callRank = client.readInt();
+                players.getPlayerFromPlayerNum(playerNum).setCallRank(callRank);
+            }
+
+            disableButton();
         }
 
         private void roundOver() {
             game.showLobbyScreen(GameState.this);
         }
-        
-        private void enableButton(EventListener listener) {
-            sendButton.setVisible(true);
-            sendButton.setDisabled(false);
-            sendButton.clearListeners();
-            sendButton.addListener(listener);
+
+        // Whether the button is enabled should be stored as boolean and the event listener should be stored as well,
+        // then the renderer can render the button based on those values.
+        private void enableButton(ChangeListener listener) {
+            buttonIsEnabled = true;
+            GameState.this.buttonAction = listener;
         }
         
         private void disableButton() {
-            sendButton.setVisible(false);
-            sendButton.setDisabled(true);
+            buttonIsEnabled = false;
+            GameState.this.buttonAction = new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+
+                }
+            };
         }
     }
 }

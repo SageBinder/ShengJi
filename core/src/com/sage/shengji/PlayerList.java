@@ -2,6 +2,7 @@ package com.sage.shengji;
 
 import java.util.ArrayList;
 
+@SuppressWarnings("serial")
 class PlayerList extends ArrayList<Player> {
     boolean removeByPlayerNum(int playerNum) {
         for(Player p : this) {

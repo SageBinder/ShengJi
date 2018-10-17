@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Random;
 
+@SuppressWarnings("serial")
 public class CardList<T extends Card> extends ArrayList<T> {
     private Random random = new Random();
 

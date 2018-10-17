@@ -1,15 +1,17 @@
 package com.sage.server;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Net;
 import com.badlogic.gdx.net.NetJavaServerSocketImpl;
 import com.badlogic.gdx.net.ServerSocketHints;
 import com.badlogic.gdx.net.Socket;
+import com.badlogic.gdx.utils.GdxRuntimeException;
 import com.sage.shengji.ClientCodes;
 
 import java.io.*;
 
 public class ShengJiServer extends Thread {
-    private final int maxPlayers;
+    private int maxPlayers;
 
     private final Object playersLock = new Object();
     private PlayerList players = new PlayerList();
@@ -27,20 +29,19 @@ public class ShengJiServer extends Thread {
 
     private NetJavaServerSocketImpl serverSocket;
 
-    public ShengJiServer(int port, int numPlayers) {
+    public ShengJiServer(int port, int numPlayers) throws GdxRuntimeException {
         maxPlayers = numPlayers;
 
         ServerSocketHints serverSocketHints = new ServerSocketHints();
         serverSocketHints.acceptTimeout = 0;
-        // TODO: figure out a way to catch GdxRuntimeException or something if an error is thrown here
         serverSocket = new NetJavaServerSocketImpl(Net.Protocol.TCP, port, serverSocketHints);
     }
 
     @Override
     public void run() {
-        Thread manageNewConnectionsThread = new Thread(this::manageNewConnections);
-        Thread manageDisconnectionsThread = new Thread(this::manageDisconnections);
-        Thread manageHostCommunicationThread = new Thread(this::manageHostCommunication);
+        Thread manageNewConnectionsThread = new Thread(manageNewConnections);
+        Thread manageDisconnectionsThread = new Thread(manageDisconnections);
+        Thread managePlayerCommunicationsThread = new Thread(managePlayerCommunication);
 
         // Once roundStarted is set to true, all three threads should exit
 
@@ -55,19 +56,20 @@ public class ShengJiServer extends Thread {
             if(!manageDisconnectionsThread.isAlive()) {
                 manageDisconnectionsThread.start();
             }
-            if(!manageHostCommunicationThread.isAlive()) {
-                manageHostCommunicationThread.start();
+            if(!managePlayerCommunicationsThread.isAlive()) {
+                managePlayerCommunicationsThread.start();
             }
             try {
-                manageNewConnectionsThread.join();
+              //  manageNewConnectionsThread.join();
                 manageDisconnectionsThread.join();
-                manageHostCommunicationThread.join();
+                managePlayerCommunicationsThread.join();
             } catch(InterruptedException e) {
                 e.printStackTrace();
             }
 
             synchronized(playersLock) {
                 roundRunner.setPlayers(players);
+                Gdx.app.log("Server.run", "before starting new round");
                 roundRunner.playNewRound();
                 for(Player p : players) {
                     p.resetForNewRound();
@@ -84,15 +86,34 @@ public class ShengJiServer extends Thread {
     // TODO: Way of letting players temporarily sit out a round
 
     // Add new connections while players.size() remains less than maxPlayers
-    private void manageNewConnections() {
+    private Runnable manageNewConnections = () -> {
         while(!roundStarted) {
+            try {
+                Thread.sleep(1000);
+            } catch(InterruptedException e) {
+                e.printStackTrace();
+            }
+
             // The connection has to be accepted outside of the synchronized block because serverSocket.accept()
             // is a blocking method. Being inside the synchronized block would prevent the other threads from
             // interacting with players because this thread will always be looking to accept new connections.
             // Instead, if the max players is met or the round has already started, dispose of the new
             // connection that was made (because it was made after max players was met or the round was started)
+            Gdx.app.log("Server.manageNewConnections", "before serverSocket.accept");
             Socket s = serverSocket.accept(null);
+            Gdx.app.log("Server.manageNewConnections", "after serverSocket.accept");
             var bufferedReader = new BufferedReader(new InputStreamReader(s.getInputStream()));
+
+            if(roundStarted) {
+                try {
+                    var bw = new BufferedWriter(new OutputStreamWriter(s.getOutputStream()));
+                    bw.write(Integer.toString(ServerCodes.CONNECTION_DENIED));
+                    bw.flush();
+                } catch(IOException e) {
+                    e.printStackTrace();
+                }
+                s.dispose();
+            }
 
             synchronized(playersLock) {
                 if(players.size() < maxPlayers && !roundStarted) {
@@ -100,8 +121,10 @@ public class ShengJiServer extends Thread {
 
                     try { // New client connections should send the name of the player
                         var writer = new BufferedWriter(new OutputStreamWriter(s.getOutputStream()));
-                        writer.write(Integer.toString(ServerCodes.JOIN_SUCCESSFUL));
+                        Gdx.app.log("Server.manageNewConnections", "JOIN_SUCCESSFUL write");
+                        writer.write(Integer.toString(ServerCodes.JOIN_SUCCESSFUL) + "\n");
                         writer.flush();
+                        Gdx.app.log("Server.manageNewConnections", "Player name read");
                         pName = bufferedReader.readLine();
                     } catch(IOException e) {
                         e.printStackTrace();
@@ -110,7 +133,7 @@ public class ShengJiServer extends Thread {
                     // Setting new player num to be players.size() is okay because player nums are always reduced to minimum possible value
                     Player newPlayer = new Player(players.size(), pName, s);
                     players.add(newPlayer);
-                    newPlayer.sendInt(newPlayer.getPlayerNum());
+                    //                    newPlayer.sendInt(newPlayer.getPlayerNum());
 
                     if(host == null) {
                         host = newPlayer;
@@ -129,12 +152,22 @@ public class ShengJiServer extends Thread {
                 }
             }
         }
-    }
+    };
 
+    // TODO: Have have players send a code if they choose to disconnect
     // If any player socket is not connected, remove that player from players and compress player nums
-    private void manageDisconnections() {
+    private Runnable manageDisconnections = () -> {
         while(!roundStarted) {
+            try {
+                Thread.sleep(1000);
+            } catch(InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            Gdx.app.log("Server.manageDisconnections", "in while");
             synchronized(playersLock) {
+                players.forEach(p -> p.sendInt(ServerCodes.PING));
+
                 if(players.removeIf(p -> !p.socketIsConnected())) {
                     // "Compress" player nums ([0, 1, 2, 4, 5] -> [0, 1, 2, 3, 4])
                     for(Player p : players) {
@@ -145,40 +178,74 @@ public class ShengJiServer extends Thread {
                 }
             }
         }
-    }
+    };
 
+    // TODO: Instead of having one thread loop through all players, make a different thread for each player to manage their communication?
     // Checks if host started round, or change calling rank of any player
-    private void manageHostCommunication() {
+    private Runnable managePlayerCommunication = () -> {
         while(!roundStarted) {
-            if(host != null) {
-                int clientCode = host.readInt();
-                switch(clientCode) {
-                    case ClientCodes.START_ROUND:
-                        this.roundStarted = true;
-                        return;
-                    case ClientCodes.WAIT_FOR_NEW_CALLING_RANK:
-                        int playerNum = host.readInt();
-                        int callRank = host.readInt();
-                        synchronized(playersLock) {
-                            players.getPlayerFromPlayerNum(playerNum).setCallRank(callRank);
-                        }
+            try {
+                Thread.sleep(1000);
+            } catch(InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            Gdx.app.log("Server.managePlayerCommunication", "in while");
+            synchronized(playersLock) {
+                for(Player p : players) {
+                    Integer clientCode = null;
+
+                    if(p.readyToRead()) {
+                        clientCode = p.readInt();
+                    }
+
+                    if(clientCode == null) {
+                        continue;
+                    }
+
+                    switch(clientCode) {
+                        case ClientCodes.START_ROUND:
+                            if(p == host) {
+                                this.roundStarted = true;
+                                return;
+                            }
+                            break;
+                        case ClientCodes.WAIT_FOR_NEW_CALLING_RANK:
+                            if(p == host) {
+                                int playerNum = p.readInt();
+                                int callRank = p.readInt();
+                                synchronized(playersLock) {
+                                    players.getPlayerFromPlayerNum(playerNum).setCallRank(callRank);
+                                }
+                            }
+                            break;
+                        case ClientCodes.PING:
+                            Gdx.app.log("Server.managePlayerCommunication",
+                                    "RECEIVED PING FROM PLAYER " + p.getPlayerNum() + " (" + p.getName() + ")");
+                            break;
+                    }
                 }
             }
         }
-    }
+    };
 
     // This method is always called from inside a synchronized block so I don't think it needs another one inside but I don't fucking know
     private void sendPlayersToAll() {
+        Gdx.app.log("Server run", "WAIT_FOR_PLAYERS_LIST write");
         players.sendIntToAll(ServerCodes.WAIT_FOR_PLAYERS_LIST);
 
-        StringBuilder playersString = new StringBuilder();
-        for(Player p : players) {
+        players.forEach(p -> {
+
             p.sendInt(p.getPlayerNum()); // As playerNum can change, first send player p their playerNum
             p.sendInt(players.size());
-            playersString.append(p.getPlayerNum()).append("\n");
-            playersString.append(p.getName()).append("\n");
-            playersString.append(p.getCallRank()).append("\n");
-        }
-        players.sendStringToAll(playersString.toString());
+        });
+
+        players.forEach(p -> {
+            players.sendIntToAll(p.getPlayerNum());
+            players.sendStringToAll(p.getName());
+            players.sendIntToAll(p.getCallRank());
+        });
+
+        players.sendIntToAll(host.getPlayerNum());
     }
 }

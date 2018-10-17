@@ -1,11 +1,12 @@
 package com.sage.shengji;
 
 import com.badlogic.gdx.Game;
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.utils.GdxRuntimeException;
 import com.sage.server.ShengJiServer;
 
-// TODO: Rendering part of player code
-public class ShengJiGame extends Game {
+public class ScreenManager extends Game {
     static final Color BACKGROUND_COLOR = new Color(0, 0.2f, 0.11f, 1);
     static final float TABLE_WORLD_SIZE = 100f;
 
@@ -16,8 +17,16 @@ public class ShengJiGame extends Game {
 
     @Override
     public void create() {
-        startGameServer(1000, 1);
-        joinGame(1000, "127.0.0.1", "Sponge");
+        Gdx.graphics.setTitle("ShengJi");
+
+//        showCreateGameScreen();
+
+        try {
+            startGameServer(25565, 5);
+        } catch(GdxRuntimeException e) {
+            e.printStackTrace();
+        }
+        joinGame(25565, "127.0.0.1", "asdfasdfsadfasdfasdfasdfasdfasdfasdf");
     }
 
     void showStartScreen() {
@@ -50,7 +59,7 @@ public class ShengJiGame extends Game {
 
     void joinGame(int port, String serverIP, String name) {
         gameState = new GameState(this);
-        this.client = new ShengJiClient(port, serverIP, name, this, gameState);
+        this.client = new ShengJiClient(port, serverIP, name, this);
         client.start();
 
         showLobbyScreen(gameState);
@@ -59,5 +68,12 @@ public class ShengJiGame extends Game {
     void startGameServer(int port, int numPlayers) {
         this.server = new ShengJiServer(port, numPlayers);
         server.start();
+    }
+
+    @Override
+    public void dispose() {
+        if(client != null) {
+            client.quit();
+        }
     }
 }
