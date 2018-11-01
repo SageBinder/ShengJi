@@ -10,6 +10,9 @@ public class ServerCodes { // Codes are negative so as to not clash with the sen
     public static final int WAIT_FOR_NEW_WINNING_CALL = -6;
     public static final int WAIT_FOR_CALL_WINNER = -7;
     public static final int NO_ONE_CALLED = -8;
+    public static final int WAIT_FOR_KITTY_CALL_WINNER = -9; // <- When no one calls, first person to play suit from kitty is the caller
+    public static final int SUCCESSFUL_KITTY_CALL = -10;
+    public static final int INVALID_KITTY_CALL = -11;
 
     // Game setup codes:
     public static final int ROUND_START = -100;

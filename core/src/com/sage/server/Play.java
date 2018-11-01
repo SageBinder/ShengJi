@@ -1,10 +1,10 @@
 package com.sage.server;
 
 import com.badlogic.gdx.Gdx;
+import com.sage.Suit;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.HashMap;
 
 // This class honestly should be immutable but I don't feel like doing that right now
@@ -23,9 +23,9 @@ class Play extends ServerCardList {
 
         // If this is the first play in the trick, set it as base play
         this.trickBasePlay = playOrder == 0 ? this : basePlay;
-        this.basePlayEffectiveSuit = playOrder == 0 ? get(0).suit().getEffectiveSuit() : trickBasePlay.getBasePlayEffectiveSuit().getEffectiveSuit();
+        this.basePlayEffectiveSuit = playOrder == 0 ? get(0).getEffectiveSuit() : trickBasePlay.basePlayEffectiveSuit;
 
-        sort();
+//        sort();
         ArrayList<ServerCardList> groupedPlay = groupPlay();
 
         playHierarchicalNum = getPlayHierarchicalValue(groupedPlay);
@@ -34,6 +34,7 @@ class Play extends ServerCardList {
     }
 
     private ArrayList<ServerCardList> groupPlay() {
+        // TODO: Use ServerCard object as key instead of Integer?
         // Key to hashmap corresponds to a card's cardnum
         HashMap<Integer, ServerCardList> cardGroupsHashMap = new HashMap<>();
         for(ServerCard c : this) {
@@ -145,14 +146,6 @@ class Play extends ServerCardList {
         return playOrder;
     }
 
-    int[] getPlayStructure() {
-        return playStructure;
-    }
-
-    Suit getBasePlayEffectiveSuit() {
-        return basePlayEffectiveSuit;
-    }
-
     Player getPlayer() {
         return belongsTo;
     }
@@ -163,17 +156,17 @@ class Play extends ServerCardList {
         return trickBasePlay != this || playHierarchicalNum != 0;
     }
 
-    void sort() {
-        class CustomComparator implements Comparator<ServerCard> {
-            @Override
-            public int compare(ServerCard c1, ServerCard c2) {
-                Integer c1value = c1.getHierarchicalValue();
-                Integer c2value = c2.getHierarchicalValue();
-
-                return c1value.compareTo(c2value);
-            }
-        }
-
-        sort(new CustomComparator());
-    }
+//    void sort() {
+//        class CustomComparator implements Comparator<ServerCard> {
+//            @Override
+//            public int compare(ServerCard c1, ServerCard c2) {
+//                Integer c1value = c1.getHierarchicalValue();
+//                Integer c2value = c2.getHierarchicalValue();
+//
+//                return c1value.compareTo(c2value);
+//            }
+//        }
+//
+//        sort(new CustomComparator());
+//    }
 }

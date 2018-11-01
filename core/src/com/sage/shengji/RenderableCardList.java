@@ -1,9 +1,10 @@
 package com.sage.shengji;
 
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.utils.viewport.Viewport;
 import com.sage.CardList;
-import com.sage.server.Rank;
-import com.sage.server.Suit;
+import com.sage.Rank;
+import com.sage.Suit;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -32,9 +33,9 @@ public class RenderableCardList extends CardList<RenderableCard> {
         }
     }
 
-    void render(SpriteBatch batch) {
+    void render(SpriteBatch batch, Viewport viewport) {
         for(RenderableCard c : this) {
-            c.render(batch);
+            c.render(batch, viewport);
         }
     }
 

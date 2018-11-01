@@ -1,6 +1,8 @@
 package com.sage.server;
 
 import com.sage.CardList;
+import com.sage.Rank;
+import com.sage.Suit;
 
 import java.util.ArrayList;
 

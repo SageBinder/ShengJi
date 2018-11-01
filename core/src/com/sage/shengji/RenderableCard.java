@@ -7,23 +7,20 @@ import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.utils.viewport.Viewport;
 import com.sage.Card;
-import com.sage.server.Rank;
-import com.sage.server.Suit;
+import com.sage.Rank;
+import com.sage.Suit;
 
 import java.util.HashMap;
 
-import static com.sage.shengji.ScreenManager.TABLE_WORLD_SIZE;
-
 class RenderableCard extends AbstractRenderableCard<RenderableCard> {
-    @SuppressWarnings("WeakerAccess")
     static final int CARD_HEIGHT_IN_PIXELS = 350;
-    @SuppressWarnings("WeakerAccess")
     static final int CARD_WIDTH_IN_PIXELS = 225;
-    @SuppressWarnings("WeakerAccess")
-    static final float CARD_WIDTH = TABLE_WORLD_SIZE / 5f;
-    @SuppressWarnings("WeakerAccess")
-    static final float CARD_HEIGHT = ((float) CARD_HEIGHT_IN_PIXELS / (float) CARD_WIDTH_IN_PIXELS) * CARD_WIDTH;
+    static final float HEIGHT_TO_WIDTH_RATIO = (float)CARD_HEIGHT_IN_PIXELS / (float)CARD_WIDTH_IN_PIXELS;
+    static final float WIDTH_TO_HEIGHT_RATIO = (float)CARD_WIDTH_IN_PIXELS / (float)CARD_HEIGHT_IN_PIXELS;
 
     private static FileHandle defaultSpriteFolder = Gdx.files.internal("playing_cards/");
     private static FileHandle spriteFolder = defaultSpriteFolder;
@@ -34,20 +31,39 @@ class RenderableCard extends AbstractRenderableCard<RenderableCard> {
     private Sprite thisCardBackSprite = null;
     private Sprite thisCardFaceSprite = null;
 
+    private Rank lastKnownTrumpRank;
+    private Suit lastKnownTrumpSuit;
+
     RenderableCard(Rank rank, Suit suit) {
         super(rank, suit);
+        if(isJoker()) {
+            setFaceBorderColor(defaultTrumpFaceBorderColor);
+            setBackBorderColor(defaultTrumpBackBorderColor);
+        }
     }
 
     RenderableCard(Card c) {
         super(c);
+        if(isJoker()) {
+            setFaceBorderColor(defaultTrumpFaceBorderColor);
+            setBackBorderColor(defaultTrumpBackBorderColor);
+        }
     }
 
     RenderableCard(int cardNum) {
         super(cardNum);
+        if(isJoker()) {
+            setFaceBorderColor(defaultTrumpFaceBorderColor);
+            setBackBorderColor(defaultTrumpBackBorderColor);
+        }
     }
 
     RenderableCard() {
         super();
+        if(isJoker()) {
+            setFaceBorderColor(defaultTrumpFaceBorderColor);
+            setBackBorderColor(defaultTrumpBackBorderColor);
+        }
     }
 
     static void setSpriteFolder(FileHandle newSpriteFolder) {
@@ -83,6 +99,7 @@ class RenderableCard extends AbstractRenderableCard<RenderableCard> {
         backPixmap.drawPixmap(originalImagePixmap,
                 0, 0, originalImagePixmap.getWidth(), originalImagePixmap.getHeight(),
                 0, 0, backPixmap.getWidth(), backPixmap.getHeight());
+        originalImagePixmap.dispose();
     }
 
     private static void loadFaceDesignPixmapForCard(int cardNum) {
@@ -92,7 +109,7 @@ class RenderableCard extends AbstractRenderableCard<RenderableCard> {
         Rank rank = Card.getRankFromCardNum(cardNum);
 
         if(!suit.isJoker()) {
-            cardImageName = rank.toStringName() + "_of_" + suit.toString() + ".png";
+            cardImageName = rank.toString() + "_of_" + suit.toString() + ".png";
         } else {
             cardImageName = suit.toString() + ".png";
         }
@@ -108,6 +125,7 @@ class RenderableCard extends AbstractRenderableCard<RenderableCard> {
         originalImagePixmap.dispose();
     }
 
+    @SuppressWarnings("ConstantConditions")
     private static void roundPixmapCorners(Pixmap pixmap, int radius) {
         int pixmapHeight = pixmap.getHeight();
         int pixmapWidth = pixmap.getWidth();
@@ -149,6 +167,7 @@ class RenderableCard extends AbstractRenderableCard<RenderableCard> {
         }
     }
 
+    @SuppressWarnings("ConstantConditions")
     private static void drawCurvedBorderOnPixmap(Pixmap pixmap, int radius, int borderThickness, Color color) {
         int pixmapHeight = pixmap.getHeight();
         int pixmapWidth = pixmap.getWidth();
@@ -208,88 +227,116 @@ class RenderableCard extends AbstractRenderableCard<RenderableCard> {
         if(faceDesignPixmaps.get(cardNum()) == null) {
             loadFaceDesignPixmapForCard(cardNum());
         }
-
-        Pixmap resizedFacePixmap = new Pixmap(CARD_WIDTH_IN_PIXELS, CARD_HEIGHT_IN_PIXELS, Pixmap.Format.RGBA8888);
-        Pixmap faceDesignPixmap = faceDesignPixmaps.get(cardNum());
-
-        Pixmap.setBlending(Pixmap.Blending.SourceOver);
-        resizedFacePixmap.setColor(getFaceBackgroundColor());
-        resizedFacePixmap.fill();
-
-        resizedFacePixmap.drawPixmap(faceDesignPixmap,
-                0, 0, faceDesignPixmap.getWidth(), faceDesignPixmap.getHeight(),
-                (int) (0.5f * (CARD_WIDTH_IN_PIXELS - (CARD_WIDTH_IN_PIXELS * getFaceDesignWidthScale()))), (int) (0.5f * (CARD_HEIGHT_IN_PIXELS - (CARD_HEIGHT_IN_PIXELS * getFaceDesignHeightScale()))),
-                (int) (CARD_WIDTH_IN_PIXELS * getFaceDesignWidthScale()), (int) (CARD_HEIGHT_IN_PIXELS * getFaceDesignHeightScale()));
-
-        roundPixmapCorners(resizedFacePixmap, (int) ((getCornerRadius() / CARD_WIDTH) * CARD_WIDTH_IN_PIXELS));
-        drawCurvedBorderOnPixmap(resizedFacePixmap,
-                (int) ((getCornerRadius() / CARD_WIDTH) * CARD_WIDTH_IN_PIXELS),
-                getFaceBorderThicknessInPixels(),
-                getFaceBorderColor());
-
-        thisCardFaceSprite = new Sprite(new Texture(resizedFacePixmap));
-
-        resizedFacePixmap.dispose();
+        thisCardFaceSprite = setupSpriteFromPixmap(faceDesignPixmaps.get(cardNum()),
+                getFaceBackgroundColor(),
+                getFaceDesignWidthScale(), getFaceDesignHeightScale(),
+                getFaceBorderThicknessInPixels(), getFaceBorderColor());
     }
 
     private void setupThisCardBackSprite() {
         if(backPixmap == null) {
             loadBackPixmap();
         }
-
-        Pixmap resizedBackPixmap = new Pixmap(CARD_WIDTH_IN_PIXELS, CARD_HEIGHT_IN_PIXELS, backPixmap.getFormat());
-
-        Pixmap.setBlending(Pixmap.Blending.SourceOver);
-        resizedBackPixmap.setColor(getBackBackgroundColor());
-        resizedBackPixmap.fill();
-
-        resizedBackPixmap.drawPixmap(backPixmap,
-                0, 0,
-                backPixmap.getWidth(), backPixmap.getHeight(),
-                (int) (0.5f * (CARD_WIDTH_IN_PIXELS - (CARD_WIDTH_IN_PIXELS * getBackDesignWidthScale()))), (int) (0.5f * (CARD_HEIGHT_IN_PIXELS - (CARD_HEIGHT_IN_PIXELS * getBackDesignHeightScale()))),
-                (int) (CARD_WIDTH_IN_PIXELS * getBackDesignWidthScale()), (int) (CARD_HEIGHT_IN_PIXELS * getBackDesignHeightScale()));
-
-        int cornerRadiusInPixels = (int) ((getCornerRadius() / CARD_WIDTH) * CARD_WIDTH_IN_PIXELS);
-        roundPixmapCorners(resizedBackPixmap, cornerRadiusInPixels);
-        drawCurvedBorderOnPixmap(resizedBackPixmap,
-                cornerRadiusInPixels,
-                getBackBorderThicknessInPixels(),
-                getBackBorderColor());
-
-        thisCardBackSprite = new Sprite(new Texture(resizedBackPixmap));
-
-        resizedBackPixmap.dispose();
+        thisCardBackSprite = setupSpriteFromPixmap(backPixmap, getBackBackgroundColor(),
+                getBackDesignWidthScale(), getBackDesignHeightScale(),
+                getBackBorderThicknessInPixels(), getBackBorderColor());
     }
 
-    void render(SpriteBatch batch) {
+    private Sprite setupSpriteFromPixmap(Pixmap designPixmap,
+                                         Color backgroundColor,
+                                         float designWidthScale, float designHeightScale,
+                                         int borderThicknessInPixels, Color borderColor) {
+        Pixmap spritePixmap = new Pixmap(designPixmap.getWidth(), designPixmap.getHeight(), designPixmap.getFormat());
+
+        Pixmap.setBlending(Pixmap.Blending.SourceOver);
+        spritePixmap.setColor(backgroundColor);
+        spritePixmap.fill();
+
+        spritePixmap.drawPixmap(designPixmap,
+                0, 0, designPixmap.getWidth(), designPixmap.getHeight(),
+                (int) (0.5f * (CARD_WIDTH_IN_PIXELS - (CARD_WIDTH_IN_PIXELS * designWidthScale))), (int) (0.5f * (CARD_HEIGHT_IN_PIXELS - (CARD_HEIGHT_IN_PIXELS * designHeightScale))),
+                (int) (CARD_WIDTH_IN_PIXELS * designWidthScale), (int) (CARD_HEIGHT_IN_PIXELS * designHeightScale));
+
+        roundPixmapCorners(spritePixmap, getCornerRadiusInPixels());
+        drawCurvedBorderOnPixmap(spritePixmap,
+                getCornerRadiusInPixels(),
+                borderThicknessInPixels,
+                borderColor);
+
+        Texture spriteTexture = new Texture(spritePixmap);
+
+        Sprite sprite = new Sprite(spriteTexture);
+        sprite.getTexture().setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+        sprite.setSize(getWidth(), getHeight());
+
+        spritePixmap.dispose();
+        return sprite;
+    }
+
+    @Override
+    void render(SpriteBatch batch, Viewport viewport) {
+        // If trump suit/rank has changed, check whether or not this card is a trump and set border color accordingly
+        if(GameState.trumpSuit != lastKnownTrumpSuit || GameState.trumpRank != lastKnownTrumpRank) {
+            lastKnownTrumpSuit = GameState.trumpSuit;
+            lastKnownTrumpRank = GameState.trumpRank;
+
+            // setFaceBorderColor and setBackBorderColor both automatically call invalidateSprites().
+            // Maybe better to call invalidateSprites manually?
+            if(isTrump()) {
+                setFaceBorderColor(defaultTrumpFaceBorderColor);
+                setBackBorderColor(defaultTrumpBackBorderColor);
+            }
+        }
+
         if(isFaceUp()) {
             if(thisCardFaceSprite == null) {
                 setupThisCardFaceSprite();
             }
-            renderFace(batch);
+            renderFace(batch, viewport);
         } else {
             if(thisCardBackSprite == null) {
                 setupThisCardBackSprite();
             }
-            renderBack(batch);
+            renderBack(batch, viewport);
         }
     }
 
-    private void renderFace(SpriteBatch batch) {
-        thisCardFaceSprite.setSize(getWidth(), getHeight());
-        thisCardFaceSprite.setPosition(getX(),
-                getY() + ((isSelected() ? 1 : 0) * getHeightChangeOnSelect() * getScale()));
-        thisCardFaceSprite.draw(batch);
+    private void renderFace(SpriteBatch batch, Viewport viewport) {
+        drawSprite(batch, viewport, thisCardFaceSprite);
     }
 
-    private void renderBack(SpriteBatch batch) {
-        thisCardBackSprite.setSize(getWidth(), getHeight());
-        thisCardBackSprite.setPosition(getX(),
-                getY() + ((isSelected() ? 1 : 0) * getHeightChangeOnSelect() * getScale()));
-        thisCardBackSprite.draw(batch);
+    private void renderBack(SpriteBatch batch, Viewport viewport) {
+        drawSprite(batch, viewport, thisCardBackSprite);
     }
 
-    void displayParametersChanged() {
+    private void drawSprite(SpriteBatch batch, Viewport viewport, Sprite sprite) {
+        // TODO: Maybe this rounding should only be done when position changes, but I'm too lazy to do that right now
+
+        // vecXY is initialized with world coordinates for card position
+        Vector2 vecXY = new Vector2(getX(),
+                getY() + ((isSelected() ? 1 : 0) * getHeightChangeOnSelect() * getHeight()));
+
+        // vecXY is then projected onto the screen, so now it represents the *screen* coordinates of the card
+        viewport.project(vecXY);
+
+        // viewport.project doesn't seem to account for the fact that with screen coordinates, y starts from the top of
+        // the screen, so line this accounts for that
+        vecXY.y = Gdx.graphics.getHeight() - vecXY.y;
+
+        // Round vecXY so that the card's position isn't in between two pixels
+        vecXY.x = MathUtils.round(vecXY.x);
+        vecXY.y = MathUtils.round(vecXY.y);
+
+        // Unproject vecXY back to world coordinates, so now we know the world coordinates of the card will be projected
+        // to a whole pixel value, and thus the card's sprite won't have any weird subpixel stretching going on
+        vecXY = viewport.unproject(new Vector2(vecXY.x, vecXY.y));
+
+        sprite.setBounds(vecXY.x, vecXY.y, getWidth(), getHeight());
+        sprite.draw(batch);
+    }
+
+    @Override
+    void invalidateSprites() {
         thisCardFaceSprite = null;
         thisCardBackSprite = null;
     }

@@ -6,27 +6,24 @@ import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 
-import java.util.ArrayList;
 import java.util.Random;
-
-import static com.sage.shengji.ScreenManager.TABLE_WORLD_SIZE;
 
 class PlaygroundScreen extends InputAdapter implements Screen {
     private ScreenManager game;
 
 	private SpriteBatch batch;
 	private ExtendViewport viewport;
-	private OrthographicCamera camera;
 
 	private RenderableHand hand;
-	private ArrayList<RenderableCard> placedCards = new ArrayList<>();
+	private RenderableCardList placedCards = new RenderableCardList();
 
 	private int currentCardNum = 0;
+	private float currentCardSinInput = 0; // <- for moving card across screen
     private RenderableCard currentCard;
 
 	private Random random = new Random(69);
@@ -38,52 +35,65 @@ class PlaygroundScreen extends InputAdapter implements Screen {
     @Override
     public void show() {
         batch = new SpriteBatch();
-        camera = new OrthographicCamera();
-        viewport = new ExtendViewport(TABLE_WORLD_SIZE, TABLE_WORLD_SIZE, camera);
-        hand  = new RenderableHand();
+        viewport = new ExtendViewport(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        hand = new RenderableHand();
 
-        for(int i = 0; i < 22; i++) {
+        for(int i = 0; i < 54; i++) {
             hand.add(new RenderableCard());
         }
 
-        currentCard = new RenderableCard(currentCardNum).setPosition(5f, TABLE_WORLD_SIZE / 2).setScale(0.8f);
+        currentCard = new RenderableCard(currentCardNum);
 
-        camera.position.set(camera.viewportWidth/2,camera.viewportHeight/2,0);
         Gdx.input.setInputProcessor(this);
     }
 
     @Override
     public void render(float delta) {
+	    // SPRITE STRETCHING PROBLEM FIXED! I left this code in this commit just for demonstration.
+	    // Code for testing the sprite stretching problem thing. It moves currentCard across screen slowly. Very lazily written lol
+	    float speed = 1 / 1000f;
+	    currentCardSinInput += delta;
+	    currentCardSinInput %= (int)1f / speed;
+	    float sin = (MathUtils.sin(currentCardSinInput * MathUtils.PI2 * speed) / 2f) + 0.5f;
+	    currentCard.setX((viewport.getWorldWidth() / 10f) + (sin * viewport.getWorldWidth() * 0.7f));
+
         Gdx.gl.glClearColor(ScreenManager.BACKGROUND_COLOR.r, ScreenManager.BACKGROUND_COLOR.g, ScreenManager.BACKGROUND_COLOR.b, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         viewport.apply();
-        batch.setProjectionMatrix(camera.combined);
+        batch.setProjectionMatrix(viewport.getCamera().combined);
 
-        currentCard.render(batch);
+        batch.begin();
+
+        currentCard.render(batch, viewport);
         hand.render(batch, viewport);
-        for(RenderableCard c : placedCards) {
-            c.render(batch);
-        }
+        placedCards.render(batch, viewport);
+
+        batch.end();
     }
 
     @Override
     public void resize(int width, int height) {
 	    viewport.update(width, height, true);
+
+	    currentCard.setPosition(viewport.getWorldWidth() / 20f, viewport.getWorldHeight() / 2f)
+                .setHeight(viewport.getWorldHeight() / 5f);
     }
 
     @Override
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-        Vector2 clickCoordinates = new Vector2(viewport.unproject(new Vector2(screenX, screenY)));
+        Vector2 clickCoordinates = viewport.unproject(new Vector2(screenX, screenY));
 
         for(int i = placedCards.size() - 1; i >= 0; i--) {
             RenderableCard c = placedCards.get(i);
             if(c.containsPoint(clickCoordinates)) {
                 if(button == Input.Buttons.LEFT && c.isFaceUp()) {
-                    c.setFaceBackgroundColor(c.getFaceBackgroundColor().sub(0.1f, 0.1f, 0.1f, 0.1f));
                     if(c.getFaceBackgroundColor().a == 0) {
                         c.setFaceBackgroundColor(new Color(random.nextFloat(), random.nextFloat(), random.nextFloat(), 1));
+                        return true;
                     }
+
+                    c.setFaceBackgroundColor(c.getFaceBackgroundColor().sub(0.1f, 0.1f, 0.1f, 0.1f));
                     return true;
                 } else if(button == Input.Buttons.RIGHT) {
                     c.flip();
@@ -112,7 +122,8 @@ class PlaygroundScreen extends InputAdapter implements Screen {
 
         placedCards.add(new RenderableCard(currentCardNum)
                         .setPosition(clickCoordinates)
-                        .setScale(1f).setFaceUp(button == Input.Buttons.LEFT));
+                        .setHeight(viewport.getWorldHeight() / 4f)
+                        .setFaceUp(button == Input.Buttons.LEFT));
         return true;
     }
 
@@ -123,7 +134,9 @@ class PlaygroundScreen extends InputAdapter implements Screen {
 	    if(currentCardNum < 0) {
 	        currentCardNum = 54 + currentCardNum;
         }
-        currentCard = new RenderableCard(currentCardNum).setPosition(5f, TABLE_WORLD_SIZE / 2).setScale(0.8f);
+        currentCard = new RenderableCard(currentCardNum)
+                .setPosition(currentCard.getPosition())
+                .setHeight(currentCard.getHeight());
 
         return false;
     }

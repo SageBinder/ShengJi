@@ -2,6 +2,8 @@ package com.sage.server;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.net.Socket;
+import com.sage.Rank;
+import com.sage.Suit;
 import com.sage.Team;
 
 import java.io.*;
@@ -20,7 +22,7 @@ class Player {
     private BufferedReader bufferedReader;
     private BufferedWriter bufferedWriter;
 
-    private int callRank = 2;
+    private Rank callRank = Rank.TWO;
 
     Player(int playerNum, String name, Socket s) {
         this.s = s;
@@ -48,9 +50,9 @@ class Player {
 
     Integer readInt() {
         try {
-            Integer i = Integer.parseInt(readLine());
+            Integer i = Integer.parseInt(readLine()); // readLine() will return null is player has disconnected
             Gdx.app.log("Server.Player.readInt()", "READ INT: " + i);
-            return i; // readLine() will return null is player has disconnected
+            return i;
         } catch(NumberFormatException e) {
             e.printStackTrace();
             return null;
@@ -104,7 +106,7 @@ class Player {
     }
 
     boolean isValidCall(ServerCard c, int numCallCards) {
-        return callRank == c.rank().toInt() && hand.stream().filter(card -> card == c).count() >= numCallCards
+        return callRank == c.rank() && hand.stream().filter(card -> card.equals(c)).count() >= numCallCards
                 && !(c.suit() == Suit.BIG_JOKER || c.suit() == Suit.SMALL_JOKER);
     }
 
@@ -118,14 +120,15 @@ class Player {
     }
 
     void increaseCallRank(int amount) {
-        callRank += amount;
+        int newCallRankIndex = ((callRank.rankNum - 2) + amount) % Rank.values().length;
+        callRank = Rank.values()[newCallRankIndex];
     }
 
-    int getCallRank() {
+    Rank getCallRank() {
         return callRank;
     }
 
-    void setCallRank(int newCallRank) {
+    void setCallRank(Rank newCallRank) {
         callRank = newCallRank;
     }
 

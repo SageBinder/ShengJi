@@ -1,5 +1,6 @@
 package com.sage.shengji;
 
+import com.sage.Rank;
 import com.sage.Team;
 
 class Player {
@@ -8,7 +9,7 @@ class Player {
     private String name;
     private RenderablePlay play = new RenderablePlay();
     private Team team = Team.NO_TEAM;
-    private int callRank = 2;
+    private Rank callRank = Rank.TWO;
 
     private final RenderableCardList points = new RenderableCardList();
 
@@ -17,7 +18,7 @@ class Player {
         this.playerNum = playerNum;
     }
 
-    Player(int playerNum, String name, int callRank) {
+    Player(int playerNum, String name, Rank callRank) {
         this.name = name;
         this.playerNum = playerNum;
         this.callRank = callRank;
@@ -63,12 +64,12 @@ class Player {
         this.team = team;
     }
 
-    int getCallRank() {
+    Rank getCallRank() {
         return callRank;
     }
 
     void setCallRank(int callRank) {
-        this.callRank = callRank;
+        this.callRank = Rank.fromInt(callRank);
     }
 
     RenderableCardList getPoints() {

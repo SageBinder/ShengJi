@@ -1,8 +1,5 @@
 package com.sage;
 
-import com.sage.server.Rank;
-import com.sage.server.Suit;
-
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Random;
@@ -44,20 +41,20 @@ public class CardList<T extends Card> extends ArrayList<T> {
         return false;
     }
 
-    @Override
-    public boolean contains(Object o) {
-        try {
-            Card card = (Card) o;
-            for(Card c : this) {
-                if(c.equals(card)) {
-                    return true;
-                }
-            }
-            return false;
-        } catch(ClassCastException e) {
-            return super.contains(o);
-        }
-    }
+//    @Override
+//    public boolean contains(Object o) {
+//        try {
+//            Card card = (Card) o;
+//            for(Card c : this) {
+//                if(c.equals(card)) {
+//                    return true;
+//                }
+//            }
+//            return false;
+//        } catch(ClassCastException e) {
+//            return super.contains(o);
+//        }
+//    }
 
     public boolean containsAny(CardList<T> cardList) {
         for(Card c : cardList) {

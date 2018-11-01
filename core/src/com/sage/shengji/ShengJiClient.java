@@ -25,7 +25,7 @@ class ShengJiClient extends Thread {
     private volatile boolean waitingForServerCode = true;
     private final Object waitingForServerCodeLock = new Object();
 
-    private volatile int consumableServerCode = 0;
+    private volatile Integer consumableServerCode = null;
     private final Object consumableServerCodeLock = new Object();
 
     ShengJiClient(int PORT, String serverIP, String playerName, ScreenManager game) {
@@ -68,16 +68,25 @@ class ShengJiClient extends Thread {
                 return;
             }
             while(serverCode > -1) {
+                Gdx.app.log("ShengJiClient.run","Oh shit, server code is > -1. This should never happen. IT'S BORKED.");
                 serverCode = readInt();
                 if(serverCode == null) {
                     return;
                 }
-                Gdx.app.log("ShengJiClient.run","Oh shit, server code is > -1. This should never happen. IT'S BORKED.");
             }
 
             if(serverCode == ServerCodes.PING) {
                 sendInt(ClientCodes.PING);
                 continue;
+            }
+
+            // Dear future me: please find a solution that isn't retarded. Sincerely, past me.
+            // (Maybe implement your own buffer and only allow the gamestate to update when server sends enough info?)
+
+            try { // Give server time to send extra information so the render thread doesn't have to wait for the server
+                Thread.sleep(500);
+            } catch(InterruptedException e) {
+                e.printStackTrace();
             }
 
             synchronized(waitingForServerCodeLock) {
@@ -101,7 +110,6 @@ class ShengJiClient extends Thread {
             return i;
         } catch(NumberFormatException e) {
             e.printStackTrace();
-            Gdx.app.log("Shengji.ShengJiClient.readInt()", "EXCEPTION: NumberFormatException");
             return null;
         }
     }
@@ -155,10 +163,10 @@ class ShengJiClient extends Thread {
         }
     }
 
-    int consumeServerCode() {
+    Integer consumeServerCode() {
         synchronized(consumableServerCodeLock) {
-            int returnValue = consumableServerCode;
-            consumableServerCode = 0;
+            Integer returnValue = consumableServerCode;
+            consumableServerCode = null;
             return returnValue;
         }
     }

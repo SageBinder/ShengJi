@@ -26,10 +26,10 @@ public class LobbyScreen extends InputAdapter implements Screen {
 
     private Viewport viewport;
 
-    private int maxNameChars = 12;
+    private int maxNameChars = 38;
 
-    private float textProportion = 1f / 7f;
-    private float viewportScale = 5f;
+    private float textProportion = 1f / 7f,
+            viewportScale = 5f;
 
     private Skin skin = new Skin(Gdx.files.internal("uiskin.json"));
 
@@ -46,7 +46,10 @@ public class LobbyScreen extends InputAdapter implements Screen {
         this.game = game;
         this.gameState = gameState;
         this.client = client;
-        viewport = new ExtendViewport(Gdx.graphics.getWidth() * viewportScale, Gdx.graphics.getHeight() * viewportScale);
+
+        float viewportWidth = Gdx.graphics.getWidth() * viewportScale,
+                viewportHeight = Gdx.graphics.getHeight() * viewportScale;
+        viewport = new ExtendViewport(viewportWidth, viewportHeight);
 
         var fontGenerator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/OpenSans-Bold.ttf"));
         var playerLabelFontParameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
@@ -57,18 +60,21 @@ public class LobbyScreen extends InputAdapter implements Screen {
         playerLabelFontParameter.magFilter = Texture.TextureFilter.Linear;
 
         playerLabelStyle.font = fontGenerator.generateFont(playerLabelFontParameter);
-
         startGameButtonStyle.font = fontGenerator.generateFont(playerLabelFontParameter);
-        startGameButton = new TextButton("Start game!", startGameButtonStyle);
 
+        fontGenerator.dispose();
+
+        startGameButton = new TextButton("Start game!", startGameButtonStyle);
         startGameButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 client.sendInt(ClientCodes.START_ROUND);
             }
         });
+        startGameButton.setVisible(false);
+        startGameButton.setDisabled(true);
 
-        fontGenerator.dispose();
+
 
         stage = new Stage();
         stage.setViewport(viewport);
@@ -79,9 +85,10 @@ public class LobbyScreen extends InputAdapter implements Screen {
         playersListTable = new Table();
 
 //        table.setDebug(true);
-        table.add(playersListTable).fillX().padTop(viewport.getWorldHeight() / 3).align(Align.center).fill(true);
+        table.row();
+        table.add(playersListTable).align(Align.center).maxWidth(viewportWidth / 2f);
 
-        table.row().padTop(viewport.getWorldHeight() / 10f);
+        table.row().padTop(viewportHeight / 10f);
         table.add(startGameButton);
 
         stage.addActor(table);
@@ -105,28 +112,33 @@ public class LobbyScreen extends InputAdapter implements Screen {
 
         if(gameState.update(client)) {
             PlayerList players = gameState.players;
-            float groupSpacing = viewport.getWorldWidth() / 10;
+            float groupSpacing = viewport.getWorldWidth() / 24f;
 
             playersListTable.clearChildren();
             playersListTable.setFillParent(false);
+            playersListTable.setWidth(viewport.getWorldWidth() / 20f);
             playersListTable.setDebug(false);
 
-            playersListTable.defaults().padLeft(groupSpacing).padRight(groupSpacing);
+            playersListTable.defaults();
 
             playersListTable.row().padBottom(viewport.getWorldHeight() / 20f);
-            playersListTable.add(new Label("P#", playerLabelStyle));
+            playersListTable.add(new Label("P#", playerLabelStyle)).padRight(groupSpacing);
             playersListTable.add(new Label("NAME", playerLabelStyle));
-            playersListTable.add(new Label("CALL RANK", playerLabelStyle));
+            playersListTable.add(new Label("CALL RANK", playerLabelStyle)).padLeft(groupSpacing);
 
             players.forEach(p -> {
                 var playerNumLabel = new Label("P" + p.getPlayerNum(), playerLabelStyle);
                 var playerNameLabel = new Label(p.getName().substring(0, Math.min(p.getName().length(), maxNameChars)), playerLabelStyle);
-                var callRankLabel = new Label(Integer.toString(p.getCallRank()), playerLabelStyle);
+                var callRankLabel = new Label(Integer.toString(p.getCallRank().rankNum), playerLabelStyle);
+
+                if(p.getName().length() > maxNameChars) {
+                    playerNameLabel.setText(playerNameLabel.getText() + "...");
+                }
 
                 playersListTable.row();
-                playersListTable.add(playerNumLabel);
+                playersListTable.add(playerNumLabel).padRight(groupSpacing);
                 playersListTable.add(playerNameLabel);
-                playersListTable.add(callRankLabel);
+                playersListTable.add(callRankLabel).padLeft(groupSpacing);
 
                 if(p.isHost()) {
                     Color hostColor = new Color(1f, 1f, 0f, 1f);
@@ -140,6 +152,14 @@ public class LobbyScreen extends InputAdapter implements Screen {
             });
 
             playersListTable.invalidate();
+
+            if(gameState.thisPlayerIsHost) {
+                startGameButton.setVisible(true);
+                startGameButton.setDisabled(false);
+            } else {
+                startGameButton.setVisible(false);
+                startGameButton.setDisabled(true);
+            }
         }
 
         stage.act(delta);

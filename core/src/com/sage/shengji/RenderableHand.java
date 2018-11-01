@@ -1,5 +1,6 @@
 package com.sage.shengji;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector2;
@@ -7,8 +8,8 @@ import com.badlogic.gdx.utils.viewport.Viewport;
 
 import java.util.ArrayList;
 
-class RenderableHand extends RenderableCardList {
-    private HandClickListener clickListener = (c, button)->{
+class RenderableHand extends RenderableCardGroup {
+    private HandClickListener clickListener = (c, button) -> {
         if(button == Input.Buttons.LEFT) {
             c.toggleSelected();
         } else if(button == Input.Buttons.RIGHT) {
@@ -16,23 +17,32 @@ class RenderableHand extends RenderableCardList {
         }
     };
 
+    float bottomPaddingProportion = 0.025f,
+            leftPaddingProportion = 0.05f,
+            rightPaddingProportion = 0.1f;
+
     RenderableHand() {
         super();
+        super.cardHeight = Gdx.graphics.getHeight() / 7f;
     }
 
     RenderableHand(ArrayList<RenderableCard> cards) {
         super(cards);
+        super.cardHeight = Gdx.graphics.getHeight() / 7f;
+    }
+
+    RenderableHand sort() {
+        sort(AbstractRenderableCard::compareTo);
+        return this;
     }
 
     void render(SpriteBatch batch, Viewport viewport) {
-        float width = viewport.getWorldWidth() - 0.2f - (RenderableCard.CARD_WIDTH / 2);
-        float pixelDivision = width / size();
+        super.regionWidth = viewport.getWorldWidth() - (viewport.getWorldWidth() * leftPaddingProportion) - (viewport.getWorldWidth() * rightPaddingProportion);
 
-        for(int i = 0; i < size(); i++) {
-            get(i).setScale(0.5f).setPosition(new Vector2((i * pixelDivision) + 0.1f, 0.2f));
-        }
+        super.pos.x = viewport.getWorldWidth() * leftPaddingProportion;
+        super.pos.y = viewport.getWorldHeight() * bottomPaddingProportion;
 
-        super.render(batch);
+        super.render(batch, viewport);
     }
 
     RenderableCard getClickedCard(Vector2 clickPos) {
@@ -63,8 +73,9 @@ class RenderableHand extends RenderableCardList {
         }
     }
 
-    void setOnClick(HandClickListener onClick) {
+    RenderableHand setOnClick(HandClickListener onClick) {
         this.clickListener = onClick;
+        return this;
     }
 
     interface HandClickListener {

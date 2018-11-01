@@ -6,6 +6,7 @@ import com.badlogic.gdx.net.NetJavaServerSocketImpl;
 import com.badlogic.gdx.net.ServerSocketHints;
 import com.badlogic.gdx.net.Socket;
 import com.badlogic.gdx.utils.GdxRuntimeException;
+import com.sage.Rank;
 import com.sage.shengji.ClientCodes;
 
 import java.io.*;
@@ -154,7 +155,6 @@ public class ShengJiServer extends Thread {
         }
     };
 
-    // TODO: Have have players send a code if they choose to disconnect
     // If any player socket is not connected, remove that player from players and compress player nums
     private Runnable manageDisconnections = () -> {
         while(!roundStarted) {
@@ -215,7 +215,7 @@ public class ShengJiServer extends Thread {
                                 int playerNum = p.readInt();
                                 int callRank = p.readInt();
                                 synchronized(playersLock) {
-                                    players.getPlayerFromPlayerNum(playerNum).setCallRank(callRank);
+                                    players.getPlayerFromPlayerNum(playerNum).setCallRank(Rank.fromInt(callRank));
                                 }
                             }
                             break;
@@ -235,7 +235,6 @@ public class ShengJiServer extends Thread {
         players.sendIntToAll(ServerCodes.WAIT_FOR_PLAYERS_LIST);
 
         players.forEach(p -> {
-
             p.sendInt(p.getPlayerNum()); // As playerNum can change, first send player p their playerNum
             p.sendInt(players.size());
         });
@@ -243,7 +242,7 @@ public class ShengJiServer extends Thread {
         players.forEach(p -> {
             players.sendIntToAll(p.getPlayerNum());
             players.sendStringToAll(p.getName());
-            players.sendIntToAll(p.getCallRank());
+            players.sendIntToAll(p.getCallRank().rankNum);
         });
 
         players.sendIntToAll(host.getPlayerNum());

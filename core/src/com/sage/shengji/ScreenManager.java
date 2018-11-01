@@ -3,12 +3,10 @@ package com.sage.shengji;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.utils.GdxRuntimeException;
 import com.sage.server.ShengJiServer;
 
 public class ScreenManager extends Game {
     static final Color BACKGROUND_COLOR = new Color(0, 0.2f, 0.11f, 1);
-    static final float TABLE_WORLD_SIZE = 100f;
 
     private ShengJiClient client;
     private ShengJiServer server;
@@ -21,12 +19,14 @@ public class ScreenManager extends Game {
 
 //        showCreateGameScreen();
 
-        try {
-            startGameServer(25565, 5);
-        } catch(GdxRuntimeException e) {
-            e.printStackTrace();
-        }
-        joinGame(25565, "127.0.0.1", "asdfasdfsadfasdfasdfasdfasdfasdfasdf");
+        showPlaygroundScreen();
+
+//        try {
+//            startGameServer(25565, 5);
+//        } catch(GdxRuntimeException e) {
+//            e.printStackTrace();
+//        }
+//        joinGame(25565, "127.0.0.1", "Test Player Name Whoooooooo long name long name long name long name");
     }
 
     void showStartScreen() {

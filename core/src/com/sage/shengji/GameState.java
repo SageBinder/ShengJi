@@ -6,6 +6,9 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.viewport.Viewport;
+import com.sage.Card;
+import com.sage.Rank;
+import com.sage.Suit;
 import com.sage.Team;
 import com.sage.server.ServerCodes;
 
@@ -16,8 +19,13 @@ class GameState implements InputProcessor {
 
     private GameStateUpdater updater = new GameStateUpdater();
 
+    static Suit trumpSuit = null;
+    static Rank trumpRank = null;
+
     PlayerList players = new PlayerList();
     int[] playerOrder;
+
+    RenderableCard noOneCalledCard;
 
     PlayerList roundWinners = new PlayerList();
 
@@ -36,8 +44,6 @@ class GameState implements InputProcessor {
 
     final RenderableCardList friendCards = new RenderableCardList();
 
-    RenderableCard trumpCard;
-
     String message = "";
     String buttonText = "";
 
@@ -50,7 +56,7 @@ class GameState implements InputProcessor {
 
     private Viewport viewport;
 
-    int lastServerPrompt = ServerCodes.ROUND_OVER;
+    int lastServerCode = ServerCodes.ROUND_OVER;
 
     GameState(ScreenManager game) {
         this.game = game;
@@ -65,8 +71,9 @@ class GameState implements InputProcessor {
     }
 
     boolean update(ShengJiClient client) {
-        int serverCode = client.consumeServerCode();
-        if(serverCode != 0) {
+        Integer serverCode = client.consumeServerCode();
+        if(serverCode != null) {
+            Gdx.app.log("Shengji.GameState.update()", "Updating with server code " + serverCode);
             updater.update(serverCode, client);
             client.waitForServerCode();
             return true;
@@ -121,76 +128,13 @@ class GameState implements InputProcessor {
     private class GameStateUpdater {
         private ShengJiClient client;
 
-        private final ChangeListener sendCallChangeListener = new ChangeListener() {
-            @Override
-            public void changed(ChangeEvent event, Actor actor) {
-                if(hand.stream().noneMatch(RenderableCard::isSelected) && thisPlayer.getPlay().isEmpty()) {
-                    client.sendInt(ClientCodes.NO_CALL);
-                } else {
-                    // This won't work if different cards are selected at the same time, but that's not supposed to happen
-                    int cardNumToSend = hand.stream().filter(RenderableCard::isSelected).findFirst().orElse(hand.get(0)).cardNum();
-                    int numCardsInCall = (int)hand.stream().filter(RenderableCard::isSelected).count();
-                    client.sendInt(cardNumToSend);
-                    client.sendInt(numCardsInCall);
-
-                    hand.addAll(thisPlayer.getPlay());
-                    thisPlayer.clearPlay();
-                    for(int i = 0; i < numCardsInCall; i++) {
-                        thisPlayer.addToPlay(new RenderableCard(cardNumToSend));
-                    }
-                    hand.removeAll(thisPlayer.getPlay()); // If call is invalid, cards from play will be added back into hand
-                }
-
-                hand.setAllSelected(false);
-            }
-        };
-
-        private final ChangeListener sendKittyChangeListener = new ChangeListener() {
-            @Override
-            public void changed(ChangeEvent event, Actor actor) {
-                hand.forEach(card -> {
-                    if(card.isSelected()) {
-                        client.sendInt(card.cardNum());
-                    }
-                });
-
-                // TODO: Temporarily store removed cards in case kitty is invalid
-                hand.removeIf(AbstractRenderableCard::isSelected);
-
-                disableButton();
-            }
-        };
-
-        private final ChangeListener sendPlayChangeListener = new ChangeListener() {
-            @Override
-            public void changed(ChangeEvent event, Actor actor) {
-                hand.forEach(card -> {
-                    if(card.isSelected()) {
-                        card.setSelected(false);
-                        client.sendInt(card.cardNum());
-                        thisPlayer.addToPlay(card);
-                    }
-                });
-                hand.removeAll(thisPlayer.getPlay());
-
-                disableButton();
-            }
-        };
-
-        private final ChangeListener sendBasePlayChangeListener = new ChangeListener() {
-            @Override
-            public void changed (ChangeEvent event, Actor actor) {
-                client.sendInt((int)hand.stream().filter(AbstractRenderableCard::isSelected).count());
-
-                sendPlayChangeListener.handle(event);
-            }
-        };
-
         void update(int serverCode, ShengJiClient client) throws NullPointerException {
             this.client = client;
+            lastServerCode = serverCode;
+
             if(!client.readyToRead()) {
-                Gdx.app.log("Shengji.GameStateUpdater.update", "client read not ready. This usually shouldn't happen.");
-                return;
+                Gdx.app.log("Shengji.GameStateUpdater.update", "client read not ready. This usually shouldn't happen. " +
+                        "Last server code: " + serverCode);
             }
 
             switch(serverCode) {
@@ -218,6 +162,15 @@ class GameState implements InputProcessor {
                     break;
                 case NO_ONE_CALLED:
                     noOneCalled();
+                    break;
+                case WAIT_FOR_KITTY_CALL_WINNER:
+                    waitForKittyCallWinner();
+                    break;
+                case SUCCESSFUL_KITTY_CALL:
+                    successfulKittyCall();
+                    break;
+                case INVALID_KITTY_CALL:
+                    invalidKittyCall();
                     break;
 
                 // Game setup codes:
@@ -322,7 +275,7 @@ class GameState implements InputProcessor {
                 int playerNum = client.readInt();
                 String name = client.readLine();
                 int callRank = client.readInt();
-                players.add(new Player(playerNum, name, callRank));
+                players.add(new Player(playerNum, name, Rank.fromInt(callRank)));
             }
 
             int hostPlayerNum = client.readInt();
@@ -343,19 +296,17 @@ class GameState implements InputProcessor {
 
         private void invalidCall() {
             message = "Invalid call, try again";
-            lastServerPrompt = ServerCodes.INVALID_CALL;
-
+            
             hand.addAll(thisPlayer.getPlay());
             thisPlayer.clearPlay();
 
             buttonText = "Send call";
-            enableButton(sendCallChangeListener);
+            enableButton();
         }
 
         private void noCall() {
             message = "You have chosen not to call";
-            lastServerPrompt = ServerCodes.NO_CALL;
-
+            
             hand.addAll(thisPlayer.getPlay());
             thisPlayer.clearPlay();
 
@@ -364,35 +315,32 @@ class GameState implements InputProcessor {
 
         private void unsuccessfulCall() {
             message = "Call not strong enough";
-            lastServerPrompt = ServerCodes.UNSUCCESSFUL_CALL;
-
+            
             hand.addAll(thisPlayer.getPlay());
             thisPlayer.clearPlay();
 
             buttonText = "Send call";
-            enableButton(sendCallChangeListener);
+            enableButton();
         }
 
         private void successfulCall() {
             message = "Successful call";
-            lastServerPrompt = ServerCodes.SUCCESSFUL_CALL;
-
+            
             players.forEach(player -> {
                 if(player != thisPlayer) {
                     player.clearPlay();
                 }
             });
 
-            enableButton(sendCallChangeListener);
+            enableButton();
         }
 
         private void sendCall() {
             message = "Make your call";
-            lastServerPrompt = ServerCodes.SEND_CALL;
-
+            
             buttonText = "Send call";
 
-            enableButton(sendCallChangeListener);
+            enableButton();
         }
 
         private void waitForNewWinningCall() {
@@ -402,7 +350,7 @@ class GameState implements InputProcessor {
 
             Player callLeader = players.getPlayerFromPlayerNum(callLeaderPlayerNum);
 
-            trumpCard = new RenderableCard(callCardNum);
+            setTrump(callCardNum);
 
             hand.addAll(thisPlayer.getPlay());
             players.forEach(Player::clearPlay);
@@ -426,17 +374,60 @@ class GameState implements InputProcessor {
         }
 
         private void noOneCalled() {
-            Player startingPlayer = players.getPlayerFromPlayerNum(client.readInt());
-            trumpCard = new RenderableCard(client.readInt());
+            noOneCalledCard = new RenderableCard(client.readInt());
 
-            message = "No one called, " + startingPlayer.getName() + " will start";
+            
+            message = "No one called";
+
+            enableButton();
+        }
+
+        private void waitForKittyCallWinner() {
+            Player callWinner = players.getPlayerFromPlayerNum(client.readInt());
+            Rank callWinnerCallRank = Rank.fromInt(client.readInt());
+            RenderableCard callCard = new RenderableCard(client.readInt());
+
+            message = "Call winner: " + callWinner.getName();
+
+            callWinner.getPlay().clear();
+            callWinner.getPlay().add(callCard);
+
+            noOneCalledCard = null;
+
+            setTrump(Card.getCardNumFromRankAndSuit(callWinnerCallRank, callCard.suit()));
+            
+            disableButton();
+        }
+
+        private void successfulKittyCall() {
+            
+            message = "Successful call!";
+
+            setTrump(Card.getCardNumFromRankAndSuit(thisPlayer.getCallRank(), noOneCalledCard.suit()));
+
+            hand.addAll(thisPlayer.getPlay());
+            thisPlayer.getPlay().clear();
+
+            noOneCalledCard = null;
 
             disableButton();
+        }
+
+        private void invalidKittyCall() {
+            
+            message = "Invalid call. Try again.";
+
+            hand.addAll(thisPlayer.getPlay());
+            thisPlayer.getPlay().clear();
+
+            enableButton();
         }
 
         // GAME SETUP CODES:
 
         private void roundStart() {
+            noOneCalledCard = null;
+
             playerOrder = null;
 
             roundWinners.clear();
@@ -451,11 +442,10 @@ class GameState implements InputProcessor {
             lastTrickWinner = null;
             leadingPlayer = null;
 
-
-
             message = "";
+            buttonText = "";
 
-            trumpCard = null;
+            resetTrump();
 
             disableButton();
             game.showGameScreen(GameState.this);
@@ -482,6 +472,7 @@ class GameState implements InputProcessor {
             for(int i = 0; i < kittySize; i++) {
                 kitty.add(new RenderableCard(client.readInt()));
             }
+            hand.addAll(kitty);
 
             disableButton();
         }
@@ -504,29 +495,28 @@ class GameState implements InputProcessor {
 
         private void sendKitty() {
             message = "Select cards to put in kitty";
-            lastServerPrompt = ServerCodes.SEND_KITTY;
-
+            
             buttonText = "Confirm kitty";
 
-            enableButton(sendKittyChangeListener);
+            enableButton();
         }
 
         private void invalidKitty() {
             message = "Invalid kitty!";
-            lastServerPrompt = ServerCodes.INVALID_KITTY;
-
+            
             buttonText = "Confirm kitty";
 
-            enableButton(sendKittyChangeListener);
+            enableButton();
         }
 
         private void sendFriendCards() {
             int numFriendCards = client.readInt();
 
             message = "Select " + numFriendCards + " friend cards";
-            lastServerPrompt = ServerCodes.SEND_FRIEND_CARDS;
 
-            // enableButton(); TODO
+            buttonText = "Send friend cards";
+
+            enableButton();
         }
 
         private void waitForFriendCards() {
@@ -556,22 +546,20 @@ class GameState implements InputProcessor {
         // [[cardNum] for each selected card in hand]
         private void sendBasePlay() {
             message = "Your turn";
-            lastServerPrompt = ServerCodes.SEND_BASE_PLAY;
-
+            
             buttonText = "Send play";
 
-            enableButton(sendBasePlayChangeListener);
+            enableButton();
         }
 
         // Should send to server:
         // [[cardNum] for each selected card in hand]
         private void sendPlay() {
             message = "Your turn";
-            lastServerPrompt = ServerCodes.SEND_PLAY;
-
+            
             buttonText = "Send play";
 
-            enableButton(sendPlayChangeListener);
+            enableButton();
         }
 
         private void waitForTurnPlayer() {
@@ -597,8 +585,7 @@ class GameState implements InputProcessor {
 
         private void invalidPlay() {
             message = "Invalid play";
-            lastServerPrompt = ServerCodes.INVALID_PLAY;
-
+            
             hand.addAll(thisPlayer.getPlay());
             thisPlayer.clearPlay();
         }
@@ -617,7 +604,6 @@ class GameState implements InputProcessor {
             } else if(newTeam == Team.KEEPERS) {
                 p.clearPoints();
             }
-
         }
 
         private void waitForPlayerInLead() {
@@ -694,20 +680,24 @@ class GameState implements InputProcessor {
 
         // Whether the button is enabled should be stored as boolean and the event listener should be stored as well,
         // then the renderer can render the button based on those values.
-        private void enableButton(ChangeListener listener) {
+        private void enableButton() {
             buttonIsEnabled = true;
-            GameState.this.buttonAction = listener;
         }
         
         private void disableButton() {
             buttonIsEnabled = false;
-            GameState.this.buttonAction = new ChangeListener() {
-                @Override
-                public void changed(ChangeEvent event, Actor actor) {
+        }
 
-                }
-            };
+        private void setTrump(int cardNum) {
+            trumpSuit = Card.getSuitFromCardNum(cardNum);
+            trumpRank = Card.getRankFromCardNum(cardNum);
+
+            Gdx.app.log("ShengJi.GameState.Updater.setTrump()", "Trump rank = " + trumpRank.toString() + ", trump suit = " + trumpSuit.toString());
+        }
+
+        private void resetTrump() {
+            trumpRank = null;
+            trumpSuit = null;
         }
     }
 }
-

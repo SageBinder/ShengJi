@@ -4,9 +4,10 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.utils.viewport.Viewport;
 import com.sage.Card;
-import com.sage.server.Rank;
-import com.sage.server.Suit;
+import com.sage.Rank;
+import com.sage.Suit;
 
 import static com.sage.shengji.RenderableCard.*;
 
@@ -14,14 +15,12 @@ import static com.sage.shengji.RenderableCard.*;
 abstract class AbstractRenderableCard<T extends AbstractRenderableCard<T>> extends Card {
     // Default variable values:
     @SuppressWarnings("WeakerAccess")
-    static final float defaultCornerRadiusScale = 0.075f;
-    @SuppressWarnings("WeakerAccess")
-    static final float defaultCornerRadius = defaultCornerRadiusScale * CARD_WIDTH;
+    static final int defaultCornerRadiusInPixels = (int)(0.075f * CARD_WIDTH_IN_PIXELS);
 
     @SuppressWarnings("WeakerAccess")
-    static final int defaultFaceBorderThicknessInPixels = (int)(0.015f * CARD_WIDTH_IN_PIXELS);
+    static final int defaultFaceBorderThicknessInPixels = (int)(0.018f * CARD_WIDTH_IN_PIXELS);
     @SuppressWarnings("WeakerAccess")
-    static final int defaultBackBorderThicknessInPixels = (int)(defaultCornerRadiusScale * CARD_WIDTH_IN_PIXELS);
+    static final int defaultBackBorderThicknessInPixels = defaultCornerRadiusInPixels;
 
     @SuppressWarnings("WeakerAccess")
     static final float defaultFaceDesignHeightScale = 0.95f;
@@ -32,25 +31,26 @@ abstract class AbstractRenderableCard<T extends AbstractRenderableCard<T>> exten
     static final float defaultBackDesignHeightScale = ((float)CARD_HEIGHT_IN_PIXELS - (2 * (float)defaultBackBorderThicknessInPixels)) / (float)CARD_HEIGHT_IN_PIXELS;
     @SuppressWarnings("WeakerAccess")
     static final float defaultBackDesignWidthScale = ((float)CARD_WIDTH_IN_PIXELS - (2 * (float)defaultBackBorderThicknessInPixels)) / (float)CARD_WIDTH_IN_PIXELS;
-    @SuppressWarnings("WeakerAccess")
-    static final float defaultScale = 1f;
 
     @SuppressWarnings("WeakerAccess")
-    static final float defaultHeightChangeOnSelect = CARD_HEIGHT / 10;
+    static final float defaultHeightChangeOnSelect = 0.9f; // Relative to card height
 
     @SuppressWarnings("WeakerAccess")
     static final Color defaultFaceBorderColor = new Color(0, 0, 0, 1);
     @SuppressWarnings("WeakerAccess")
     static final Color defaultBackBorderColor = new Color(1, 1, 1, 1);
+
     @SuppressWarnings("WeakerAccess")
     static final Color defaultFaceBackgroundColor = new Color(1, 1, 1, 1);
     @SuppressWarnings("WeakerAccess")
     static final Color defaultBackBackgroundColor = new Color(0, 0, 0, 1);
 
+    static final Color defaultTrumpFaceBorderColor = new Color(0.75f, 0.75f, 0f, 1f);
+    static final Color defaultTrumpBackBorderColor = new Color(defaultBackBorderColor);
+
     // Member variables:
     @SuppressWarnings("FieldCanBeLocal")
-    private float cornerRadiusScale = defaultCornerRadiusScale;
-    private float cornerRadius = defaultCornerRadius;
+    private int cornerRadiusInPixels = defaultCornerRadiusInPixels;
 
     @SuppressWarnings("FieldCanBeLocal")
     private int faceBorderThicknessInPixels = defaultFaceBorderThicknessInPixels;
@@ -66,8 +66,6 @@ abstract class AbstractRenderableCard<T extends AbstractRenderableCard<T>> exten
     private float backDesignHeightScale = defaultBackDesignHeightScale;
     private float backDesignWidthScale = defaultBackDesignWidthScale;
 
-    private float scale = defaultScale; // Overall scale of the card with respect to the world
-
     private float heightChangeOnSelect = defaultHeightChangeOnSelect;
     
     private Color faceBorderColor = new Color(defaultFaceBorderColor);
@@ -76,8 +74,9 @@ abstract class AbstractRenderableCard<T extends AbstractRenderableCard<T>> exten
     private Color faceBackgroundColor = new Color(defaultFaceBackgroundColor);
     private Color backBackgroundColor = new Color(defaultBackBackgroundColor);
 
+    // TODO: Have a Rectangle selectedRect which represents the location and size of the card when it's selected
     // cardRect represents overall rectangle before rounding corners
-    private Rectangle cardRect = new Rectangle(0, 0, CARD_WIDTH, CARD_HEIGHT);
+    private Rectangle cardRect = new Rectangle(0, 0, CARD_WIDTH_IN_PIXELS, CARD_HEIGHT_IN_PIXELS);
 
     private boolean faceUp = true;
     private boolean isSelected = false;
@@ -99,81 +98,70 @@ abstract class AbstractRenderableCard<T extends AbstractRenderableCard<T>> exten
         super();
     }
 
-    abstract void displayParametersChanged();
+    abstract void invalidateSprites();
 
-    abstract void render(SpriteBatch batch);
+    abstract void render(SpriteBatch batch, Viewport viewport);
 
-    @SuppressWarnings("unused")
     boolean containsPoint(Vector2 point) {
         return containsPoint(point.x, point.y);
     }
 
-    @SuppressWarnings("WeakerAccess")
     boolean containsPoint(float x, float y) {
-        return (!isSelected &&
-                cardRect.contains(x, y))
-                || (isSelected &&
-                new Rectangle(getX(), getY() + (getHeightChangeOnSelect() * getScale()), getWidth(), getHeight()).contains(x, y));
+        return isSelected ? new Rectangle(getX(), getY() + (getHeightChangeOnSelect() * getHeight()), getWidth(), getHeight()).contains(x, y)
+            : cardRect.contains(x, y);
     }
+
+    // invalidateSprites() is automatically called after a display parameter is set. Maybe it's better to manually call
+    // invalidateSprites() after setting necessary display parameters?
 
     // --- SETTERS ---
     // Face value setters:
     T setFaceDesignScale(float scale) {
         faceDesignHeightScale = scale;
         faceDesignWidthScale = scale;
-        displayParametersChanged();
+        invalidateSprites();
         return (T) this;
     }
 
     T setFaceDesignHeightScale(float scale) {
         this.faceDesignHeightScale = scale;
-        displayParametersChanged();
+        invalidateSprites();
         return (T) this;
     }
 
     T setFaceDesignWidthScale(float scale) {
         this.faceDesignWidthScale = scale;
-        displayParametersChanged();
+        invalidateSprites();
         return (T) this;
-    }
-
-    Color getFaceBackgroundColor() {
-        displayParametersChanged();
-        return this.faceBackgroundColor;
     }
 
     T setFaceBackgroundColor(Color faceBackgroundColor) {
         this.faceBackgroundColor = faceBackgroundColor;
-        displayParametersChanged();
+        invalidateSprites();
         return (T) this;
     }
 
     T setFaceBorderColor(Color faceBorderColor) {
         this.faceBorderColor = faceBorderColor;
-        displayParametersChanged();
+        invalidateSprites();
         return (T) this;
     }
 
     T setFaceBorderThicknessRelativeToHeight(float borderScale) {
         this.faceBorderThicknessInPixels = (int)(borderScale * CARD_HEIGHT_IN_PIXELS);
-        displayParametersChanged();
+        invalidateSprites();
         return (T) this;
     }
 
     T setFaceBorderThicknessRelativeToWidth(float borderScale) {
         this.faceBorderThicknessInPixels = (int)(borderScale * CARD_WIDTH_IN_PIXELS);
-        displayParametersChanged();
+        invalidateSprites();
         return (T) this;
     }
 
     T setFaceBorderThicknessInPixels(int faceBorderThicknessInPixels) {
         this.faceBorderThicknessInPixels = faceBorderThicknessInPixels;
-        displayParametersChanged();
-        return (T) this;
-    }
-
-    T setFaceUp(boolean faceUp) {
-        this.faceUp = faceUp;
+        invalidateSprites();
         return (T) this;
     }
 
@@ -181,19 +169,19 @@ abstract class AbstractRenderableCard<T extends AbstractRenderableCard<T>> exten
     T setBackDesignScale(float scale) {
         backDesignHeightScale = scale;
         backDesignWidthScale = scale;
-        displayParametersChanged();
+        invalidateSprites();
         return (T) this;
     }
 
     T setBackDesignHeightScale(float backDesignHeightScale) {
         this.backDesignHeightScale = backDesignHeightScale;
-        displayParametersChanged();
+        invalidateSprites();
         return (T) this;
     }
 
     T setBackDesignWidthScale(float backDesignWidthScale) {
         this.backDesignWidthScale = backDesignWidthScale;
-        displayParametersChanged();
+        invalidateSprites();
         return (T) this;
     }
 
@@ -204,41 +192,42 @@ abstract class AbstractRenderableCard<T extends AbstractRenderableCard<T>> exten
 
     T setBackBorderColor(Color backBorderColor) {
         this.backBorderColor = backBorderColor;
-        displayParametersChanged();
+        invalidateSprites();
         return (T) this;
     }
 
     T setBackBorderThicknessRelativeToHeight(float borderScale) {
         this.backBorderThicknessInPixels = (int)(borderScale * CARD_HEIGHT_IN_PIXELS);
-        displayParametersChanged();
+        invalidateSprites();
         return (T) this;
     }
 
     T setBackBorderThicknessRelativeToWidth(float borderScale) {
         this.backBorderThicknessInPixels = (int)(borderScale * CARD_WIDTH_IN_PIXELS);
-        displayParametersChanged();
+        invalidateSprites();
         return (T) this;
     }
 
     T setBackBorderThicknessInPixels(int backBorderThicknessInPixels) {
         this.backBorderThicknessInPixels = backBorderThicknessInPixels;
-        displayParametersChanged();
+        invalidateSprites();
         return (T) this;
     }
 
-    T setScale(float newScale) {
-        scale = newScale;
-        cardRect.setSize(CARD_WIDTH * scale, CARD_HEIGHT * scale);
+    T scale(float newScale) {
+        cardRect.setSize(getWidth() * newScale, getHeight() * newScale);
         return (T) this;
     }
 
     T setWidth(float width) {
         cardRect.setWidth(width);
+        cardRect.setHeight(HEIGHT_TO_WIDTH_RATIO * width);
         return (T) this;
     }
 
     T setHeight(float height) {
         cardRect.setHeight(height);
+        cardRect.setWidth(WIDTH_TO_HEIGHT_RATIO * height);
         return (T) this;
     }
 
@@ -283,10 +272,15 @@ abstract class AbstractRenderableCard<T extends AbstractRenderableCard<T>> exten
     }
 
     // General value setters:
-    T setCornerRadiusScale(float cornerRadiusScale) {
-        this.cornerRadiusScale = cornerRadiusScale;
-        cornerRadius = cornerRadiusScale * CARD_WIDTH;
-        displayParametersChanged();
+    T setCornerRadiusRelativeToWidth(float scale) {
+        cornerRadiusInPixels = (int)(scale * CARD_WIDTH_IN_PIXELS);
+        invalidateSprites();
+        return (T) this;
+    }
+
+    T setCornerRadiusRelativeToHeight(float scale) {
+        cornerRadiusInPixels = (int)(scale * CARD_HEIGHT_IN_PIXELS);
+        invalidateSprites();
         return (T) this;
     }
 
@@ -305,12 +299,21 @@ abstract class AbstractRenderableCard<T extends AbstractRenderableCard<T>> exten
         return (T) this;
     }
 
-    boolean isFaceUp() {
-        return faceUp;
+    T setFaceUp(boolean faceUp) {
+        this.faceUp = faceUp;
+        return (T) this;
     }
 
     // --- GETTERS ---
     // Face value getters:
+    Color getFaceBackgroundColor() {
+        return this.faceBackgroundColor;
+    }
+
+    Color getFaceBorderColor() {
+        return faceBorderColor;
+    }
+
     int getFaceBorderThicknessInPixels() {
         return faceBorderThicknessInPixels;
     }
@@ -340,10 +343,6 @@ abstract class AbstractRenderableCard<T extends AbstractRenderableCard<T>> exten
         return heightChangeOnSelect;
     }
 
-    Color getFaceBorderColor() {
-        return faceBorderColor;
-    }
-
     Color getBackBorderColor() {
         return backBorderColor;
     }
@@ -352,12 +351,9 @@ abstract class AbstractRenderableCard<T extends AbstractRenderableCard<T>> exten
         return backBackgroundColor;
     }
 
-    float getCornerRadius() {
-        return cornerRadius;
-    }
-
-    float getScale() {
-        return this.scale;
+    // General value getters:
+    int getCornerRadiusInPixels() {
+        return cornerRadiusInPixels;
     }
 
     float getX() {
@@ -380,12 +376,32 @@ abstract class AbstractRenderableCard<T extends AbstractRenderableCard<T>> exten
         return cardRect.getPosition(new Vector2());
     }
 
-    // General value getters:
-    float getCornerRadiusScale() {
-        return cornerRadiusScale;
-    }
-
     boolean isSelected() {
         return isSelected;
+    }
+
+    boolean isFaceUp() {
+        return faceUp;
+    }
+
+    @Override
+    public boolean isTrumpSuit() {
+        return suit() == GameState.trumpSuit;
+    }
+
+    @Override
+    public boolean isTrumpRank() {
+        return rank() == GameState.trumpRank;
+    }
+
+    @Override
+    public boolean isTrump() {
+        return isTrumpSuit() || isTrumpRank() || isJoker();
+    }
+
+    // Other:
+    @Override
+    public int compareTo(Object o) {
+        return super.compareTo(o);
     }
 }

@@ -1,5 +1,6 @@
 package com.sage.server;
 
+import com.sage.Rank;
 import com.sage.Team;
 
 import java.util.ArrayList;
@@ -23,10 +24,12 @@ class TrickRunner {
 
         int numCardsInPlay = 0;
         int playOrderIndex = 0;
+        // Outer loop iterates through all the players and gets their play
         do {
             players.sendIntToAll(ServerCodes.WAIT_FOR_TURN_PLAYER);
             players.sendIntToAll(turnPlayer.getPlayerNum());
 
+            // Inner loop repeats if player submitted an invalid play, and breaks once player submits valid play
             while(true) {
                 Play turnPlay;
                 ServerCardList cardsInPlay = new ServerCardList();
@@ -144,10 +147,6 @@ class TrickRunner {
 
     private Player getNextPlayer(Player p) {
         int pIndex = players.indexOf(p);
-        if(pIndex == players.size() - 1) {
-            return players.get(0);
-        } else {
-            return players.get(pIndex + 1);
-        }
+        return pIndex == players.size() - 1 ? players.get(0) : players.get(pIndex + 1);
     }
 }

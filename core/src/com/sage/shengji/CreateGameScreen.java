@@ -176,7 +176,7 @@ class CreateGameScreen extends InputAdapter implements Screen {
 
         stage.addActor(table);
 
-        InputMultiplexer inputMultiplexer = new InputMultiplexer();
+        var inputMultiplexer = new InputMultiplexer();
         inputMultiplexer.addProcessor(stage);
         inputMultiplexer.addProcessor(this);
 
