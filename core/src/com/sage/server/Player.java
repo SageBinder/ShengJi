@@ -106,7 +106,7 @@ class Player {
     }
 
     boolean isValidCall(ServerCard c, int numCallCards) {
-        return callRank == c.rank() && hand.stream().filter(card -> card.equals(c)).count() >= numCallCards
+        return callRank == c.rank() && hand.stream().filter(card -> card.valueEquals(c)).count() >= numCallCards
                 && !(c.suit() == Suit.BIG_JOKER || c.suit() == Suit.SMALL_JOKER);
     }
 

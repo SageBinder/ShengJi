@@ -25,7 +25,6 @@ class Play extends ServerCardList {
         this.trickBasePlay = playOrder == 0 ? this : basePlay;
         this.basePlayEffectiveSuit = playOrder == 0 ? get(0).getEffectiveSuit() : trickBasePlay.basePlayEffectiveSuit;
 
-//        sort();
         ArrayList<ServerCardList> groupedPlay = groupPlay();
 
         playHierarchicalNum = getPlayHierarchicalValue(groupedPlay);
@@ -34,7 +33,6 @@ class Play extends ServerCardList {
     }
 
     private ArrayList<ServerCardList> groupPlay() {
-        // TODO: Use ServerCard object as key instead of Integer?
         // Key to hashmap corresponds to a card's cardnum
         HashMap<Integer, ServerCardList> cardGroupsHashMap = new HashMap<>();
         for(ServerCard c : this) {

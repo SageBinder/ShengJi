@@ -1,6 +1,5 @@
 package com.sage;
 
-import java.util.Objects;
 import java.util.Random;
 
 public abstract class Card implements Comparable {
@@ -121,18 +120,8 @@ public abstract class Card implements Comparable {
     public abstract boolean isTrump();
 
     // Two cards are considered equal simply if they have to same suit and rank.
-    @Override
-    public boolean equals(Object obj) {
-        try {
-            return this.cardNum == ((Card)obj).cardNum;
-        } catch(ClassCastException | NullPointerException e) {
-            return super.equals(obj);
-        }
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(cardNum);
+    public boolean valueEquals(Card c) {
+            return this.cardNum == c.cardNum;
     }
 
     @Override

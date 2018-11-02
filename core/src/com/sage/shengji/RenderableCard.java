@@ -159,10 +159,6 @@ class RenderableCard extends AbstractRenderableCard<RenderableCard> {
                         }
                     }
                 }
-
-                // If all four condition checks failed, pixel (x, y) shouldn't be transparent,
-                // so add the pixel at (x, y) from the back image pixmap to the new pixmap
-                pixmap.drawPixel(x, y, pixmap.getPixel(x, y));
             }
         }
     }
@@ -313,8 +309,7 @@ class RenderableCard extends AbstractRenderableCard<RenderableCard> {
         // TODO: Maybe this rounding should only be done when position changes, but I'm too lazy to do that right now
 
         // vecXY is initialized with world coordinates for card position
-        Vector2 vecXY = new Vector2(getX(),
-                getY() + ((isSelected() ? 1 : 0) * getHeightChangeOnSelect() * getHeight()));
+        Vector2 vecXY = new Vector2(getDisplayX(), getDisplayY());
 
         // vecXY is then projected onto the screen, so now it represents the *screen* coordinates of the card
         viewport.project(vecXY);
@@ -331,13 +326,27 @@ class RenderableCard extends AbstractRenderableCard<RenderableCard> {
         // to a whole pixel value, and thus the card's sprite won't have any weird subpixel stretching going on
         vecXY = viewport.unproject(new Vector2(vecXY.x, vecXY.y));
 
-        sprite.setBounds(vecXY.x, vecXY.y, getWidth(), getHeight());
+        sprite.setBounds(vecXY.x, vecXY.y, getDisplayWidth(), getDisplayHeight());
         sprite.draw(batch);
     }
 
     @Override
     void invalidateSprites() {
+        if(thisCardBackSprite != null) {
+            thisCardFaceSprite.getTexture().dispose();
+        }
         thisCardFaceSprite = null;
+
+        if(thisCardBackSprite != null) {
+            thisCardBackSprite.getTexture().dispose();
+        }
         thisCardBackSprite = null;
+    }
+
+    // finalize necessary?
+    @Override
+    public void finalize() {
+        thisCardFaceSprite.getTexture().dispose();
+        thisCardBackSprite.getTexture().dispose();
     }
 }

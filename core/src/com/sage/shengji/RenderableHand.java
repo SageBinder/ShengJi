@@ -7,6 +7,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
 import java.util.ArrayList;
+import java.util.ListIterator;
 
 class RenderableHand extends RenderableCardGroup {
     private HandClickListener clickListener = (c, button) -> {
@@ -19,7 +20,7 @@ class RenderableHand extends RenderableCardGroup {
 
     float bottomPaddingProportion = 0.025f,
             leftPaddingProportion = 0.05f,
-            rightPaddingProportion = 0.1f;
+            rightPaddingProportion = 0.05f;
 
     RenderableHand() {
         super();
@@ -38,27 +39,10 @@ class RenderableHand extends RenderableCardGroup {
 
     void render(SpriteBatch batch, Viewport viewport) {
         super.regionWidth = viewport.getWorldWidth() - (viewport.getWorldWidth() * leftPaddingProportion) - (viewport.getWorldWidth() * rightPaddingProportion);
-
         super.pos.x = viewport.getWorldWidth() * leftPaddingProportion;
         super.pos.y = viewport.getWorldHeight() * bottomPaddingProportion;
 
         super.render(batch, viewport);
-    }
-
-    RenderableCard getClickedCard(Vector2 clickPos) {
-        return getClickedCard(clickPos.x, clickPos.y);
-    }
-
-    @SuppressWarnings("WeakerAccess")
-    RenderableCard getClickedCard(float x, float y) {
-        for(int i = size() - 1; i >= 0; i--) {
-            RenderableCard c = get(i);
-            if(c.containsPoint(x, y)) {
-                return c;
-            }
-        }
-
-        return null;
     }
 
     void click(Vector2 pos, int button) {
@@ -66,10 +50,13 @@ class RenderableHand extends RenderableCardGroup {
     }
 
     void click(float x, float y, int button) {
-        RenderableCard c = getClickedCard(x, y);
+        for(ListIterator<RenderableCard> i = reverseListIterator(); i.hasPrevious();) {
+            final RenderableCard c = i.previous();
 
-        if(c != null) {
-            clickListener.click(c, button);
+            if(c.displayRectContainsPoint(x, y)) {
+                clickListener.click(c, button);
+                return;
+            }
         }
     }
 
