@@ -33,6 +33,8 @@ public class LobbyScreen extends InputAdapter implements Screen {
 
     private Skin skin = new Skin(Gdx.files.internal("uiskin.json"));
 
+    InputMultiplexer multiplexer;
+
     private Stage stage;
     private Table table;
 
@@ -93,7 +95,7 @@ public class LobbyScreen extends InputAdapter implements Screen {
 
         stage.addActor(table);
 
-        var multiplexer = new InputMultiplexer();
+        multiplexer = new InputMultiplexer();
         multiplexer.addProcessor(this);
         multiplexer.addProcessor(stage);
         Gdx.input.setInputProcessor(multiplexer);
@@ -102,7 +104,7 @@ public class LobbyScreen extends InputAdapter implements Screen {
     @Override
     public void show() {
 //        game.showGameScreen(gameState); // Default to showing gameScreen for now just to test gameScreen
-        gameState.setViewport(viewport);
+        Gdx.input.setInputProcessor(multiplexer);
     }
 
     @Override
@@ -111,7 +113,6 @@ public class LobbyScreen extends InputAdapter implements Screen {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         if(gameState.update(client)) {
-            PlayerList players = gameState.players;
             float groupSpacing = viewport.getWorldWidth() / 24f;
 
             playersListTable.clearChildren();
@@ -126,7 +127,7 @@ public class LobbyScreen extends InputAdapter implements Screen {
             playersListTable.add(new Label("NAME", playerLabelStyle));
             playersListTable.add(new Label("CALL RANK", playerLabelStyle)).padLeft(groupSpacing);
 
-            players.forEach(p -> {
+            gameState.players.forEach(p -> {
                 var playerNumLabel = new Label("P" + p.getPlayerNum(), playerLabelStyle);
                 var playerNameLabel = new Label(p.getName().substring(0, Math.min(p.getName().length(), maxNameChars)), playerLabelStyle);
                 var callRankLabel = new Label(Integer.toString(p.getCallRank().rankNum), playerLabelStyle);
@@ -153,7 +154,7 @@ public class LobbyScreen extends InputAdapter implements Screen {
 
             playersListTable.invalidate();
 
-            if(gameState.thisPlayerIsHost) {
+            if(gameState.thisPlayer.isHost()) {
                 startGameButton.setVisible(true);
                 startGameButton.setDisabled(false);
             } else {

@@ -3,11 +3,11 @@ package com.sage.shengji;
 import com.sage.Rank;
 import com.sage.Team;
 
-class Player {
+abstract class Player {
     private int playerNum;
     private boolean isHost = false;
+    private boolean isThisPlayer = false;
     private String name;
-    private RenderablePlay play = new RenderablePlay();
     private Team team = Team.NO_TEAM;
     private Rank callRank = Rank.TWO;
 
@@ -19,8 +19,7 @@ class Player {
     }
 
     Player(int playerNum, String name, Rank callRank) {
-        this.name = name;
-        this.playerNum = playerNum;
+        this(playerNum, name);
         this.callRank = callRank;
     }
 
@@ -38,22 +37,6 @@ class Player {
 
     int getPlayerNum() {
         return playerNum;
-    }
-
-    void addToPlay(RenderableCardList list) {
-        play.addAll(list);
-    }
-
-    void addToPlay(RenderableCard c) {
-        play.add(c);
-    }
-
-    void clearPlay() {
-        play.clear();
-    }
-
-    RenderablePlay getPlay() {
-        return play;
     }
 
     Team getTeam() {
@@ -94,5 +77,13 @@ class Player {
 
     boolean isHost() {
         return isHost;
+    }
+
+    void setThisPlayer(boolean isThisPlayer) {
+        this.isThisPlayer = isThisPlayer;
+    }
+
+    boolean isThisPlayer() {
+        return isThisPlayer;
     }
 }

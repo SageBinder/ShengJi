@@ -43,7 +43,6 @@ class ShengJiClient extends Thread {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> socket.dispose()));
     }
 
-    // TODO: Send start command to server when host wants to start
     @Override
     public void run() {
         Gdx.app.log("Client run", "Beginning");
@@ -177,7 +176,6 @@ class ShengJiClient extends Thread {
         }
     }
 
-    // TODO: send server a quit code if player decides to quit
     void quit() {
         socket.dispose();
         quit = true;

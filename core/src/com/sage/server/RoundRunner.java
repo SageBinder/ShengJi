@@ -262,6 +262,7 @@ class RoundRunner {
                             if(isValidCall && numCallCards > highestNumCallCards) {
                                 synchronized(lock) {
                                     highestNumCallCards = numCallCards;
+
                                     caller = p;
                                     caller.sendInt(ServerCodes.SUCCESSFUL_CALL);
 

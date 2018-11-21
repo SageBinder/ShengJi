@@ -2,10 +2,9 @@ package com.sage.shengji;
 
 import java.util.ArrayList;
 
-@SuppressWarnings("serial")
-class PlayerList extends ArrayList<Player> {
+class PlayerList<T extends Player> extends ArrayList<T>{
     boolean removeByPlayerNum(int playerNum) {
-        for(Player p : this) {
+        for(T p : this) {
             if(p.getPlayerNum() == playerNum) {
                 return this.remove(p);
             }
@@ -13,13 +12,17 @@ class PlayerList extends ArrayList<Player> {
         return false;
     }
 
-    Player getPlayerFromPlayerNum(int playerNum) {
-        for(Player p : this) {
+    T getPlayerFromPlayerNum(int playerNum) {
+        for(T p : this) {
             if(p.getPlayerNum() == playerNum) {
                 return p;
             }
         }
 
         return null;
+    }
+
+    T getThisPlayer() {
+        return stream().filter(Player::isThisPlayer).findFirst().orElse(get(0));
     }
 }

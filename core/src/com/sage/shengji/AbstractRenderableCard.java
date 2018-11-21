@@ -14,56 +14,41 @@ import static com.sage.shengji.RenderableCard.*;
 @SuppressWarnings("unchecked")
 abstract class AbstractRenderableCard<T extends AbstractRenderableCard<T>> extends Card {
     // Default variable values:
-    @SuppressWarnings("WeakerAccess")
     static final int defaultCornerRadiusInPixels = (int)(0.075f * CARD_WIDTH_IN_PIXELS);
 
-    @SuppressWarnings("WeakerAccess")
     static final int defaultFaceBorderThicknessInPixels = (int)(0.018f * CARD_WIDTH_IN_PIXELS);
-    @SuppressWarnings("WeakerAccess")
     static final int defaultBackBorderThicknessInPixels = defaultCornerRadiusInPixels;
 
-    @SuppressWarnings("WeakerAccess")
     static final float defaultFaceDesignHeightScale = 0.95f;
-    @SuppressWarnings("WeakerAccess")
     static final float defaultFaceDesignWidthScale = 0.95f;
 
-    @SuppressWarnings("WeakerAccess")
     static final float defaultBackDesignHeightScale = ((float)CARD_HEIGHT_IN_PIXELS - (2 * (float)defaultBackBorderThicknessInPixels)) / (float)CARD_HEIGHT_IN_PIXELS;
-    @SuppressWarnings("WeakerAccess")
     static final float defaultBackDesignWidthScale = ((float)CARD_WIDTH_IN_PIXELS - (2 * (float)defaultBackBorderThicknessInPixels)) / (float)CARD_WIDTH_IN_PIXELS;
 
-    @SuppressWarnings("WeakerAccess")
     static final float defaultHeightChangeOnSelect = 0.9f; // Relative to card height
 
-    @SuppressWarnings("WeakerAccess")
     static final Color defaultFaceBorderColor = new Color(0, 0, 0, 1);
-    @SuppressWarnings("WeakerAccess")
     static final Color defaultBackBorderColor = new Color(1, 1, 1, 1);
 
-    @SuppressWarnings("WeakerAccess")
+    static final Color defaultTrumpFaceBorderColor = new Color(0.75f, 0.75f, 0f, 1f);
+    static final Color defaultTrumpBackBorderColor = new Color(defaultBackBorderColor);
+
     static final Color defaultFaceUnselectedBackgroundColor = new Color(1, 1, 1, 1);
-    @SuppressWarnings("WeakerAccess")
     static final Color defaultBackUnselectedBackgroundColor = new Color(0, 0, 0, 1);
 
     static final Color defaultFaceSelectedBackgroundColor = new Color(defaultFaceUnselectedBackgroundColor).sub(0.5f, 0.5f, 0.5f, 0);
     static final Color defaultBackSelectedBackgroundColor = new Color(defaultBackUnselectedBackgroundColor);
 
-    static final Color defaultTrumpFaceBorderColor = new Color(0.75f, 0.75f, 0f, 1f);
-    static final Color defaultTrumpBackBorderColor = new Color(defaultBackBorderColor);
+    static final Color defaultFaceHighlightedBackgroundColor = new Color(1.0f, 1.0f, 0.5f, 1.0f);
+    static final Color defaultBackHighlightedBackgroundColor = new Color(defaultBackUnselectedBackgroundColor);
 
     // Member variables:
-    @SuppressWarnings("FieldCanBeLocal")
     private int cornerRadiusInPixels = defaultCornerRadiusInPixels;
 
-    @SuppressWarnings("FieldCanBeLocal")
     private int faceBorderThicknessInPixels = defaultFaceBorderThicknessInPixels;
-
-    @SuppressWarnings("FieldCanBeLocal")
     private int backBorderThicknessInPixels = defaultBackBorderThicknessInPixels;
 
-    @SuppressWarnings("FieldCanBeLocal")
     private float faceDesignHeightScale = defaultFaceDesignHeightScale; // Proportion that the face (numbers, design etc.) is scaled with respect to the card's overall rectangle
-    @SuppressWarnings("FieldCanBeLocal")
     private float faceDesignWidthScale = defaultFaceDesignWidthScale;
 
     private float backDesignHeightScale = defaultBackDesignHeightScale;
@@ -71,21 +56,26 @@ abstract class AbstractRenderableCard<T extends AbstractRenderableCard<T>> exten
 
     private float heightChangeOnSelect = defaultHeightChangeOnSelect;
     
-    private Color faceBorderColor = new Color(defaultFaceBorderColor);
-    private Color backBorderColor = new Color(defaultBackBorderColor);
+    private final Color faceBorderColor = new Color(defaultFaceBorderColor);
+    private final Color backBorderColor = new Color(defaultBackBorderColor);
 
-    private Color faceBackgroundColor = new Color(defaultFaceUnselectedBackgroundColor);
-    private Color backBackgroundColor = new Color(defaultBackUnselectedBackgroundColor);
+    private final Color faceBackgroundColor = new Color(defaultFaceUnselectedBackgroundColor);
+    private final Color backBackgroundColor = new Color(defaultBackUnselectedBackgroundColor);
 
-    private Color faceUnselectedBackgroundColor = new Color(defaultFaceUnselectedBackgroundColor);
-    private Color backUnselectedBackgroundColor = new Color(defaultBackUnselectedBackgroundColor);
+    final Color faceUnselectedBackgroundColor = new Color(defaultFaceUnselectedBackgroundColor);
+    final Color backUnselectedBackgroundColor = new Color(defaultBackUnselectedBackgroundColor);
 
-    private Color faceSelectedBackgroundColor = new Color(defaultFaceSelectedBackgroundColor);
-    private Color backSelectedBackgroundColor = new Color(defaultBackSelectedBackgroundColor);
+    final Color faceSelectedBackgroundColor = new Color(defaultFaceSelectedBackgroundColor);
+    final Color backSelectedBackgroundColor = new Color(defaultBackSelectedBackgroundColor);
+
+    final Color faceHighlightedBackgroundColor = new Color(defaultFaceHighlightedBackgroundColor);
+    final Color backHighlightedBackgroundColor = new Color(defaultBackHighlightedBackgroundColor);
 
     // baseCardRect represents overall rectangle before rounding corners
-    private Rectangle baseCardRect = new Rectangle(0, 0, CARD_WIDTH_IN_PIXELS, CARD_HEIGHT_IN_PIXELS);
-    private Rectangle displayCardRect = new Rectangle(baseCardRect);
+    private final Rectangle baseCardRect = new Rectangle(0, 0, CARD_WIDTH_IN_PIXELS, CARD_HEIGHT_IN_PIXELS);
+    private final Rectangle displayCardRect = new Rectangle(baseCardRect);
+
+    private boolean moveDisplayWithBase = true;
 
     private boolean faceUp = true;
     private boolean isSelected = false;
@@ -152,14 +142,32 @@ abstract class AbstractRenderableCard<T extends AbstractRenderableCard<T>> exten
     }
 
     T setFaceBackgroundColor(Color faceBackgroundColor) {
-        this.faceBackgroundColor = faceBackgroundColor;
+        this.faceBackgroundColor.set(faceBackgroundColor);
         invalidateSprites();
         return (T) this;
     }
 
+    T resetFaceBackgroundColor() {
+        if(isSelected) {
+            setFaceBackgroundColor(faceSelectedBackgroundColor);
+        } else {
+            setFaceBackgroundColor(faceUnselectedBackgroundColor);
+        }
+        return (T) this;
+    }
+
     T setFaceBorderColor(Color faceBorderColor) {
-        this.faceBorderColor = faceBorderColor;
+        this.faceBorderColor.set(faceBorderColor);
         invalidateSprites();
+        return (T) this;
+    }
+
+    T resetFaceBorderColor() {
+        if(isTrump()) {
+            setFaceBorderColor(defaultTrumpFaceBorderColor);
+        } else {
+            setFaceBorderColor(defaultFaceBorderColor);
+        }
         return (T) this;
     }
 
@@ -202,13 +210,31 @@ abstract class AbstractRenderableCard<T extends AbstractRenderableCard<T>> exten
     }
 
     T setBackBackgroundColor(Color backBackgroundColor) {
-        this.backBackgroundColor = backBackgroundColor;
+        this.backBackgroundColor.set(backBackgroundColor);
+        return (T) this;
+    }
+
+    T resetBackBackgroundColor() {
+        if(isSelected) {
+            setBackBackgroundColor(backSelectedBackgroundColor);
+        } else {
+            setBackBackgroundColor(backUnselectedBackgroundColor);
+        }
         return (T) this;
     }
 
     T setBackBorderColor(Color backBorderColor) {
-        this.backBorderColor = backBorderColor;
+        this.backBorderColor.set(backBorderColor);
         invalidateSprites();
+        return (T) this;
+    }
+
+    T resetBackBorderColor() {
+        if(isTrump()) {
+            setBackBorderColor(defaultTrumpBackBorderColor);
+        } else {
+            setBackBorderColor(defaultBackBorderColor);
+        }
         return (T) this;
     }
 
@@ -231,6 +257,30 @@ abstract class AbstractRenderableCard<T extends AbstractRenderableCard<T>> exten
     }
 
     // General value setters:
+    T setBothBackgroundColors(Color newColor) {
+        setFaceBackgroundColor(newColor);
+        setBackBackgroundColor(newColor);
+        return (T) this;
+    }
+
+    T setBothBorderColors(Color newColor) {
+        setFaceBorderColor(newColor);
+        setBackBorderColor(newColor);
+        return (T) this;
+    }
+
+    T resetBothBackgroundColors() {
+        resetFaceBackgroundColor();
+        resetBackBackgroundColor();
+        return (T) this;
+    }
+
+    T resetBothBorderColors() {
+        resetFaceBorderColor();
+        resetBackBorderColor();
+        return (T) this;
+    }
+
     T setCornerRadiusRelativeToWidth(float scale) {
         cornerRadiusInPixels = (int)(scale * CARD_WIDTH_IN_PIXELS);
         invalidateSprites();
@@ -260,39 +310,45 @@ abstract class AbstractRenderableCard<T extends AbstractRenderableCard<T>> exten
 
     T setX(float x) {
         float change = x - baseCardRect.x;
-        displayCardRect.x += change;
         baseCardRect.x += change;
+        if(moveDisplayWithBase) displayCardRect.x += change;
+
         return (T) this;
     }
 
     T setY(float y) {
         float change = y - baseCardRect.y;
-        displayCardRect.y += change;
         baseCardRect.y += change;
+        if(moveDisplayWithBase) displayCardRect.y += change;
+
         return (T) this;
     }
 
     T setWidth(float width) {
         float widthChangeProportion = width / baseCardRect.width;
 
-        displayCardRect.width *= widthChangeProportion;
-        displayCardRect.height = HEIGHT_TO_WIDTH_RATIO * displayCardRect.width;
-
         baseCardRect.width *= widthChangeProportion;
         baseCardRect.height = HEIGHT_TO_WIDTH_RATIO * baseCardRect.width;
+
+        if(moveDisplayWithBase) {
+            displayCardRect.width *= widthChangeProportion;
+            displayCardRect.height = HEIGHT_TO_WIDTH_RATIO * displayCardRect.width;
+        }
 
         return (T) this;
     }
 
     T setHeight(float height) {
         float heightChangeProportion = height / baseCardRect.height;
-        
-        displayCardRect.height *= heightChangeProportion;
-        displayCardRect.width = WIDTH_TO_HEIGHT_RATIO * displayCardRect.height;
-        
+
         baseCardRect.height *= heightChangeProportion;
         baseCardRect.width = WIDTH_TO_HEIGHT_RATIO * baseCardRect.height;
-        
+
+        if(moveDisplayWithBase) {
+            displayCardRect.height *= heightChangeProportion;
+            displayCardRect.width = WIDTH_TO_HEIGHT_RATIO * displayCardRect.height;
+        }
+
         return (T) this;
     }
 
@@ -333,6 +389,11 @@ abstract class AbstractRenderableCard<T extends AbstractRenderableCard<T>> exten
         return (T) this;
     }
 
+    T setMoveDisplayWithBase(boolean moveDisplayWithBase) {
+        this.moveDisplayWithBase = moveDisplayWithBase;
+        return (T) this;
+    }
+
     T resetDisplayRect() {
         displayCardRect.set(baseCardRect);
         return (T) this;
@@ -364,12 +425,12 @@ abstract class AbstractRenderableCard<T extends AbstractRenderableCard<T>> exten
         isSelected = selected;
 
         if(isSelected) {
-            setFaceBackgroundColor(new Color(faceSelectedBackgroundColor));
-            setBackBackgroundColor(new Color(backSelectedBackgroundColor));
+            setFaceBackgroundColor(faceSelectedBackgroundColor);
+            setBackBackgroundColor(backSelectedBackgroundColor);
             setDisplayPosition(baseCardRect.x, baseCardRect.y + (heightChangeOnSelect * baseCardRect.height));
         } else {
-            setBackBackgroundColor(new Color(backUnselectedBackgroundColor));
-            setFaceBackgroundColor(new Color(faceUnselectedBackgroundColor));
+            setBackBackgroundColor(backUnselectedBackgroundColor);
+            setFaceBackgroundColor(faceUnselectedBackgroundColor);
             resetDisplayRect();
         }
 
@@ -382,6 +443,7 @@ abstract class AbstractRenderableCard<T extends AbstractRenderableCard<T>> exten
     }
 
     T setSelectable(boolean selectable) {
+        if(!selectable) setSelected(false);
         this.selectable = selectable;
         return (T) this;
     }
@@ -394,15 +456,11 @@ abstract class AbstractRenderableCard<T extends AbstractRenderableCard<T>> exten
     // --- GETTERS ---
     // Face value getters:
     Color getFaceBackgroundColor() {
-        return this.faceBackgroundColor;
+        return new Color(this.faceBackgroundColor);
     }
 
     Color getFaceBorderColor() {
-        return faceBorderColor;
-    }
-
-    Color getFaceSelectedBackgroundColor() {
-        return faceSelectedBackgroundColor;
+        return new Color(faceBorderColor);
     }
 
     int getFaceBorderThicknessInPixels() {
@@ -435,15 +493,11 @@ abstract class AbstractRenderableCard<T extends AbstractRenderableCard<T>> exten
     }
 
     Color getBackBorderColor() {
-        return backBorderColor;
+        return new Color(backBorderColor);
     }
 
     Color getBackBackgroundColor() {
-        return backBackgroundColor;
-    }
-
-    Color getDefaultBackSelectedBackgroundColor() {
-        return backSelectedBackgroundColor;
+        return new Color(backBackgroundColor);
     }
 
     // General value getters:
@@ -515,6 +569,4 @@ abstract class AbstractRenderableCard<T extends AbstractRenderableCard<T>> exten
     public int compareTo(Object o) {
         return super.compareTo(o);
     }
-
-
 }

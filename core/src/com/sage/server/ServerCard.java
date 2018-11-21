@@ -4,6 +4,8 @@ import com.sage.Card;
 import com.sage.Rank;
 import com.sage.Suit;
 
+import java.util.Objects;
+
 class ServerCard extends Card {
     ServerCard(Rank rank, Suit suit) {
         super(rank, suit);
@@ -50,5 +52,22 @@ class ServerCard extends Card {
 
     public boolean isTrump() {
         return isTrumpSuit() || isTrumpRank() || isJoker();
+    }
+
+    // Overriding equals this way is probably really stupid but I've already written everything else with this in mind
+    // so it stays.
+
+    @Override
+    public boolean equals(Object obj) {
+        try {
+            return cardNum() == ((ServerCard)obj).cardNum();
+        } catch(ClassCastException e) {
+            return super.equals(obj);
+        }
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(cardNum());
     }
 }

@@ -1,26 +1,27 @@
 package com.sage.shengji;
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.InputAdapter;
-import com.badlogic.gdx.InputMultiplexer;
-import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.*;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 
+import java.util.ArrayList;
+import java.util.ListIterator;
 import java.util.stream.Collectors;
 
 import static com.sage.server.ServerCodes.*;
 
-public class GameScreen extends InputAdapter implements Screen {
+public class GameScreen extends InputAdapter implements Screen, InputProcessor {
     private ScreenManager game;
     private GameState gameState;
     private ShengJiClient client;
@@ -29,14 +30,16 @@ public class GameScreen extends InputAdapter implements Screen {
 
     private SpriteBatch batch = new SpriteBatch();
 
-    private float textProportion = 1f / 7f,
+    private float textProportion = 1f / 10f,
             viewportScale = 5f;
 
     private InputMultiplexer multiplexer;
     private Stage gameStage;
-    private TextButton sendButton;
 
-    private BitmapFont messageFont;
+    private TextButton sendButton;
+    private Label messageLabel;
+
+//    private BitmapFont messageFont;
 
     GameScreen(ScreenManager game, GameState gameState, ShengJiClient client) {
         this.game = game;
@@ -47,32 +50,42 @@ public class GameScreen extends InputAdapter implements Screen {
                 viewportHeight = Gdx.graphics.getHeight() * viewportScale;
         viewport = new ExtendViewport(viewportWidth, viewportHeight);
 
-        gameState.setViewport(viewport);
-
         var fontGenerator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/OpenSans-Bold.ttf"));
-        var fontParameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
-        fontParameter.size = (int)(Math.max(Gdx.graphics.getHeight(), Gdx.graphics.getWidth()) * textProportion);
 
-        Skin skin = new Skin(Gdx.files.internal("uiskin.json"));
+        var playerNameFontParameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
+        playerNameFontParameter.incremental = true;
+        playerNameFontParameter.size = (int)(Math.max(Gdx.graphics.getHeight(), Gdx.graphics.getWidth()) * textProportion * 0.8f);
+        RenderablePlayer.nameFont = fontGenerator.generateFont(playerNameFontParameter);
+
+        var uiFontParameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
+        uiFontParameter.incremental = true; // <- I don't know what this line does, but the font gets all fucky without it
+        uiFontParameter.size = (int)(Math.max(Gdx.graphics.getHeight(), Gdx.graphics.getWidth()) * textProportion);
+
+        var skin = new Skin(Gdx.files.internal("uiskin.json"));
 
         var textButtonStyle = skin.get(TextButton.TextButtonStyle.class);
-        textButtonStyle.font = fontGenerator.generateFont(fontParameter);
+        textButtonStyle.font = fontGenerator.generateFont(uiFontParameter);
 
-        messageFont = fontGenerator.generateFont(fontParameter);
+        var labelStyle = skin.get(Label.LabelStyle.class);
+        labelStyle.font = fontGenerator.generateFont(uiFontParameter);
 
         fontGenerator.dispose();
 
         gameStage = new Stage(viewport, batch);
+
         sendButton = new TextButton("I AM A BUTTON", textButtonStyle);
-//        sendButton.setTransform(true);
-//        sendButton.setPosition(viewportWidth / 2, viewportHeight / 2);
+        sendButton.setProgrammaticChangeEvents(true);
+        messageLabel = new Label("I AM NOT A BUTTON", labelStyle);
 
         Table table = new Table();
         table.setFillParent(true);
-        table.center();
-        table.debug();
+        table.top().padTop(viewportHeight * (0.30f));
+//        table.debug();
 
+        table.row();
+        table.add(messageLabel);
 
+        table.row().padTop(viewportHeight / 30f);
         table.add(sendButton);
 
         gameStage.addActor(table);
@@ -80,21 +93,20 @@ public class GameScreen extends InputAdapter implements Screen {
         multiplexer = new InputMultiplexer();
         multiplexer.addProcessor(gameStage);
         multiplexer.addProcessor(this);
-        multiplexer.addProcessor(gameState);
 
         Gdx.input.setInputProcessor(multiplexer);
     }
 
     @Override
     public void show() {
-        gameState.setViewport(viewport);
         Gdx.input.setInputProcessor(multiplexer);
     }
 
     @Override
     public void render(float delta) {
+        sendButton.setText(gameState.buttonText);
+        messageLabel.setText(gameState.message);
         if(gameState.update(client)) {
-            sendButton.setText(gameState.buttonText);
 //            sendButton.setWidth(((float)sendButton.getStyle().font.getRegion().getRegionWidth() / viewport.getScreenWidth()) * viewport.getWorldWidth());
 
             switch(gameState.lastServerCode) {
@@ -146,9 +158,6 @@ public class GameScreen extends InputAdapter implements Screen {
         gameStage.draw();
 
         batch.begin();
-
-      //  messageFont.draw(batch, gameState.message, viewport.getWorldWidth() / 2, viewport.getWorldHeight() / 2);
-
         batch.setProjectionMatrix(viewport.getCamera().combined);
 
         if(gameState.lastServerCode == INVALID_KITTY || gameState.lastServerCode == SEND_KITTY) {
@@ -156,6 +165,7 @@ public class GameScreen extends InputAdapter implements Screen {
         }
 
         gameState.hand.render(batch, viewport);
+        gameState.players.render(batch, viewport);
 
         batch.end();
     }
@@ -169,6 +179,7 @@ public class GameScreen extends InputAdapter implements Screen {
         sendButton.setVisible(false);
     }
 
+
     private void enableButton(ChangeListener listener) {
         while(sendButton.getListeners().size > 1) {
             sendButton.getListeners().removeIndex(sendButton.getListeners().size - 1);
@@ -177,6 +188,131 @@ public class GameScreen extends InputAdapter implements Screen {
 
         sendButton.setDisabled(false);
         sendButton.setVisible(true);
+    }
+
+
+    // I'm thinking RenderableHand should implement InputProcessor and these features should be put there instead.
+    private RenderableCard lastHighlightedCard = null;
+    @Override
+    public boolean mouseMoved(int screenX, int screenY) {
+        Vector2 clickCoordinates = viewport.unproject(new Vector2(screenX, screenY));
+
+        for(ListIterator<RenderableCard> i = gameState.hand.reverseListIterator(); i.hasPrevious();) {
+            final RenderableCard c = i.previous();
+
+            if(c.isSelected()) {
+                if(c.displayRectContainsPoint(clickCoordinates)) {
+                    break;
+                } else {
+                    continue;
+                }
+            }
+
+            if(c.displayRectContainsPoint(clickCoordinates) || c.baseRectContainsPoint(clickCoordinates)) {
+                if(lastHighlightedCard != null && !lastHighlightedCard.isSelected() && lastHighlightedCard != c) {
+                    lastHighlightedCard.resetDisplayRect();
+                    lastHighlightedCard.resetBothBackgroundColors();
+                }
+
+                c.setDisplayY(c.getY() + (c.getHeight() * 0.4f));
+                c.setFaceBackgroundColor(c.faceHighlightedBackgroundColor);
+                c.setBackBackgroundColor(c.backHighlightedBackgroundColor);
+                lastHighlightedCard = c;
+
+                return false;
+            }
+        }
+
+        if(lastHighlightedCard != null && !lastHighlightedCard.isSelected()) {
+            lastHighlightedCard.resetDisplayRect();
+            lastHighlightedCard.resetBothBackgroundColors();
+        }
+
+        return false;
+    }
+
+    @Override
+    public boolean touchDown (int screenX, int screenY, int pointer, int button) {
+        Vector2 clickCoordinates = viewport.unproject(new Vector2(screenX, screenY));
+
+        try {
+            for(ListIterator<RenderableCard> i = gameState.hand.reverseListIterator(); i.hasPrevious(); ) {
+                final RenderableCard c = i.previous();
+                if(c.displayRectContainsPoint(clickCoordinates) || (!c.isSelected() && c.baseRectContainsPoint(clickCoordinates))) {
+                    if(borderedCard != null) borderedCard.resetBothBorderColors();
+                    borderedCard = c;
+                    borderedCard.setBothBorderColors(Color.CYAN);
+
+                    if(button == Input.Buttons.LEFT && c.isFaceUp()) {
+                        c.toggleSelected();
+                        return true;
+                    } else if(button == Input.Buttons.RIGHT) {
+                        c.flip();
+                        return true;
+                    }
+
+                    return false;
+                }
+            }
+
+            if(borderedCard != null) {
+                borderedCard.resetBothBorderColors();
+                borderedCard = null;
+            }
+            return false;
+        } finally {
+            mouseMoved(screenX, screenY);
+        }
+    }
+
+
+    RenderableCard borderedCard = null;
+    @Override
+    public boolean keyDown(int keyCode) {
+        if(keyCode == Input.Keys.ENTER) {
+            sendButton.toggle();
+            return false;
+        }
+
+        if(keyCode == Input.Keys.BACKSPACE) {
+            gameState.hand.forEach(AbstractRenderableCard::deselect);
+            return false;
+        }
+
+        int direction;
+
+        if(keyCode == Input.Keys.SPACE
+                || keyCode == Input.Keys.UP
+                || keyCode == Input.Keys.DOWN
+                || keyCode == Input.Keys.S) {
+            if(borderedCard != null) borderedCard.toggleSelected();
+            return false;
+        }
+
+        if(keyCode == Input.Keys.F) {
+            if(borderedCard != null) borderedCard.flip();
+            return false;
+        }
+
+        if(keyCode == Input.Keys.LEFT) {
+            direction = -1;
+        } else if(keyCode == Input.Keys.RIGHT) {
+            direction = 1;
+        } else {
+            return false;
+        }
+
+        if(borderedCard == null) {
+            borderedCard = gameState.hand.get(direction == -1 ? gameState.hand.size() - 1 : 0);
+        } else {
+            borderedCard.resetBothBorderColors();
+
+            int index = (gameState.hand.indexOf(borderedCard) + direction) % gameState.hand.size();
+            borderedCard = gameState.hand.get(index >= 0 ? index : gameState.hand.size() - 1);
+        }
+        borderedCard.setBothBorderColors(Color.CYAN);
+
+        return false;
     }
 
     @Override
@@ -201,7 +337,8 @@ public class GameScreen extends InputAdapter implements Screen {
 
     @Override
     public void dispose() {
-        messageFont.dispose();
+        messageLabel.getStyle().font.dispose();
+        sendButton.getStyle().font.dispose();
     }
 
     // TODO: Make sure the number of selected cards is valid before sending to server
@@ -210,17 +347,25 @@ public class GameScreen extends InputAdapter implements Screen {
         @Override
         public void changed(ChangeEvent event, Actor actor) {
             if(gameState.hand.stream().anyMatch(RenderableCard::isSelected)) {
-                int cardNumToSend = gameState.hand.stream().filter(RenderableCard::isSelected).findFirst().orElse(gameState.hand.get(0)).cardNum();
-                client.sendInt(cardNumToSend);
+                if(gameState.hand.stream().filter(RenderableCard::isSelected).count() != 1) {
+                    gameState.message = "Only one card for kitty call";
+                    return;
+                }
+
+                RenderableCard cardToSend = gameState.hand.stream()
+                        .filter(RenderableCard::isSelected)
+                        .findFirst().orElse(gameState.hand.get(0));
+                client.sendInt(cardToSend.cardNum());
 
                 // thisPlayer.getPlay() should be empty, but add cards back into hand just in case
                 gameState.hand.addAll(gameState.thisPlayer.getPlay());
                 gameState.thisPlayer.clearPlay();
 
-                gameState.thisPlayer.addToPlay(new RenderableCard(cardNumToSend));
+                gameState.thisPlayer.addToPlay(cardToSend);
 
-                gameState.hand.removeAll(gameState.thisPlayer.getPlay());
+                gameState.hand.remove(cardToSend);
 
+                cardToSend.deselect();
                 gameState.hand.setAllSelected(false);
             }
         }
@@ -232,9 +377,19 @@ public class GameScreen extends InputAdapter implements Screen {
             if(gameState.hand.stream().noneMatch(RenderableCard::isSelected) && gameState.thisPlayer.getPlay().isEmpty()) {
                 client.sendInt(ClientCodes.NO_CALL);
             } else {
-                // This won't work if different cards are selected at the same time, but that's not supposed to happen
-                int cardNumToSend = gameState.hand.stream().filter(RenderableCard::isSelected).findFirst().orElse(gameState.hand.get(0)).cardNum();
-                int numCardsInCall = (int)gameState.hand.stream().filter(RenderableCard::isSelected).count();
+                ArrayList<RenderableCard> selectedCards = (ArrayList<RenderableCard>)gameState.hand.stream()
+                        .filter(AbstractRenderableCard::isSelected).collect(Collectors.toList());
+
+                // Ensure that all the selected cards are the same type of card
+                for(RenderableCard c : selectedCards) {
+                    if(c.cardNum() != selectedCards.get(0).cardNum()) {
+                        gameState.message = "All cards in call must be the same";
+                        return;
+                    }
+                }
+
+                int cardNumToSend = selectedCards.get(0).cardNum();
+                int numCardsInCall = selectedCards.size();
                 client.sendInt(cardNumToSend);
                 client.sendInt(numCardsInCall);
 
@@ -242,10 +397,9 @@ public class GameScreen extends InputAdapter implements Screen {
                 gameState.hand.addAll(gameState.thisPlayer.getPlay());
                 gameState.thisPlayer.clearPlay();
 
-                for(int i = 0; i < numCardsInCall; i++) {
-                    gameState.thisPlayer.addToPlay(new RenderableCard(cardNumToSend));
-                }
-                gameState.hand.removeAll(gameState.thisPlayer.getPlay()); // If call is invalid, cards from play will be added back into hand
+                gameState.thisPlayer.getPlay().addAll(selectedCards);
+                gameState.hand.removeAll(selectedCards);
+                selectedCards.forEach(AbstractRenderableCard::deselect);
             }
 
             gameState.hand.setAllSelected(false);
@@ -282,7 +436,7 @@ public class GameScreen extends InputAdapter implements Screen {
             });
             gameState.hand.removeAll(gameState.thisPlayer.getPlay());
 
-            disableButton();
+//            disableButton();
         }
     };
 
@@ -311,7 +465,7 @@ public class GameScreen extends InputAdapter implements Screen {
                     client.sendInt(c.cardNum());
                     c.setSelected(false);
                 });
-                disableButton();
+//                disableButton();
             }
         }
     };

@@ -332,7 +332,7 @@ class RenderableCard extends AbstractRenderableCard<RenderableCard> {
 
     @Override
     void invalidateSprites() {
-        if(thisCardBackSprite != null) {
+        if(thisCardFaceSprite != null) {
             thisCardFaceSprite.getTexture().dispose();
         }
         thisCardFaceSprite = null;

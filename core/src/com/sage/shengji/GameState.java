@@ -1,11 +1,6 @@
 package com.sage.shengji;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.InputProcessor;
-import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.scenes.scene2d.Actor;
-import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
-import com.badlogic.gdx.utils.viewport.Viewport;
 import com.sage.Card;
 import com.sage.Rank;
 import com.sage.Suit;
@@ -14,7 +9,7 @@ import com.sage.server.ServerCodes;
 
 import static com.sage.server.ServerCodes.*;
 
-class GameState implements InputProcessor {
+class GameState {
     private ScreenManager game;
 
     private GameStateUpdater updater = new GameStateUpdater();
@@ -22,20 +17,20 @@ class GameState implements InputProcessor {
     static Suit trumpSuit = null;
     static Rank trumpRank = null;
 
-    PlayerList players = new PlayerList();
+    RenderablePlayerList players = new RenderablePlayerList();
     int[] playerOrder;
 
     RenderableCard noOneCalledCard;
 
-    PlayerList roundWinners = new PlayerList();
+    PlayerList<Player> roundWinners = new PlayerList<>();
 
-    Player turnPlayer;
-    Player lastTrickWinner;
-    Player leadingPlayer;
+    // These are all RenderablePlayer instead of just Player because I want to change render properties of them
+    RenderablePlayer turnPlayer;
+    RenderablePlayer lastTrickWinner;
+    RenderablePlayer leadingPlayer;
 
-    Player thisPlayer;
+    RenderablePlayer thisPlayer;
     final RenderableHand hand = new RenderableHand();
-    boolean thisPlayerIsHost = false;
 
     final RenderableCardList collectedPointCards = new RenderableCardList();
     int numCollectedPoints = 0;
@@ -47,27 +42,12 @@ class GameState implements InputProcessor {
     String message = "";
     String buttonText = "";
 
-    ChangeListener buttonAction = new ChangeListener() {
-        @Override
-        public void changed(ChangeEvent event, Actor actor) {
-        }
-    };
     boolean buttonIsEnabled = false;
-
-    private Viewport viewport;
 
     int lastServerCode = ServerCodes.ROUND_OVER;
 
     GameState(ScreenManager game) {
         this.game = game;
-
-//        for(int i = 0; i < 10; i++) {
-//            hand.add(new RenderableCard());
-//        }
-    }
-
-    void setViewport(Viewport viewport) {
-        this.viewport = viewport;
     }
 
     boolean update(ShengJiClient client) {
@@ -79,49 +59,6 @@ class GameState implements InputProcessor {
             return true;
         }
 
-        return false;
-    }
-
-    @Override
-    public boolean keyDown(int keycode) {
-        return false;
-    }
-
-    @Override
-    public boolean keyUp(int keycode) {
-        return false;
-    }
-
-    @Override
-    public boolean keyTyped(char character) {
-        return false;
-    }
-
-    @Override
-    public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-        Vector2 clickPos = viewport.unproject(new Vector2(screenX, screenY));
-        hand.click(clickPos, button);
-
-        return false;
-    }
-
-    @Override
-    public boolean touchUp(int screenX, int screenY, int pointer, int button) {
-        return false;
-    }
-
-    @Override
-    public boolean touchDragged(int screenX, int screenY, int pointer) {
-        return false;
-    }
-
-    @Override
-    public boolean mouseMoved(int screenX, int screenY) {
-        return false;
-    }
-
-    @Override
-    public boolean scrolled(int amount) {
         return false;
     }
 
@@ -260,34 +197,37 @@ class GameState implements InputProcessor {
         // Server should send:
         // [thisPlayerNum]\n
         // [# of players]\n
-        // [[[playerNum]\n[name]\n[callRank]\n] for each player]
+        // [[[playerNum]\n[name]\n[callRank]\n] for each RenderablePlayer]
         private void waitForPlayersList() {
-            // Server will send this player's playerNum first
+            // Server will send this RenderablePlayer's playerNum first
             int thisPlayerNum = client.readInt();
 
             // Server will send the number of players
             int numPlayers = client.readInt();
 
-            PlayerList players = new PlayerList();
+            RenderablePlayerList players = new RenderablePlayerList();
 
             for(int i = 0; i < numPlayers; i++) {
                 // Server should send [[playerNum]\n[name]\n[callRank]]
                 int playerNum = client.readInt();
                 String name = client.readLine();
                 int callRank = client.readInt();
-                players.add(new Player(playerNum, name, Rank.fromInt(callRank)));
+                players.add(new RenderablePlayer(playerNum, name, Rank.fromInt(callRank)));
             }
 
             int hostPlayerNum = client.readInt();
-            Player host = players.getPlayerFromPlayerNum(hostPlayerNum);
+            RenderablePlayer host = players.getPlayerFromPlayerNum(hostPlayerNum);
 
-            players.forEach(p -> p.setHost(false));
+            players.forEach(p -> {
+                p.setHost(false);
+                p.setThisPlayer(false);
+            });
             host.setHost(true);
 
             GameState.this.players = players;
             thisPlayer = players.getPlayerFromPlayerNum(thisPlayerNum);
-
-            thisPlayerIsHost = thisPlayer == host;
+            thisPlayer.setHost(thisPlayer == host);
+            thisPlayer.setThisPlayer(true);
 
             disableButton();
         }
@@ -326,9 +266,9 @@ class GameState implements InputProcessor {
         private void successfulCall() {
             message = "Successful call";
             
-            players.forEach(player -> {
-                if(player != thisPlayer) {
-                    player.clearPlay();
+            players.forEach(RenderablePlayer -> {
+                if(RenderablePlayer != thisPlayer) {
+                    RenderablePlayer.clearPlay();
                 }
             });
 
@@ -348,12 +288,10 @@ class GameState implements InputProcessor {
             int callCardNum = client.readInt();
             int numCallCards = client.readInt();
 
-            Player callLeader = players.getPlayerFromPlayerNum(callLeaderPlayerNum);
-
-            setTrump(callCardNum);
+            RenderablePlayer callLeader = players.getPlayerFromPlayerNum(callLeaderPlayerNum);
 
             hand.addAll(thisPlayer.getPlay());
-            players.forEach(Player::clearPlay);
+            players.forEach(RenderablePlayer::clearPlay);
 
             for(int i = 0; i < numCallCards; i++) {
                 callLeader.addToPlay(new RenderableCard(callCardNum));
@@ -363,10 +301,12 @@ class GameState implements InputProcessor {
         }
 
         private void waitForCallWinner() {
-            hand.addAll(thisPlayer.getPlay());
-            players.forEach(Player::clearPlay);
+            RenderablePlayer callWinner = players.getPlayerFromPlayerNum(client.readInt());
+            setTrump(callWinner.getPlay().get(0).cardNum());
+            callWinner.setTeam(Team.KEEPERS);
 
-            Player callWinner = players.getPlayerFromPlayerNum(client.readInt());
+            hand.addAll(thisPlayer.getPlay());
+            players.forEach(RenderablePlayer::clearPlay);
 
             message = "Call winner: " + callWinner.getName();
 
@@ -376,19 +316,19 @@ class GameState implements InputProcessor {
         private void noOneCalled() {
             noOneCalledCard = new RenderableCard(client.readInt());
 
-            
             message = "No one called";
 
             enableButton();
         }
 
         private void waitForKittyCallWinner() {
-            Player callWinner = players.getPlayerFromPlayerNum(client.readInt());
+            RenderablePlayer callWinner = players.getPlayerFromPlayerNum(client.readInt());
             Rank callWinnerCallRank = Rank.fromInt(client.readInt());
             RenderableCard callCard = new RenderableCard(client.readInt());
 
             message = "Call winner: " + callWinner.getName();
 
+            callWinner.setTeam(Team.KEEPERS);
             callWinner.getPlay().clear();
             callWinner.getPlay().add(callCard);
 
@@ -400,7 +340,6 @@ class GameState implements InputProcessor {
         }
 
         private void successfulKittyCall() {
-            
             message = "Successful call!";
 
             setTrump(Card.getCardNumFromRankAndSuit(thisPlayer.getCallRank(), noOneCalledCard.suit()));
@@ -414,7 +353,6 @@ class GameState implements InputProcessor {
         }
 
         private void invalidKittyCall() {
-            
             message = "Invalid call. Try again.";
 
             hand.addAll(thisPlayer.getPlay());
@@ -453,7 +391,7 @@ class GameState implements InputProcessor {
 
         // Server should send:
         // [# of players]\n
-        // [[playerNum]\n for each player]
+        // [[playerNum]\n for each RenderablePlayer]
         private void waitForPlayerOrder() {
             int numPlayers = client.readInt();
             playerOrder = new int[numPlayers];
@@ -478,7 +416,7 @@ class GameState implements InputProcessor {
         }
 
         // Server should send:
-        // [cardNum]\n for each card in this player's hand
+        // [cardNum]\n for each card in this RenderablePlayer's hand
         private void waitForHand() {
             int[] cardNums = new int[client.readInt()];
 
@@ -495,7 +433,6 @@ class GameState implements InputProcessor {
 
         private void sendKitty() {
             message = "Select cards to put in kitty";
-            
             buttonText = "Confirm kitty";
 
             enableButton();
@@ -503,7 +440,6 @@ class GameState implements InputProcessor {
 
         private void invalidKitty() {
             message = "Invalid kitty!";
-            
             buttonText = "Confirm kitty";
 
             enableButton();
@@ -513,7 +449,6 @@ class GameState implements InputProcessor {
             int numFriendCards = client.readInt();
 
             message = "Select " + numFriendCards + " friend cards";
-
             buttonText = "Send friend cards";
 
             enableButton();
@@ -535,7 +470,7 @@ class GameState implements InputProcessor {
         // GAME CODES:
 
         private void trickStart() {
-            players.forEach(Player::clearPlay);
+            players.forEach(RenderablePlayer::clearPlay);
 
             disableButton();
         }
@@ -546,7 +481,6 @@ class GameState implements InputProcessor {
         // [[cardNum] for each selected card in hand]
         private void sendBasePlay() {
             message = "Your turn";
-            
             buttonText = "Send play";
 
             enableButton();
@@ -556,7 +490,6 @@ class GameState implements InputProcessor {
         // [[cardNum] for each selected card in hand]
         private void sendPlay() {
             message = "Your turn";
-            
             buttonText = "Send play";
 
             enableButton();
@@ -591,7 +524,7 @@ class GameState implements InputProcessor {
         }
 
         private void waitForNewPlayerTeam() {
-            Player p = players.getPlayerFromPlayerNum(client.readInt());
+            RenderablePlayer p = players.getPlayerFromPlayerNum(client.readInt());
             int teamNum = client.readInt();
             Team newTeam = Team.getTeamFromTeamNum(teamNum);
 
@@ -618,7 +551,7 @@ class GameState implements InputProcessor {
                     : "(no team)";
             message = lastTrickWinner.getName() + " " + teamString + " won the trick!";
 
-            players.forEach(Player::clearPlay);
+            players.forEach(RenderablePlayer::clearPlay);
 
             disableButton();
         }

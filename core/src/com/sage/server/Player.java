@@ -48,9 +48,24 @@ class Player {
         }
     }
 
+    int clearReadBuffer() {
+        try {
+            int i = 0;
+            while(bufferedReader.ready()) {
+                bufferedReader.read();
+                i++;
+            }
+            return i;
+        } catch(IOException e) {
+            e.printStackTrace();
+            s.dispose();
+            return -1;
+        }
+    }
+
     Integer readInt() {
         try {
-            Integer i = Integer.parseInt(readLine()); // readLine() will return null is player has disconnected
+            Integer i = Integer.parseInt(readLine()); // readLine() will return null if player has disconnected
             Gdx.app.log("Server.Player.readInt()", "READ INT: " + i);
             return i;
         } catch(NumberFormatException e) {
