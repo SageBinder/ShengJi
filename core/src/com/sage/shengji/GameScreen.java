@@ -279,6 +279,10 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
             return false;
         }
 
+        if(gameState.hand.isEmpty()) {
+            return false;
+        }
+
         int direction;
 
         if(keyCode == Input.Keys.SPACE

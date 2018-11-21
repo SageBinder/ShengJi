@@ -79,7 +79,9 @@ abstract class AbstractRenderableCard<T extends AbstractRenderableCard<T>> exten
 
     private boolean faceUp = true;
     private boolean isSelected = false;
+
     private boolean selectable = true;
+    private boolean flippable = true;
 
     AbstractRenderableCard(Rank rank, Suit suit) {
         super(rank, suit);
@@ -399,11 +401,6 @@ abstract class AbstractRenderableCard<T extends AbstractRenderableCard<T>> exten
         return (T) this;
     }
 
-    T setFaceUp(boolean faceUp) {
-        this.faceUp = faceUp;
-        return (T) this;
-    }
-
     T select() {
         setSelected(true);
         return (T) this;
@@ -437,19 +434,34 @@ abstract class AbstractRenderableCard<T extends AbstractRenderableCard<T>> exten
         return (T) this;
     }
 
-    T setHeightChangeOnSelect(float heightChangeOnSelect) {
-        this.heightChangeOnSelect = heightChangeOnSelect;
-        return (T) this;
-    }
-
     T setSelectable(boolean selectable) {
         if(!selectable) setSelected(false);
         this.selectable = selectable;
         return (T) this;
     }
 
+    T setHeightChangeOnSelect(float heightChangeOnSelect) {
+        this.heightChangeOnSelect = heightChangeOnSelect;
+        return (T) this;
+    }
+
+    T setFaceUp(boolean faceUp) {
+        if(flippable) {
+            this.faceUp = faceUp;
+        }
+        return (T) this;
+    }
+
     T flip() {
-        faceUp = !faceUp;
+        if(flippable) {
+            faceUp = !faceUp;
+        }
+        return (T) this;
+    }
+
+    T setFlippable(boolean flippable) {
+        if(!flippable) setFaceUp(true);
+        this.flippable = flippable;
         return (T) this;
     }
 
@@ -545,8 +557,16 @@ abstract class AbstractRenderableCard<T extends AbstractRenderableCard<T>> exten
         return isSelected;
     }
 
+    boolean isSelectable() {
+        return selectable;
+    }
+
     boolean isFaceUp() {
         return faceUp;
+    }
+
+    boolean isFlippable() {
+        return flippable;
     }
 
     @Override
