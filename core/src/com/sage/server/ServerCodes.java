@@ -32,14 +32,16 @@ public class ServerCodes { // Codes are negative so as to not clash with the sen
     public static final int WAIT_FOR_TURN_PLAYER = -203;
     public static final int WAIT_FOR_PLAY = -204;
     public static final int INVALID_PLAY = -205;
-    public static final int WAIT_FOR_NEW_PLAYER_TEAM = -206;
-    public static final int WAIT_FOR_PLAYER_IN_LEAD = -207;
-    public static final int WAIT_FOR_TRICK_WINNER = -208;
-    public static final int WAIT_FOR_TRICK_POINT_CARDS = -209;
-    public static final int WAIT_FOR_ROUND_WINNERS = -210;
-    public static final int WAIT_FOR_NUM_COLLECTED_POINTS = -211;
-    public static final int WAIT_FOR_CALLING_NUMBERS = -212;
-    public static final int ROUND_OVER = -213;
+    public static final int WAIT_FOR_INVALIDATED_FRIEND_CARD = -206;
+    public static final int WAIT_FOR_NEW_PLAYER_TEAM = -207;
+    public static final int WAIT_FOR_PLAYER_IN_LEAD = -208;
+    public static final int WAIT_FOR_TRICK_WINNER = -209;
+    public static final int WAIT_FOR_TRICK_POINT_CARDS = -210;
+    public static final int WAIT_FOR_ROUND_WINNERS = -211;
+    public static final int WAIT_FOR_NUM_COLLECTED_POINTS = -212;
+    public static final int WAIT_FOR_CALLING_NUMBERS = -213;
+    public static final int WAIT_FOR_ROUND_END_KITTY = -214;
+    public static final int ROUND_OVER = -215;
 
     // Lobby codes
     public static final int JOIN_SUCCESSFUL = -300;

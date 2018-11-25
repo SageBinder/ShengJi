@@ -14,7 +14,8 @@ class RenderablePlayer extends Player {
     static BitmapFont nameFont = new BitmapFont();
     static int maxNameChars = 24;
 
-    private GlyphLayout nameLayout = new GlyphLayout(nameFont, getName());
+    private GlyphLayout nameLayout = new GlyphLayout(nameFont, getName(17));
+    Color nameColor = new Color(Color.WHITE);
 
     Vector2 pos = new Vector2();
 
@@ -29,12 +30,12 @@ class RenderablePlayer extends Player {
     }
 
     void render(SpriteBatch batch, Viewport viewport) {
-        nameFont.draw(batch, getName(),
+        nameFont.setColor(nameColor);
+        nameFont.draw(batch, getName(17),
                 pos.x, pos.y + (nameFont.getXHeight() * 2),
-                0, Math.min(maxNameChars, getName().length()),
                 0, Align.center, false);
 
-        play.cardHeight = nameFont.getXHeight() * 10;
+        play.cardHeight = viewport.getWorldHeight() * 0.11f;
         play.regionWidth = ((play.prefDivisionProportion * 6) + (1)) * play.cardHeight * RenderableCard.WIDTH_TO_HEIGHT_RATIO;
         play.pos.y = this.pos.y - play.cardHeight;
         play.pos.x = this.pos.x - (play.regionWidth / 2);
@@ -76,7 +77,7 @@ class RenderablePlayer extends Player {
     @Override
     void setTeam(Team team) {
         super.setTeam(team);
-        nameFont.setColor(
+        nameColor.set(
                 team == Team.COLLECTORS ? Color.ORANGE :
                 team == Team.KEEPERS ? Color.GREEN :
                 Color.WHITE);

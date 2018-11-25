@@ -1,11 +1,16 @@
 package com.sage.shengji;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Color;
 import com.sage.Card;
 import com.sage.Rank;
 import com.sage.Suit;
 import com.sage.Team;
 import com.sage.server.ServerCodes;
+
+import java.util.Collection;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static com.sage.server.ServerCodes.*;
 
@@ -16,9 +21,9 @@ class GameState {
 
     static Suit trumpSuit = null;
     static Rank trumpRank = null;
+    RenderableCard trumpCard = null;
 
     RenderablePlayerList players = new RenderablePlayerList();
-    int[] playerOrder;
 
     RenderableCard noOneCalledCard;
 
@@ -31,13 +36,16 @@ class GameState {
 
     RenderablePlayer thisPlayer;
     final RenderableHand hand = new RenderableHand();
+    final RenderableCardList thisPlayerCurrentCall = new RenderableCardList();
 
-    final RenderableCardList collectedPointCards = new RenderableCardList();
+    int numCardsInBasePlay = 0;
+
+    final RenderableCardGroup collectedPointCards = new RenderableCardGroup();
     int numCollectedPoints = 0;
 
     final RenderableCardList kitty = new RenderableCardList();
 
-    final RenderableCardList friendCards = new RenderableCardList();
+    final RenderableCardGroup friendCards = new RenderableCardGroup();
 
     String message = "";
     String buttonText = "";
@@ -51,6 +59,8 @@ class GameState {
     }
 
     boolean update(ShengJiClient client) {
+        numCollectedPoints = collectedPointCards.getTotalPoints();
+
         Integer serverCode = client.consumeServerCode();
         if(serverCode != null) {
             Gdx.app.log("Shengji.GameState.update()", "Updating with server code " + serverCode);
@@ -158,6 +168,9 @@ class GameState {
                 case INVALID_PLAY:
                     invalidPlay();
                     break;
+                case WAIT_FOR_INVALIDATED_FRIEND_CARD:
+                    waitForInvalidatedFriendCard();
+                    break;
                 case WAIT_FOR_NEW_PLAYER_TEAM:
                     waitForNewPlayerTeam();
                     break;
@@ -174,11 +187,13 @@ class GameState {
                     waitForRoundWinners();
                     break;
                 case WAIT_FOR_NUM_COLLECTED_POINTS:
-                    waitForCollectedPoints();
+                    waitForNumCollectedPoints();
                     break;
                 case WAIT_FOR_CALLING_NUMBERS:
                     waitForCallingNumbers();
                     break;
+                case WAIT_FOR_ROUND_END_KITTY:
+                    waitForRoundEndKitty();
                 case ROUND_OVER:
                     roundOver();
                     break;
@@ -258,6 +273,7 @@ class GameState {
             
             hand.addAll(thisPlayer.getPlay());
             thisPlayer.clearPlay();
+            thisPlayer.getPlay().addAll(thisPlayerCurrentCall);
 
             buttonText = "Send call";
             enableButton();
@@ -265,10 +281,25 @@ class GameState {
 
         private void successfulCall() {
             message = "Successful call";
-            
-            players.forEach(RenderablePlayer -> {
-                if(RenderablePlayer != thisPlayer) {
-                    RenderablePlayer.clearPlay();
+
+            int callCardNum = client.readInt();
+            int numCardsInCall = client.readInt();
+
+            hand.addAll(thisPlayer.getPlay());
+            Collection<RenderableCard> call = hand.stream()
+                    .filter(c -> c.cardNum() == callCardNum)
+                    .limit(numCardsInCall)
+                    .collect(Collectors.toList());
+
+            hand.removeAll(call);
+            thisPlayer.getPlay().clear();
+            thisPlayer.getPlay().addAll(call);
+            thisPlayerCurrentCall.clear();
+            thisPlayerCurrentCall.addAll(thisPlayer.getPlay());
+
+            players.forEach(p -> {
+                if(p != thisPlayer) {
+                    p.clearPlay();
                 }
             });
 
@@ -308,7 +339,7 @@ class GameState {
             hand.addAll(thisPlayer.getPlay());
             players.forEach(RenderablePlayer::clearPlay);
 
-            message = "Call winner: " + callWinner.getName();
+            message = "Call winner: " + callWinner.getName(17);
 
             disableButton();
         }
@@ -326,10 +357,10 @@ class GameState {
             Rank callWinnerCallRank = Rank.fromInt(client.readInt());
             RenderableCard callCard = new RenderableCard(client.readInt());
 
-            message = "Call winner: " + callWinner.getName();
+            message = "Call winner: " + callWinner.getName(17);
 
             callWinner.setTeam(Team.KEEPERS);
-            callWinner.getPlay().clear();
+            callWinner.clearPlay();
             callWinner.getPlay().add(callCard);
 
             noOneCalledCard = null;
@@ -345,7 +376,9 @@ class GameState {
             setTrump(Card.getCardNumFromRankAndSuit(thisPlayer.getCallRank(), noOneCalledCard.suit()));
 
             hand.addAll(thisPlayer.getPlay());
-            thisPlayer.getPlay().clear();
+            thisPlayer.clearPlay();
+
+            thisPlayer.setTeam(Team.KEEPERS);
 
             noOneCalledCard = null;
 
@@ -356,7 +389,7 @@ class GameState {
             message = "Invalid call. Try again.";
 
             hand.addAll(thisPlayer.getPlay());
-            thisPlayer.getPlay().clear();
+            thisPlayer.clearPlay();
 
             enableButton();
         }
@@ -366,13 +399,12 @@ class GameState {
         private void roundStart() {
             noOneCalledCard = null;
 
-            playerOrder = null;
-
             roundWinners.clear();
             kitty.clear();
             collectedPointCards.clear();
             hand.clear();
             friendCards.clear();
+            thisPlayerCurrentCall.clear();
 
             numCollectedPoints = 0;
 
@@ -394,10 +426,18 @@ class GameState {
         // [[playerNum]\n for each RenderablePlayer]
         private void waitForPlayerOrder() {
             int numPlayers = client.readInt();
-            playerOrder = new int[numPlayers];
+            int[] playerOrder = new int[numPlayers];
             for(int i = 0; i < playerOrder.length; i++) {
                 playerOrder[i] = client.readInt();
             }
+
+            // Oof lazy way of changing order of players
+            RenderablePlayerList temp = new RenderablePlayerList();
+            for(int i : playerOrder) {
+                temp.add(players.get(i));
+            }
+            players.clear();
+            players.addAll(temp);
 
             disableButton();
         }
@@ -432,7 +472,7 @@ class GameState {
         }
 
         private void sendKitty() {
-            message = "Select cards to put in kitty";
+            message = "Select " + kitty.size() +  " cards to put in kitty";
             buttonText = "Confirm kitty";
 
             enableButton();
@@ -442,20 +482,35 @@ class GameState {
             message = "Invalid kitty!";
             buttonText = "Confirm kitty";
 
+            hand.addAll(thisPlayer.getPlay());
+            thisPlayer.clearPlay();
+            
             enableButton();
         }
 
         private void sendFriendCards() {
+            // First, clear the this player's play because it contains the selected kitty cards
+            thisPlayer.clearPlay(); // UPDATE 2018-11-22 actually I don't think it does but I'm leaving it here
+            
             int numFriendCards = client.readInt();
-
             message = "Select " + numFriendCards + " friend cards";
             buttonText = "Send friend cards";
+
+            friendCards.prefDivisionProportion = 1.1f;
+            for(int i = 0; i < numFriendCards; i++) {
+                friendCards.add(
+                        new RenderableCard(Rank.ACE, Suit.getSuitFromNum(i % 4))
+                        .setFlippable(false)
+                        .setSelectable(false));
+            }
 
             enableButton();
         }
 
         private void waitForFriendCards() {
             int numFriendCards = client.readInt();
+            friendCards.clear();
+            friendCards.prefDivisionProportion = 1.1f;
             for(int i = 0; i < numFriendCards; i++) {
                 friendCards.add(new RenderableCard(client.readInt()));
             }
@@ -471,6 +526,7 @@ class GameState {
 
         private void trickStart() {
             players.forEach(RenderablePlayer::clearPlay);
+            numCardsInBasePlay = 0;
 
             disableButton();
         }
@@ -492,13 +548,15 @@ class GameState {
             message = "Your turn";
             buttonText = "Send play";
 
+            numCardsInBasePlay = client.readInt();
+
             enableButton();
         }
 
         private void waitForTurnPlayer() {
             turnPlayer = players.getPlayerFromPlayerNum(client.readInt());
 
-            message = "Waiting on " + turnPlayer.getName();
+            message = "Waiting on " + turnPlayer.getName(17);
 
             disableButton();
         }
@@ -511,6 +569,16 @@ class GameState {
                 turnPlayer.addToPlay(new RenderableCard(client.readInt()));
             }
 
+            boolean sentPlayIsBasePlay = players.stream()
+                    .filter(p -> p != turnPlayer)
+                    .allMatch(p -> p.getPlay().isEmpty());
+            if(sentPlayIsBasePlay) {
+                turnPlayer.getPlay().forEach(c -> {
+                    c.faceUnselectedBackgroundColor.set(Color.LIGHT_GRAY);
+                    c.setFaceBackgroundColor(c.faceUnselectedBackgroundColor);
+                });
+            }
+
             message = "";
 
             disableButton();
@@ -518,9 +586,24 @@ class GameState {
 
         private void invalidPlay() {
             message = "Invalid play";
-            
+
+            thisPlayer.getPlay().forEach(c -> {
+                c.faceUnselectedBackgroundColor.set(Color.WHITE);
+                c.setFaceBackgroundColor(c.faceUnselectedBackgroundColor);
+            });
             hand.addAll(thisPlayer.getPlay());
             thisPlayer.clearPlay();
+        }
+
+        private void waitForInvalidatedFriendCard() {
+            int invalidatedFriendCard = client.readInt();
+            Optional<RenderableCard> invalidatedCardOptional =
+                    friendCards.stream().filter(c -> c.cardNum() == invalidatedFriendCard).limit(1).findFirst();
+            invalidatedCardOptional.ifPresent(c -> {
+                c.faceUnselectedBackgroundColor.set(c.faceSelectedBackgroundColor);
+                c.setFaceBackgroundColor(c.faceUnselectedBackgroundColor);
+                c.setFaceBorderColor(Color.RED);
+            });
         }
 
         private void waitForNewPlayerTeam() {
@@ -541,6 +624,15 @@ class GameState {
 
         private void waitForPlayerInLead() {
             leadingPlayer = players.getPlayerFromPlayerNum(client.readInt());
+
+            players.forEach(p -> {
+                if(p != leadingPlayer) {
+                    p.getPlay().forEach(c -> c.setFaceBackgroundColor(c.faceUnselectedBackgroundColor));
+                }
+            });
+            leadingPlayer.getPlay()
+                    .forEach(c -> c.setFaceBackgroundColor(
+                            new Color(238f / 255f, 221f / 255f, 130f / 255f, 1f))); // Light Goldenrod
         }
 
         private void waitForTrickWinner() {
@@ -549,7 +641,7 @@ class GameState {
             String teamString = lastTrickWinner.getTeam() == Team.COLLECTORS ? "(collector)"
                     : lastTrickWinner.getTeam() == Team.KEEPERS ? "(keeper)"
                     : "(no team)";
-            message = lastTrickWinner.getName() + " " + teamString + " won the trick!";
+            message = lastTrickWinner.getName(17) + " " + teamString + " won the trick!";
 
             players.forEach(RenderablePlayer::clearPlay);
 
@@ -583,13 +675,13 @@ class GameState {
 
             message = "Winners: ";
             roundWinners.forEach(p -> message += roundWinners.lastIndexOf(p) == roundWinners.size() - 1
-                    ? p.getName() + ", "
-                    : p.getName());
+                    ? p.getName(17) + ", "
+                    : p.getName(17));
 
             disableButton();
         }
 
-        private void waitForCollectedPoints() {
+        private void waitForNumCollectedPoints() {
             numCollectedPoints = client.readInt();
 
             disableButton();
@@ -602,6 +694,15 @@ class GameState {
                 int playerNum = client.readInt();
                 int callRank = client.readInt();
                 players.getPlayerFromPlayerNum(playerNum).setCallRank(callRank);
+            }
+
+            disableButton();
+        }
+
+        private void waitForRoundEndKitty() {
+            int kittySize = client.readInt();
+            for(int i = 0; i < kittySize; i++) {
+                kitty.add(new RenderableCard(client.readInt()));
             }
 
             disableButton();
@@ -624,6 +725,7 @@ class GameState {
         private void setTrump(int cardNum) {
             trumpSuit = Card.getSuitFromCardNum(cardNum);
             trumpRank = Card.getRankFromCardNum(cardNum);
+            trumpCard = new RenderableCard(trumpRank, trumpSuit);
 
             Gdx.app.log("ShengJi.GameState.Updater.setTrump()", "Trump rank = " + trumpRank.toString() + ", trump suit = " + trumpSuit.toString());
         }
@@ -631,6 +733,7 @@ class GameState {
         private void resetTrump() {
             trumpRank = null;
             trumpSuit = null;
+            trumpCard = null;
         }
     }
 }

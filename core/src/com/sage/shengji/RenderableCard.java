@@ -315,7 +315,7 @@ class RenderableCard extends AbstractRenderableCard<RenderableCard> {
         viewport.project(vecXY);
 
         // viewport.project doesn't seem to account for the fact that with screen coordinates, y starts from the top of
-        // the screen, so line this accounts for that
+        // the screen, so this line accounts for that
         vecXY.y = Gdx.graphics.getHeight() - vecXY.y;
 
         // Round vecXY so that the card's position isn't in between two pixels
@@ -324,7 +324,7 @@ class RenderableCard extends AbstractRenderableCard<RenderableCard> {
 
         // Unproject vecXY back to world coordinates, so now we know the world coordinates of the card will be projected
         // to a whole pixel value, and thus the card's sprite won't have any weird subpixel stretching going on
-        vecXY = viewport.unproject(new Vector2(vecXY.x, vecXY.y));
+        viewport.unproject(vecXY);
 
         sprite.setBounds(vecXY.x, vecXY.y, getDisplayWidth(), getDisplayHeight());
         sprite.draw(batch);

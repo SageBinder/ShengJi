@@ -8,6 +8,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
 import java.util.ArrayList;
+import java.util.Collection;
 
 class RenderableCardGroup extends RenderableCardList {
     Vector2 pos = new Vector2();
@@ -32,7 +33,7 @@ class RenderableCardGroup extends RenderableCardList {
     void render(SpriteBatch batch, Viewport viewport) {
         float cardPositionRegionWidth = regionWidth - (RenderableCard.WIDTH_TO_HEIGHT_RATIO * cardHeight);
 
-        float division = Math.min(cardHeight * RenderableCard.WIDTH_TO_HEIGHT_RATIO * prefDivisionProportion,
+        float division = Math.min(RenderableCard.WIDTH_TO_HEIGHT_RATIO * cardHeight * prefDivisionProportion,
                 cardPositionRegionWidth / (size() - 1));
 
         float offset = MathUtils.clamp((cardPositionRegionWidth * 0.5f) - (0.5f * division * (size() - 1)),
@@ -90,6 +91,16 @@ class RenderableCardGroup extends RenderableCardList {
         return this;
     }
 
+    RenderableCardGroup setPosition(float x, float y) {
+        pos.x = x;
+        pos.y = y;
+        return this;
+    }
+
+    RenderableCardGroup setPosition(Vector2 pos) {
+        return setPosition(pos.x, pos.y);
+    }
+
     void debug() {
         inDebugMode = true;
     }
@@ -100,5 +111,29 @@ class RenderableCardGroup extends RenderableCardList {
 
     boolean inDebugMode() {
         return inDebugMode;
+    }
+
+    @Override
+    public boolean add(RenderableCard c) {
+        c.resetDisplayRect();
+        return super.add(c);
+    }
+
+    @Override
+    public void add(int index, RenderableCard c) {
+        c.resetDisplayRect();
+        super.add(c);
+    }
+
+    @Override
+    public boolean addAll(Collection<? extends RenderableCard> c) {
+        c.forEach(AbstractRenderableCard::resetDisplayRect);
+        return super.addAll(c);
+    }
+
+    @Override
+    public boolean addAll(int index, Collection<? extends RenderableCard> c) {
+        c.forEach(AbstractRenderableCard::resetDisplayRect);
+        return super.addAll(index, c);
     }
 }

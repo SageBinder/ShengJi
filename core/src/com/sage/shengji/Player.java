@@ -11,7 +11,7 @@ abstract class Player {
     private Team team = Team.NO_TEAM;
     private Rank callRank = Rank.TWO;
 
-    private final RenderableCardList points = new RenderableCardList();
+    private final RenderableCardGroup points = new RenderableCardGroup();
 
     Player(int playerNum, String name) {
         this.name = name;
@@ -25,6 +25,10 @@ abstract class Player {
 
     void setName(String newName) {
         name = newName;
+    }
+
+    String getName(int maxCharacters) {
+        return name.substring(0, Math.min(maxCharacters, name.length()));
     }
 
     String getName() {
@@ -55,7 +59,7 @@ abstract class Player {
         this.callRank = Rank.fromInt(callRank);
     }
 
-    RenderableCardList getPoints() {
+    RenderableCardGroup getPoints() {
         return points;
     }
 

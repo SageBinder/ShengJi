@@ -23,7 +23,7 @@ public class ScreenManager extends Game {
 //        showPlaygroundScreen();
 
         try {
-            startGameServer(25565, 5);
+            startGameServer(25565, 10);
             joinGame(25565, "127.0.0.1", "Test Player Name Whoooooooo long name long name long name long name");
         } catch(GdxRuntimeException e) {
             e.printStackTrace();

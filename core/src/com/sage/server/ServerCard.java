@@ -25,33 +25,30 @@ class ServerCard extends Card {
     }
 
     Suit getEffectiveSuit() {
-        if(suit() == Suit.BIG_JOKER || suit() == Suit.SMALL_JOKER) {
-            return RoundRunner.trumpSuit;
-        } else {
-            return suit();
-        }
+        return suit() == Suit.BIG_JOKER
+                || suit() == Suit.SMALL_JOKER
+                || rank() == RoundRunner.trumpRank ? RoundRunner.trumpSuit
+                : suit();
     }
 
-    int getPointValue() {
-        if(rank() == Rank.TEN || rank() == Rank.KING) {
-            return 10;
-        }
-        if(rank() == Rank.FIVE) {
-            return 5;
-        }
-        return 0;
-    }
-
+    @Override
     public boolean isTrumpSuit() {
         return suit() == RoundRunner.trumpSuit;
     }
 
+    @Override
     public boolean isTrumpRank() {
         return rank() == RoundRunner.trumpRank;
     }
 
+    @Override
     public boolean isTrump() {
         return isTrumpSuit() || isTrumpRank() || isJoker();
+    }
+
+    @Override
+    public void cardChanged() {
+        // The abstract cardChanged method in Card is pretty much only to tell RenderableCard to update its shit
     }
 
     // Overriding equals this way is probably really stupid but I've already written everything else with this in mind

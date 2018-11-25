@@ -19,15 +19,19 @@ class RenderablePlay extends RenderableCardGroup {
 
     @Override
     public boolean addAll(Collection<? extends RenderableCard> c) {
-        c.forEach(card -> card.setSelectable(false));
-        c.forEach(card -> card.setFlippable(false));
+        c.forEach(card -> {
+            card.setSelectable(false);
+            card.setFlippable(false);
+        });
         return super.addAll(c);
     }
 
     @Override
     public boolean addAll(int index, Collection<? extends RenderableCard> c) {
-        c.forEach(card -> card.setSelectable(false));
-        c.forEach(card -> card.setFlippable(false));
+        c.forEach(card -> {
+            card.setSelectable(false);
+            card.setFlippable(false);
+        });
         return super.addAll(index, c);
     }
 }

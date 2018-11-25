@@ -42,7 +42,6 @@ class TrickRunner {
                     turnPlayer.sendInt(numCardsInPlay);
                 }
 
-                turnPlayer.sendInt(numCardsInPlay);
                 for(int i = 0; i < numCardsInPlay; i++) {
                     cardsInPlay.add(new ServerCard(turnPlayer.readInt()));
                 }
@@ -76,7 +75,10 @@ class TrickRunner {
                         }
 
                         for(ServerCard c : turnPlay) {
-                            friendCards.remove(c);
+                            if(friendCards.remove(c)) {
+                                players.sendIntToAll(ServerCodes.WAIT_FOR_INVALIDATED_FRIEND_CARD);
+                                players.sendIntToAll(c.cardNum());
+                            }
                             if(friendCards.isEmpty()) {
                                 for(Player p : players) {
                                     if(p.getTeam() == Team.NO_TEAM) {

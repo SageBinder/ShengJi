@@ -53,15 +53,19 @@ class RenderableHand extends RenderableCardGroup {
 
     @Override
     public boolean addAll(Collection<? extends RenderableCard> c) {
-        c.forEach(card -> card.setSelectable(true));
-        c.forEach(card -> card.setFlippable(true));
+        c.forEach(card -> {
+            card.setSelectable(true);
+            card.setFlippable(true);
+        });
         return super.addAll(c);
     }
 
     @Override
     public boolean addAll(int index, Collection<? extends RenderableCard> c) {
-        c.forEach(card -> card.setSelectable(true));
-        c.forEach(card -> card.setFlippable(true));
+        c.forEach(card -> {
+            card.setSelectable(true);
+            card.setFlippable(true);
+        });
         return super.addAll(index, c);
     }
 }

@@ -296,7 +296,7 @@ abstract class AbstractRenderableCard<T extends AbstractRenderableCard<T>> exten
     }
 
     T scale(float newScale) {
-        setSize(getWidth() * newScale, getHeight() * newScale);
+        setWidth(getWidth() * newScale);
         return (T) this;
     }
 
@@ -351,12 +351,6 @@ abstract class AbstractRenderableCard<T extends AbstractRenderableCard<T>> exten
             displayCardRect.width = WIDTH_TO_HEIGHT_RATIO * displayCardRect.height;
         }
 
-        return (T) this;
-    }
-
-    T setSize(float width, float height)  {
-        setWidth(width);
-        setHeight(height);
         return (T) this;
     }
 
@@ -584,9 +578,14 @@ abstract class AbstractRenderableCard<T extends AbstractRenderableCard<T>> exten
         return isTrumpSuit() || isTrumpRank() || isJoker();
     }
 
+    @Override
+    public void cardChanged() {
+        invalidateSprites();
+    }
+
     // Other:
     @Override
-    public int compareTo(Object o) {
-        return super.compareTo(o);
+    public int compareTo(Card c) {
+        return super.compareTo(c);
     }
 }

@@ -3,6 +3,7 @@ package com.sage.shengji;
 import com.badlogic.gdx.*;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.math.Vector2;
@@ -13,6 +14,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 
 import java.util.ArrayList;
@@ -34,12 +36,14 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
             viewportScale = 5f;
 
     private InputMultiplexer multiplexer;
-    private Stage gameStage;
+    private Stage uiStage;
 
     private TextButton sendButton;
     private Label messageLabel;
 
-//    private BitmapFont messageFont;
+    private BitmapFont font;
+
+    private float delayTimer = 0;
 
     GameScreen(ScreenManager game, GameState gameState, ShengJiClient client) {
         this.game = game;
@@ -53,7 +57,7 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
         var fontGenerator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/OpenSans-Bold.ttf"));
 
         var playerNameFontParameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
-        playerNameFontParameter.incremental = true;
+        playerNameFontParameter.incremental = true; // <- I don't know what this line does, but the font gets all fucky without it
         playerNameFontParameter.size = (int)(Math.max(Gdx.graphics.getHeight(), Gdx.graphics.getWidth()) * textProportion * 0.8f);
         RenderablePlayer.nameFont = fontGenerator.generateFont(playerNameFontParameter);
 
@@ -69,17 +73,19 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
         var labelStyle = skin.get(Label.LabelStyle.class);
         labelStyle.font = fontGenerator.generateFont(uiFontParameter);
 
+        font = fontGenerator.generateFont(uiFontParameter);
+
         fontGenerator.dispose();
 
-        gameStage = new Stage(viewport, batch);
+        uiStage = new Stage(viewport, batch);
 
         sendButton = new TextButton("I AM A BUTTON", textButtonStyle);
         sendButton.setProgrammaticChangeEvents(true);
         messageLabel = new Label("I AM NOT A BUTTON", labelStyle);
 
         Table table = new Table();
-        table.setFillParent(true);
-        table.top().padTop(viewportHeight * (0.30f));
+//        table.setFillParent(true);
+//        table.top().padTop(viewportHeight * (0.30f));
 //        table.debug();
 
         table.row();
@@ -88,10 +94,10 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
         table.row().padTop(viewportHeight / 30f);
         table.add(sendButton);
 
-        gameStage.addActor(table);
+        uiStage.addActor(table);
 
         multiplexer = new InputMultiplexer();
-        multiplexer.addProcessor(gameStage);
+        multiplexer.addProcessor(uiStage);
         multiplexer.addProcessor(this);
 
         Gdx.input.setInputProcessor(multiplexer);
@@ -104,11 +110,80 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
 
     @Override
     public void render(float delta) {
+        updateGameState();
         sendButton.setText(gameState.buttonText);
         messageLabel.setText(gameState.message);
-        if(gameState.update(client)) {
-//            sendButton.setWidth(((float)sendButton.getStyle().font.getRegion().getRegionWidth() / viewport.getScreenWidth()) * viewport.getWorldWidth());
 
+        uiStage.getActors().get(0).setPosition(
+                (viewport.getWorldWidth() * gameState.players.centerProportion.x)
+                        - (uiStage.getActors().get(0).getWidth() * 0.5f),
+                (viewport.getWorldHeight() * gameState.players.centerProportion.y)
+                        - (uiStage.getActors().get(0).getHeight() * 0.5f)
+        );
+        uiStage.act(delta);
+
+        checkDelayAndPress(delta,
+                Input.Keys.LEFT,
+                Input.Keys.RIGHT,
+                Input.Keys.UP,
+                Input.Keys.DOWN);
+
+        Gdx.gl.glClearColor(ScreenManager.BACKGROUND_COLOR.r, ScreenManager.BACKGROUND_COLOR.g, ScreenManager.BACKGROUND_COLOR.b, ScreenManager.BACKGROUND_COLOR.a);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+        batch.begin();
+        batch.setProjectionMatrix(viewport.getCamera().combined);
+
+        switch(gameState.lastServerCode) {
+            case INVALID_CALL:
+            case UNSUCCESSFUL_CALL:
+            case SUCCESSFUL_CALL:
+            case SEND_CALL:
+                break;
+
+            // If server sends new winning call, button stays disabled if player has already chosen not to call,
+            // else it stays enabled.
+            case WAIT_FOR_NEW_WINNING_CALL:
+                break;
+
+            case INVALID_KITTY_CALL:
+            case NO_ONE_CALLED:
+                renderNoOneCalledCard();
+                break;
+
+            case SEND_KITTY:
+            case INVALID_KITTY:
+                gameState.kitty.render(batch, viewport);
+                break;
+
+            case SEND_FRIEND_CARDS:
+                renderChoosableFriendCards();
+                break;
+
+            case SEND_BASE_PLAY:
+                break;
+
+            case SEND_PLAY:
+                break;
+
+            default:
+                disableButton();
+        }
+
+        renderPointCards();
+        renderPlayerPointCards();
+        renderFriendCards();
+        renderTrumpCard();
+        gameState.players.render(batch, viewport);
+        gameState.hand.render(batch, viewport);
+
+        batch.end();
+
+        uiStage.draw();
+    }
+
+    private void updateGameState() {
+        if(gameState.update(client)) {
             switch(gameState.lastServerCode) {
                 case INVALID_CALL:
                 case UNSUCCESSFUL_CALL:
@@ -133,6 +208,8 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
                     break;
 
                 case SEND_FRIEND_CARDS:
+                    currentBorderGroup = gameState.friendCards;
+                    keyDown(Input.Keys.RIGHT); // <- To update borderedCard
                     enableButton(sendFriendCardsChangeListener);
                     break;
 
@@ -148,26 +225,107 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
                     disableButton();
             }
 
+            if(gameState.lastServerCode != SEND_FRIEND_CARDS) {
+                currentBorderGroup = gameState.hand;
+            }
+
             gameState.hand.sort();
         }
+    }
 
-        Gdx.gl.glClearColor(ScreenManager.BACKGROUND_COLOR.r, ScreenManager.BACKGROUND_COLOR.g, ScreenManager.BACKGROUND_COLOR.b, ScreenManager.BACKGROUND_COLOR.a);
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+    private void renderPointCards() {
+        gameState.collectedPointCards.regionWidth = gameState.players.get(0).getPlay().regionWidth * 1.5f;
+        gameState.collectedPointCards.cardHeight = gameState.players.get(0).getPlay().cardHeight * 1.2f;
+        gameState.collectedPointCards.setPosition(
+                viewport.getWorldWidth() * 0.05f,
+                viewport.getWorldHeight() - gameState.collectedPointCards.cardHeight - (viewport.getWorldWidth() * 0.027f));
+        gameState.collectedPointCards.render(batch, viewport);
 
-        gameStage.act(delta);
-        gameStage.draw();
+        font.draw(batch, "Collectors have " + gameState.numCollectedPoints + " points",
+                gameState.collectedPointCards.pos.x + (gameState.collectedPointCards.regionWidth * 0.5f),
+                gameState.collectedPointCards.pos.y + (font.getXHeight() * 2) + gameState.collectedPointCards.cardHeight,
+                0, Align.center, false);
+    }
 
-        batch.begin();
-        batch.setProjectionMatrix(viewport.getCamera().combined);
+    private void renderPlayerPointCards() {
 
-        if(gameState.lastServerCode == INVALID_KITTY || gameState.lastServerCode == SEND_KITTY) {
-            gameState.kitty.render(batch, viewport);
+    }
+
+    private void renderFriendCards() {
+        if(gameState.lastServerCode != SEND_FRIEND_CARDS && !gameState.friendCards.isEmpty()) {
+            gameState.friendCards.cardHeight =
+                    gameState.thisPlayer.getPlay().cardHeight;
+
+            gameState.friendCards.regionWidth =
+                    (RenderableCard.WIDTH_TO_HEIGHT_RATIO * gameState.friendCards.cardHeight) * 4;
+
+            gameState.friendCards.setPosition(
+                    gameState.friendCards.regionWidth * 0.1f,
+                    (viewport.getWorldHeight() * 0.4f) - (gameState.friendCards.cardHeight * 0.75f));
+
+            font.draw(batch, "Friend\ncards",
+                    gameState.friendCards.pos.x + (gameState.friendCards.regionWidth * 0.5f),
+                    gameState.friendCards.pos.y + (font.getXHeight() * 4) + gameState.friendCards.cardHeight,
+                    0, Align.center, false);
+            gameState.friendCards.render(batch, viewport); // !! friendCards should be rendered AFTER font.draw !!
         }
+    }
 
-        gameState.hand.render(batch, viewport);
-        gameState.players.render(batch, viewport);
+    private void renderChoosableFriendCards() {
+        gameState.friendCards.cardHeight =
+                gameState.thisPlayer.getPlay().cardHeight;
 
-        batch.end();
+        gameState.friendCards.regionWidth =
+                (RenderableCard.WIDTH_TO_HEIGHT_RATIO * gameState.friendCards.cardHeight) * 4;
+
+        gameState.friendCards.setPosition(
+                (viewport.getWorldWidth() - gameState.friendCards.regionWidth) * 0.5f,
+                gameState.hand.pos.y + (gameState.hand.cardHeight * 2)
+        );
+        gameState.friendCards.render(batch, viewport);
+    }
+
+    private void renderNoOneCalledCard() {
+        gameState.noOneCalledCard.setHeight(gameState.hand.cardHeight);
+        gameState.noOneCalledCard.setPosition(
+                (gameState.hand.pos.x * 0.5f) + (gameState.noOneCalledCard.getWidth() * 0.5f),
+                (viewport.getWorldHeight() - gameState.noOneCalledCard.getHeight()) * 0.5f);
+        gameState.noOneCalledCard.render(batch, viewport);
+
+        font.draw(batch, "Card pulled\nfrom kitty",
+                gameState.noOneCalledCard.getPosition().x + (gameState.noOneCalledCard.getWidth() * 0.5f),
+                gameState.noOneCalledCard.getPosition().y + (font.getXHeight() * 4) + gameState.noOneCalledCard.getHeight(),
+                0, Align.center, false);
+    }
+
+    private void renderTrumpCard() {
+        if(gameState.trumpCard != null) {
+            gameState.trumpCard.setHeight(gameState.hand.cardHeight);
+            gameState.trumpCard.setPosition(
+                    gameState.hand.pos.x * 0.5f,
+                    (viewport.getWorldHeight() * 0.6f) - (gameState.trumpCard.getHeight() * 0.5f));
+            gameState.trumpCard.render(batch, viewport);
+
+            font.setColor(Color.GOLD);
+            font.draw(batch, "Trump\ncard",
+                    gameState.trumpCard.getPosition().x + (gameState.trumpCard.getWidth() * 0.5f),
+                    gameState.trumpCard.getPosition().y + (font.getXHeight() * 4) + gameState.trumpCard.getHeight(),
+                    0, Align.center, false);
+            font.setColor(Color.WHITE);
+        }
+    }
+
+    private void checkDelayAndPress(float delta, int ...keyCodes) {
+        for(int keyCode: keyCodes) {
+            if(Gdx.input.isKeyPressed(keyCode)) {
+                delayTimer += delta;
+                if(delayTimer > 0.5f) {
+                    delayTimer -= 0.05f;
+                    keyDown(keyCode);
+                }
+                return;
+            }
+        }
     }
 
     private void disableButton() {
@@ -179,7 +337,6 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
         sendButton.setVisible(false);
     }
 
-
     private void enableButton(ChangeListener listener) {
         while(sendButton.getListeners().size > 1) {
             sendButton.getListeners().removeIndex(sendButton.getListeners().size - 1);
@@ -190,16 +347,32 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
         sendButton.setVisible(true);
     }
 
-
     // I'm thinking RenderableHand should implement InputProcessor and these features should be put there instead.
     private RenderableCard lastHighlightedCard = null;
     @Override
     public boolean mouseMoved(int screenX, int screenY) {
         Vector2 clickCoordinates = viewport.unproject(new Vector2(screenX, screenY));
 
+        if(gameState.lastServerCode != SEND_FRIEND_CARDS) {
+            for(ListIterator<RenderableCard> i = gameState.friendCards.reverseListIterator(); i.hasPrevious();) {
+                final RenderableCard c = i.previous();
+                if(c.isSelected()) {
+                    if(c.displayRectContainsPoint(clickCoordinates)) {
+                        break;
+                    } else {
+                        continue;
+                    }
+                }
+
+                if(c.displayRectContainsPoint(clickCoordinates) || c.baseRectContainsPoint(clickCoordinates)) {
+                    highlightCard(c);
+                    return false;
+                }
+            }
+        }
+
         for(ListIterator<RenderableCard> i = gameState.hand.reverseListIterator(); i.hasPrevious();) {
             final RenderableCard c = i.previous();
-
             if(c.isSelected()) {
                 if(c.displayRectContainsPoint(clickCoordinates)) {
                     break;
@@ -209,16 +382,7 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
             }
 
             if(c.displayRectContainsPoint(clickCoordinates) || c.baseRectContainsPoint(clickCoordinates)) {
-                if(lastHighlightedCard != null && !lastHighlightedCard.isSelected() && lastHighlightedCard != c) {
-                    lastHighlightedCard.resetDisplayRect();
-                    lastHighlightedCard.resetBothBackgroundColors();
-                }
-
-                c.setDisplayY(c.getY() + (c.getHeight() * 0.4f));
-                c.setFaceBackgroundColor(c.faceHighlightedBackgroundColor);
-                c.setBackBackgroundColor(c.backHighlightedBackgroundColor);
-                lastHighlightedCard = c;
-
+                highlightCard(c);
                 return false;
             }
         }
@@ -231,17 +395,43 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
         return false;
     }
 
+    private void highlightCard(RenderableCard c) {
+        if(lastHighlightedCard != null && !lastHighlightedCard.isSelected() && lastHighlightedCard != c) {
+            lastHighlightedCard.resetDisplayRect();
+            lastHighlightedCard.resetBothBackgroundColors();
+        }
+
+        c.setDisplayY(c.getY() + (c.getHeight() * 0.4f));
+        c.setFaceBackgroundColor(c.faceHighlightedBackgroundColor);
+        c.setBackBackgroundColor(c.backHighlightedBackgroundColor);
+        lastHighlightedCard = c;
+    }
+
     @Override
     public boolean touchDown (int screenX, int screenY, int pointer, int button) {
         Vector2 clickCoordinates = viewport.unproject(new Vector2(screenX, screenY));
+
+        if(gameState.lastServerCode == SEND_FRIEND_CARDS) {
+            for(ListIterator<RenderableCard> i = gameState.friendCards.reverseListIterator(); i.hasPrevious(); ) {
+                final RenderableCard c = i.previous();
+                if(c.displayRectContainsPoint(clickCoordinates)) {
+                    if(borderedCard != null) borderedCard.resetBothBorderColors();
+                    borderedCard = c;
+                    borderedCard.setBothBorderColors(Color.CYAN);
+                    return false;
+                }
+            }
+        }
 
         try {
             for(ListIterator<RenderableCard> i = gameState.hand.reverseListIterator(); i.hasPrevious(); ) {
                 final RenderableCard c = i.previous();
                 if(c.displayRectContainsPoint(clickCoordinates) || (!c.isSelected() && c.baseRectContainsPoint(clickCoordinates))) {
-                    if(borderedCard != null) borderedCard.resetBothBorderColors();
-                    borderedCard = c;
-                    borderedCard.setBothBorderColors(Color.CYAN);
+                    if(gameState.lastServerCode != SEND_FRIEND_CARDS) {
+                        if(borderedCard != null) borderedCard.resetBothBorderColors();
+                        borderedCard = c;
+                        borderedCard.setBothBorderColors(Color.CYAN);
+                    }
 
                     if(button == Input.Buttons.LEFT && c.isFaceUp()) {
                         c.toggleSelected();
@@ -255,10 +445,7 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
                 }
             }
 
-            if(borderedCard != null) {
-                borderedCard.resetBothBorderColors();
-                borderedCard = null;
-            }
+            resetBorderedCard();
             return false;
         } finally {
             mouseMoved(screenX, screenY);
@@ -266,11 +453,17 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
     }
 
 
-    RenderableCard borderedCard = null;
+    private RenderableCard borderedCard = null;
+    private RenderableCardGroup currentBorderGroup = null;
     @Override
     public boolean keyDown(int keyCode) {
+        if(keyCode == Input.Keys.ESCAPE) {
+            resetBorderedCard();
+            return false;
+        }
+
         if(keyCode == Input.Keys.ENTER) {
-            sendButton.toggle();
+            if(gameState.buttonIsEnabled) sendButton.toggle();
             return false;
         }
 
@@ -279,11 +472,17 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
             return false;
         }
 
-        if(gameState.hand.isEmpty()) {
+        if(currentBorderGroup == null || currentBorderGroup.isEmpty()) {
             return false;
         }
 
         int direction;
+
+        if(gameState.lastServerCode == SEND_FRIEND_CARDS
+                && (keyCode == Input.Keys.UP || keyCode == Input.Keys.DOWN)) {
+            scrolled(keyCode == Input.Keys.UP ? -1 : 1);
+            return false;
+        }
 
         if(keyCode == Input.Keys.SPACE
                 || keyCode == Input.Keys.UP
@@ -298,27 +497,53 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
             return false;
         }
 
-        if(keyCode == Input.Keys.LEFT) {
-            direction = -1;
-        } else if(keyCode == Input.Keys.RIGHT) {
-            direction = 1;
+        if(keyCode == Input.Keys.RIGHT || keyCode == Input.Keys.LEFT) {
+            direction = keyCode == Input.Keys.RIGHT ? 1 : -1;
         } else {
             return false;
         }
 
+        if(Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) || Gdx.input.isKeyPressed(Input.Keys.CONTROL_RIGHT)) {
+            direction *= 2;
+        }
+
         if(borderedCard == null) {
-            borderedCard = gameState.hand.get(direction == -1 ? gameState.hand.size() - 1 : 0);
+            borderedCard = currentBorderGroup.get(direction < 0 ? currentBorderGroup.size() - 1 : 0);
         } else {
             borderedCard.resetBothBorderColors();
 
-            int index = (gameState.hand.indexOf(borderedCard) + direction) % gameState.hand.size();
-            borderedCard = gameState.hand.get(index >= 0 ? index : gameState.hand.size() - 1);
+            int index = (currentBorderGroup.indexOf(borderedCard) + direction) % currentBorderGroup.size();
+            borderedCard = currentBorderGroup.get(index >= 0 ? index : currentBorderGroup.size() + index);
         }
         borderedCard.setBothBorderColors(Color.CYAN);
 
         return false;
     }
 
+    @Override
+    public boolean keyUp(int keyCode) {
+        delayTimer = 0;
+        return false;
+    }
+
+    @Override
+    public boolean scrolled(int amount) {
+        if(gameState.lastServerCode == SEND_FRIEND_CARDS && borderedCard != null) {
+            if(!gameState.friendCards.contains(borderedCard)) {
+                return false;
+            }
+
+            int newCardNum = borderedCard.cardNum();
+            newCardNum -= amount;
+            newCardNum %= 54;
+            if(newCardNum < 0) {
+                newCardNum = 54 + newCardNum;
+            }
+            borderedCard.setCardNum(newCardNum);
+        }
+        return false;
+    }
+    
     @Override
     public void resize(int width, int height) {
         viewport.update(width, height, true);
@@ -345,8 +570,13 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
         sendButton.getStyle().font.dispose();
     }
 
-    // TODO: Make sure the number of selected cards is valid before sending to server
-    // TODO: Disabling the button from button's change listener freezes the program, so uh... find a workaround
+    private void resetBorderedCard() {
+        if(borderedCard != null) {
+            borderedCard.resetBothBorderColors();
+            borderedCard = null;
+        }
+    }
+
     private final ChangeListener sendKittyCallChangeListener = new ChangeListener() {
         @Override
         public void changed(ChangeEvent event, Actor actor) {
@@ -369,7 +599,6 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
 
                 gameState.hand.remove(cardToSend);
 
-                cardToSend.deselect();
                 gameState.hand.setAllSelected(false);
             }
         }
@@ -378,51 +607,67 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
     private final ChangeListener sendCallChangeListener = new ChangeListener() {
         @Override
         public void changed(ChangeEvent event, Actor actor) {
-            if(gameState.hand.stream().noneMatch(RenderableCard::isSelected) && gameState.thisPlayer.getPlay().isEmpty()) {
-                client.sendInt(ClientCodes.NO_CALL);
-            } else {
-                ArrayList<RenderableCard> selectedCards = (ArrayList<RenderableCard>)gameState.hand.stream()
-                        .filter(AbstractRenderableCard::isSelected).collect(Collectors.toList());
+            ArrayList<RenderableCard> selectedCards = (ArrayList<RenderableCard>)gameState.hand.stream()
+                    .filter(AbstractRenderableCard::isSelected)
+                    .collect(Collectors.toList());
 
-                // Ensure that all the selected cards are the same type of card
-                for(RenderableCard c : selectedCards) {
-                    if(c.cardNum() != selectedCards.get(0).cardNum()) {
-                        gameState.message = "All cards in call must be the same";
-                        return;
-                    }
+            if(selectedCards.isEmpty()) {
+                if(gameState.thisPlayer.getPlay().isEmpty()) {
+                    client.sendInt(ClientCodes.NO_CALL);
                 }
-
-                int cardNumToSend = selectedCards.get(0).cardNum();
-                int numCardsInCall = selectedCards.size();
-                client.sendInt(cardNumToSend);
-                client.sendInt(numCardsInCall);
-
-                // thisPlayer.getPlay() should be empty, but add cards back into hand just in case
-                gameState.hand.addAll(gameState.thisPlayer.getPlay());
-                gameState.thisPlayer.clearPlay();
-
-                gameState.thisPlayer.getPlay().addAll(selectedCards);
-                gameState.hand.removeAll(selectedCards);
-                selectedCards.forEach(AbstractRenderableCard::deselect);
+                return;
             }
 
+            // Ensure that all the selected cards are the same type of card
+            if(!selectedCards.stream().allMatch(c -> selectedCards.get(0).cardNum() == c.cardNum())) {
+                gameState.message = "All cards in call must be the same";
+                return;
+            }
+
+            int cardNumToSend = selectedCards.get(0).cardNum();
+            int numCardsInCall = selectedCards.size();
+            if(!gameState.thisPlayer.getPlay().isEmpty()
+                    && cardNumToSend == gameState.thisPlayer.getPlay().get(0).cardNum()) {
+                numCardsInCall += gameState.thisPlayer.getPlay().size();
+            } else {
+                gameState.hand.addAll(gameState.thisPlayer.getPlay());
+                gameState.thisPlayer.clearPlay();
+            }
+            client.sendInt(cardNumToSend);
+            client.sendInt(numCardsInCall);
+
+            gameState.thisPlayer.getPlay().addAll(selectedCards);
+            gameState.hand.removeAll(selectedCards);
+            selectedCards.forEach(AbstractRenderableCard::deselect);
+
             gameState.hand.setAllSelected(false);
+            resetBorderedCard();
         }
     };
 
     private final ChangeListener sendKittyChangeListener = new ChangeListener() {
         @Override
         public void changed(ChangeEvent event, Actor actor) {
-            gameState.hand.stream().filter(RenderableCard::isSelected).forEach((c) -> client.sendInt(c.cardNum()));
+            ArrayList<RenderableCard> selectedCards = (ArrayList<RenderableCard>)gameState.hand.stream()
+                    .filter(RenderableCard::isSelected)
+                    .collect(Collectors.toList());
 
-//            gameState.hand.forEach(card -> {
-//                if(card.isSelected()) {
-//                    client.sendInt(card.cardNum());
-//                }
-//            });
+            if(selectedCards.isEmpty()) {
+                gameState.message = "You didn't select any cards, you dummy. Select " + gameState.kitty.size() + " cards";
+                return;
+            }
 
-            // TODO: Temporarily store removed cards in case kitty is invalid
-            gameState.hand.removeIf(AbstractRenderableCard::isSelected);
+            if(selectedCards.size() != gameState.kitty.size()) {
+                gameState.message =
+                        (selectedCards.size() > gameState.kitty.size() ? "Too many" : "Not enough") + " cards, " +
+                                "select " + gameState.kitty.size() + " cards";
+                return;
+            }
+
+            resetBorderedCard();
+            gameState.thisPlayer.getPlay().addAll(selectedCards);
+            gameState.hand.removeAll(selectedCards);
+            selectedCards.forEach(c -> client.sendInt(c.cardNum()));
 
 //            disableButton();
         }
@@ -431,6 +676,12 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
     private final ChangeListener sendPlayChangeListener = new ChangeListener() {
         @Override
         public void changed(ChangeEvent event, Actor actor) {
+            if(gameState.hand.stream().filter(AbstractRenderableCard::isSelected).count() != gameState.numCardsInBasePlay
+                    && gameState.numCardsInBasePlay > 0) {
+                gameState.message = "Incorrect number of cards in play";
+                return;
+            }
+
             gameState.hand.forEach(card -> {
                 if(card.isSelected()) {
                     card.setSelected(false);
@@ -439,7 +690,16 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
                 }
             });
             gameState.hand.removeAll(gameState.thisPlayer.getPlay());
+            resetBorderedCard();
 
+            boolean isBasePlay = gameState.players.stream()
+                    .allMatch(p -> p != gameState.thisPlayer && p.getPlay().isEmpty());
+            if(isBasePlay) {
+                gameState.thisPlayer.getPlay().forEach(c -> {
+                    c.faceUnselectedBackgroundColor.set(Color.LIGHT_GRAY);
+                    c.setFaceBackgroundColor(c.faceUnselectedBackgroundColor);
+                });
+            }
 //            disableButton();
         }
     };
@@ -448,29 +708,14 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
         @Override
         public void changed (ChangeEvent event, Actor actor) {
             client.sendInt((int)gameState.hand.stream().filter(AbstractRenderableCard::isSelected).count());
-
             sendPlayChangeListener.handle(event);
         }
     };
 
-    // TODO: Allow user to pick friend cards from all possible cards, not just hand
     private final ChangeListener sendFriendCardsChangeListener = new ChangeListener() {
         @Override
         public void changed(ChangeEvent event, Actor actor) {
-            // Will this cast actually work?
-            RenderableCardList selectedCards = (RenderableCardList)gameState.hand.stream()
-                    .filter(AbstractRenderableCard::isSelected)
-                    .collect(Collectors.toList());
-
-            if(selectedCards.size() > gameState.players.size() / 2) { // players.size() / 2 is the number of friend cards. This should be converted into an int and read from GameState
-                gameState.message = "Too many friend cards!";
-            } else {
-                selectedCards.forEach((c) -> {
-                    client.sendInt(c.cardNum());
-                    c.setSelected(false);
-                });
-//                disableButton();
-            }
+            gameState.friendCards.forEach(c -> client.sendInt(c.cardNum()));
         }
     };
 }

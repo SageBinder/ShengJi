@@ -44,6 +44,9 @@ public class LobbyScreen extends InputAdapter implements Screen {
     private TextButton startGameButton;
     private TextButton.TextButtonStyle startGameButtonStyle = skin.get(TextButton.TextButtonStyle.class);
 
+    private Label messageLabel;
+    private Label.LabelStyle messageLabelStyle = skin.get(Label.LabelStyle.class);
+
     LobbyScreen(ScreenManager game, GameState gameState, ShengJiClient client) {
         this.game = game;
         this.gameState = gameState;
@@ -63,6 +66,7 @@ public class LobbyScreen extends InputAdapter implements Screen {
 
         playerLabelStyle.font = fontGenerator.generateFont(playerLabelFontParameter);
         startGameButtonStyle.font = fontGenerator.generateFont(playerLabelFontParameter);
+        messageLabelStyle.font = fontGenerator.generateFont(playerLabelFontParameter);
 
         fontGenerator.dispose();
 
@@ -76,7 +80,7 @@ public class LobbyScreen extends InputAdapter implements Screen {
         startGameButton.setVisible(false);
         startGameButton.setDisabled(true);
 
-
+        messageLabel = new Label("", messageLabelStyle);
 
         stage = new Stage();
         stage.setViewport(viewport);
@@ -92,6 +96,9 @@ public class LobbyScreen extends InputAdapter implements Screen {
 
         table.row().padTop(viewportHeight / 10f);
         table.add(startGameButton);
+
+        table.row().padTop(viewportHeight / 10f);
+        table.add(messageLabel);
 
         stage.addActor(table);
 
@@ -112,13 +119,13 @@ public class LobbyScreen extends InputAdapter implements Screen {
         Gdx.gl.glClearColor(ScreenManager.BACKGROUND_COLOR.r, ScreenManager.BACKGROUND_COLOR.g, ScreenManager.BACKGROUND_COLOR.b, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
+        messageLabel.setText(gameState.message);
         if(gameState.update(client)) {
             float groupSpacing = viewport.getWorldWidth() / 24f;
 
             playersListTable.clearChildren();
             playersListTable.setFillParent(false);
             playersListTable.setWidth(viewport.getWorldWidth() / 20f);
-            playersListTable.setDebug(false);
 
             playersListTable.defaults();
 
@@ -129,7 +136,7 @@ public class LobbyScreen extends InputAdapter implements Screen {
 
             gameState.players.forEach(p -> {
                 var playerNumLabel = new Label("P" + p.getPlayerNum(), playerLabelStyle);
-                var playerNameLabel = new Label(p.getName().substring(0, Math.min(p.getName().length(), maxNameChars)), playerLabelStyle);
+                var playerNameLabel = new Label(p.getName(maxNameChars), playerLabelStyle);
                 var callRankLabel = new Label(Integer.toString(p.getCallRank().rankNum), playerLabelStyle);
 
                 if(p.getName().length() > maxNameChars) {

@@ -37,4 +37,23 @@ public enum Suit {
                 return "";
         }
     }
+
+    public static Suit getSuitFromNum(int num) {
+        switch(num) {
+            case 0:
+                return HEARTS;
+            case 1:
+                return CLUBS;
+            case 2:
+                return DIAMONDS;
+            case 3:
+                return SPADES;
+            case -2:
+                return SMALL_JOKER;
+            case -1:
+                return BIG_JOKER;
+            default:
+                return HEARTS;
+        }
+    }
 }

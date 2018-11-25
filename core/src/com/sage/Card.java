@@ -2,10 +2,10 @@ package com.sage;
 
 import java.util.Random;
 
-public abstract class Card implements Comparable {
-    private final Rank rank;
-    private final Suit suit;
-    private final int cardNum;
+public abstract class Card implements Comparable<Card> {
+    private Rank rank;
+    private Suit suit;
+    private int cardNum;
     private int hierarchicalValue;
 
     private boolean wasTrumpRank = false;
@@ -76,12 +76,42 @@ public abstract class Card implements Comparable {
         return rank;
     }
 
+    public void setSuit(Suit suit) {
+        this.suit = suit;
+        cardNum = getCardNumFromRankAndSuit(rank, suit);
+        establishHierarchicalValue();
+        cardChanged();
+    }
+
+    public void setRank(Rank rank) {
+        this.rank = rank;
+        cardNum = getCardNumFromRankAndSuit(rank, suit);
+        establishHierarchicalValue();
+        cardChanged();
+    }
+
+    public void setCardNum(int cardNum) {
+        this.cardNum = cardNum;
+        this.rank = getRankFromCardNum(cardNum);
+        this.suit = getSuitFromCardNum(cardNum);
+        establishHierarchicalValue();
+        cardChanged();
+    }
+
+    public abstract void cardChanged();
+
     public boolean isJoker() {
         return suit.isJoker();
     }
 
     public int cardNum() {
         return cardNum;
+    }
+
+    public int getPointValue() {
+        return rank() == Rank.TEN || rank() == Rank.KING ? 10
+                : rank() == Rank.FIVE ? 5
+                : 0;
     }
 
     public static Rank getRankFromCardNum(int cardNum) {
@@ -125,9 +155,7 @@ public abstract class Card implements Comparable {
     }
 
     @Override
-    public int compareTo(Object o) {
-        Card compareCard = (Card)o;
-
+    public int compareTo(Card compareCard) {
         if(this.isTrump() && compareCard.isTrump()) {
             int hierarchyCompare = Integer.compare(this.getHierarchicalValue(), compareCard.getHierarchicalValue());
 

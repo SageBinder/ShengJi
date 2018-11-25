@@ -30,10 +30,7 @@ class RoundRunner {
         players.sendIntToAll(ServerCodes.ROUND_START);
         players.sendIntToAll(ServerCodes.WAIT_FOR_PLAYER_ORDER);
         players.sendIntToAll(players.size());
-        players.forEach((p) -> players.sendIntToAll(p.getPlayerNum()));
-//        for(Player p : players) {
-//            players.sendIntToAll(p.getPlayerNum());
-//        }
+        players.forEach(p -> players.sendIntToAll(p.getPlayerNum()));
 
         trumpSuit = null;
         trumpRank = null;
@@ -44,6 +41,7 @@ class RoundRunner {
         ServerCardList friendCards;
 
         final int numPointsNeeded = 40 * numFullDecks;
+        final int totalAvailablePoints = deck.getTotalPoints();
         ServerCardList pointCardsCollected = new ServerCardList();
 
         dealDeckToPlayers(deck);
@@ -82,39 +80,56 @@ class RoundRunner {
 
         int totalPointsCollected = pointCardsCollected.getTotalPoints();
         int kittyPointsMultiplier;
+        int callRankIncrease;
+        Team winningTeam;
 
         try {
             assert winningPlay != null;
         } catch(AssertionError e) {
             e.printStackTrace();
+            players.sendIntToAll(ServerCodes.ROUND_OVER);
             Gdx.app.log("Server.RoundRunner.playNewRound()", "assert winningPlay != null FAILED. SHOULDN'T FUCKING HAPPEN.\n" +
                     "Returning now because at this point it's way fucked.");
             return;
         }
 
-
-        kittyPointsMultiplier = winningPlay.size();
+        kittyPointsMultiplier = winningPlay.size() + 1;
         if(winningPlay.getPlayer().getTeam() == Team.COLLECTORS) {
-            totalPointsCollected += kittyPointsMultiplier * (kitty.getTotalPoints());
+            totalPointsCollected += kittyPointsMultiplier * kitty.getTotalPoints();
         }
+
+        if(totalPointsCollected >= numPointsNeeded) {
+            winningTeam = Team.COLLECTORS;
+            if(totalPointsCollected >= numPointsNeeded * 1.5f) {
+                callRankIncrease = 2;
+            } else if (totalPointsCollected == totalAvailablePoints) {
+                callRankIncrease = 3;
+            } else {
+                callRankIncrease = 1;
+            }
+        } else {
+            winningTeam = Team.KEEPERS;
+            if(totalPointsCollected < numPointsNeeded / 2) {
+                callRankIncrease = 2;
+            } else if(totalPointsCollected == 0) {
+                callRankIncrease = 3;
+            } else {
+                callRankIncrease = 1;
+            }
+        }
+
         // Send total collected points to all players
         players.sendIntToAll(ServerCodes.WAIT_FOR_NUM_COLLECTED_POINTS);
         players.sendIntToAll(totalPointsCollected);
 
         // Send kitty to all players
-        players.sendIntToAll(ServerCodes.WAIT_FOR_KITTY);
+        players.sendIntToAll(ServerCodes.WAIT_FOR_ROUND_END_KITTY);
+        players.sendIntToAll(kitty.size());
         players.sendCardsToAll(kitty);
-
-        Team winningTeam;
-        if(totalPointsCollected >= numPointsNeeded) {
-            winningTeam = Team.COLLECTORS;
-        } else {
-            winningTeam = Team.KEEPERS;
-        }
 
         PlayerList roundWinners = new PlayerList();
         roundWinners.addAll(players.stream().filter(p -> p.getTeam() == winningTeam).collect(Collectors.toList()));
-        roundWinners.forEach(p -> p.increaseCallRank(1)); // TODO: calculate whether or not winners should go up 2 or 3 ranks
+        roundWinners.forEach(p -> p.increaseCallRank(callRankIncrease));
 
         // Send round winners to all players
         players.sendIntToAll(ServerCodes.WAIT_FOR_ROUND_WINNERS);
@@ -228,7 +243,7 @@ class RoundRunner {
                 try {
                     p.sendInt(ServerCodes.SEND_CALL);
                     int callCardNum;
-                    int numCallCards;
+                    int numCardsInCall;
                     while(true) {
                         Thread.sleep(100);
                         if(numNoCallPlayers == players.size() - 1 && caller != null) {
@@ -247,8 +262,8 @@ class RoundRunner {
                                     p.sendInt(ServerCodes.SEND_CALL);
                                     continue;
                                 }
-                                numCallCards = p.readInt();
-                                if(numCallCards < 0) {
+                                numCardsInCall = p.readInt();
+                                if(numCardsInCall < 0) {
                                     p.sendInt(ServerCodes.SEND_CALL);
                                     continue;
                                 }
@@ -258,13 +273,15 @@ class RoundRunner {
                             }
 
                             ServerCard callCard = new ServerCard(callCardNum);
-                            boolean isValidCall = p.isValidCall(callCard, numCallCards);
-                            if(isValidCall && numCallCards > highestNumCallCards) {
+                            boolean isValidCall = p.isValidCall(callCard, numCardsInCall);
+                            if(isValidCall && numCardsInCall > highestNumCallCards) {
                                 synchronized(lock) {
-                                    highestNumCallCards = numCallCards;
+                                    highestNumCallCards = numCardsInCall;
 
                                     caller = p;
                                     caller.sendInt(ServerCodes.SUCCESSFUL_CALL);
+                                    caller.sendInt(callCardNum);
+                                    caller.sendInt(numCardsInCall);
 
                                     trumpSuit = callCard.suit();
                                     trumpRank = callCard.rank();
@@ -272,7 +289,7 @@ class RoundRunner {
                                     for(Player p1 : players) {
                                         if(p1 != caller) {
                                             p1.sendInt(ServerCodes.WAIT_FOR_NEW_WINNING_CALL);
-                                            p1.sendString(caller.getPlayerNum() + "\n" + callCardNum + "\n" + numCallCards);
+                                            p1.sendString(caller.getPlayerNum() + "\n" + callCardNum + "\n" + numCardsInCall);
                                         }
                                     }
                                 }
@@ -330,7 +347,7 @@ class RoundRunner {
                             caller = p;
 
                             trumpSuit = callCard.suit();
-                            trumpRank = p.getCallRank();
+                            trumpRank = caller.getCallRank();
 
                             players.forEach((p1) -> {
                                 if(p1 != caller) {
@@ -352,6 +369,11 @@ class RoundRunner {
             players.sendIntToAll(ServerCodes.WAIT_FOR_CALL_WINNER);
             players.sendIntToAll(caller.getPlayerNum());
         }
+
+        caller.setTeam(Team.KEEPERS);
+        players.sendIntToAll(ServerCodes.WAIT_FOR_NEW_PLAYER_TEAM);
+        players.sendIntToAll(caller.getPlayerNum());
+        players.sendIntToAll(caller.getTeam().getTeamNum());
 
         return caller;
     }
