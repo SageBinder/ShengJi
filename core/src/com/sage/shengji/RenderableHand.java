@@ -28,13 +28,19 @@ class RenderableHand extends RenderableCardGroup {
         return this;
     }
 
+    @Override
     void render(SpriteBatch batch, Viewport viewport) {
+        this.render(batch, viewport, false);
+    }
+
+    @Override
+    void render(SpriteBatch batch, Viewport viewport, boolean renderBase) {
         super.cardHeight = viewport.getWorldHeight() * cardHeightProportion;
         super.regionWidth = viewport.getWorldWidth() - (viewport.getWorldWidth() * leftPaddingProportion) - (viewport.getWorldWidth() * rightPaddingProportion);
         super.pos.x = viewport.getWorldWidth() * leftPaddingProportion;
         super.pos.y = viewport.getWorldHeight() * bottomPaddingProportion;
 
-        super.render(batch, viewport);
+        super.render(batch, viewport, renderBase);
     }
 
     @Override

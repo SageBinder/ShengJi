@@ -271,6 +271,14 @@ class RenderableCard extends AbstractRenderableCard<RenderableCard> {
 
     @Override
     void render(SpriteBatch batch, Viewport viewport) {
+        renderAt(batch, viewport, getDisplayX(), getDisplayY(), getDisplayWidth(), getDisplayHeight());
+    }
+
+    void renderBase(SpriteBatch batch, Viewport viewport) {
+        renderAt(batch, viewport, getX(),  getY(), getWidth(), getHeight());
+    }
+
+    void renderAt(SpriteBatch batch, Viewport viewport, float x, float y, float width, float height) {
         // If trump suit/rank has changed, check whether or not this card is a trump and set border color accordingly
         if(GameState.trumpSuit != lastKnownTrumpSuit || GameState.trumpRank != lastKnownTrumpRank) {
             lastKnownTrumpSuit = GameState.trumpSuit;
@@ -288,28 +296,31 @@ class RenderableCard extends AbstractRenderableCard<RenderableCard> {
             if(thisCardFaceSprite == null) {
                 setupThisCardFaceSprite();
             }
-            renderFace(batch, viewport);
+            renderFace(batch, viewport, x, y, width, height);
         } else {
             if(thisCardBackSprite == null) {
                 setupThisCardBackSprite();
             }
-            renderBack(batch, viewport);
+            renderBack(batch, viewport, x, y, width, height);
         }
     }
 
-    private void renderFace(SpriteBatch batch, Viewport viewport) {
-        drawSprite(batch, viewport, thisCardFaceSprite);
+    private void renderFace(SpriteBatch batch, Viewport viewport,
+                            float x, float y, float width, float height) {
+        drawSprite(batch, viewport, thisCardFaceSprite, x, y, width, height);
     }
 
-    private void renderBack(SpriteBatch batch, Viewport viewport) {
-        drawSprite(batch, viewport, thisCardBackSprite);
+    private void renderBack(SpriteBatch batch, Viewport viewport,
+                            float x, float y, float width, float height) {
+        drawSprite(batch, viewport, thisCardBackSprite, x, y, width, height);
     }
 
-    private void drawSprite(SpriteBatch batch, Viewport viewport, Sprite sprite) {
+    private void drawSprite(SpriteBatch batch, Viewport viewport, Sprite sprite,
+                            float x, float y, float width, float height) {
         // TODO: Maybe this rounding should only be done when position changes, but I'm too lazy to do that right now
 
         // vecXY is initialized with world coordinates for card position
-        Vector2 vecXY = new Vector2(getDisplayX(), getDisplayY());
+        Vector2 vecXY = new Vector2(x, y);
 
         // vecXY is then projected onto the screen, so now it represents the *screen* coordinates of the card
         viewport.project(vecXY);
@@ -326,7 +337,7 @@ class RenderableCard extends AbstractRenderableCard<RenderableCard> {
         // to a whole pixel value, and thus the card's sprite won't have any weird subpixel stretching going on
         viewport.unproject(vecXY);
 
-        sprite.setBounds(vecXY.x, vecXY.y, getDisplayWidth(), getDisplayHeight());
+        sprite.setBounds(vecXY.x, vecXY.y, width, height);
         sprite.draw(batch);
     }
 

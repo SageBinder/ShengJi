@@ -51,4 +51,14 @@ public enum Rank {
             throw new IllegalArgumentException("No rank with value " + rankNum);
         }
     }
+
+    public static Rank previousRank(int rankNum) {
+        int previousRankIdx = rankNum - 3;
+        previousRankIdx = previousRankIdx < 0 ? values().length + previousRankIdx : previousRankIdx;
+        return values()[previousRankIdx];
+    }
+
+    public static Rank nextRank(int rankNum) {
+        return values()[(rankNum - 1) % (Rank.values().length)];
+    }
 }

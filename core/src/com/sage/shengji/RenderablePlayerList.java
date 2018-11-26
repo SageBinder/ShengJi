@@ -35,7 +35,8 @@ class RenderablePlayerList extends PlayerList<RenderablePlayer> {
             toRender.getPoints().regionWidth = toRender.getPlay().regionWidth;
             toRender.getPoints().pos.x = toRender.getPlay().pos.x;
             toRender.getPoints().pos.y = toRender.getPlay().pos.y - (toRender.getPoints().cardHeight * 1.05f);
-            toRender.getPoints().render(batch, viewport);
+            toRender.getPoints().prefDivisionProportion = 1.1f;
+            toRender.getPoints().render(batch, viewport, true);
         }
     }
 }

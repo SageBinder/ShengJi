@@ -39,6 +39,15 @@ public class RenderableCardList extends CardList<RenderableCard> {
         }
     }
 
+    void render(SpriteBatch batch, Viewport viewport, boolean renderBase) {
+        for(RenderableCard c : this) {
+            c.render(batch, viewport);
+            if(renderBase && !c.displayRectEqualsBaseRect()) {
+                c.renderBase(batch, viewport);
+            }
+        }
+    }
+
     void setAllSelected(boolean selected) {
         forEach(c -> c.setSelected(selected));
     }

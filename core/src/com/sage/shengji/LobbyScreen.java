@@ -18,6 +18,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
+import com.sage.Rank;
 
 public class LobbyScreen extends InputAdapter implements Screen {
     private ScreenManager game;
@@ -90,7 +91,7 @@ public class LobbyScreen extends InputAdapter implements Screen {
 
         playersListTable = new Table();
 
-//        table.setDebug(true);
+        table.debugAll();
         table.row();
         table.add(playersListTable).align(Align.center).maxWidth(viewportWidth / 2f);
 
@@ -106,6 +107,8 @@ public class LobbyScreen extends InputAdapter implements Screen {
         multiplexer.addProcessor(this);
         multiplexer.addProcessor(stage);
         Gdx.input.setInputProcessor(multiplexer);
+
+        updateUIFromGameState();
     }
 
     @Override
@@ -121,57 +124,104 @@ public class LobbyScreen extends InputAdapter implements Screen {
 
         messageLabel.setText(gameState.message);
         if(gameState.update(client)) {
-            float groupSpacing = viewport.getWorldWidth() / 24f;
-
-            playersListTable.clearChildren();
-            playersListTable.setFillParent(false);
-            playersListTable.setWidth(viewport.getWorldWidth() / 20f);
-
-            playersListTable.defaults();
-
-            playersListTable.row().padBottom(viewport.getWorldHeight() / 20f);
-            playersListTable.add(new Label("P#", playerLabelStyle)).padRight(groupSpacing);
-            playersListTable.add(new Label("NAME", playerLabelStyle));
-            playersListTable.add(new Label("CALL RANK", playerLabelStyle)).padLeft(groupSpacing);
-
-            gameState.players.forEach(p -> {
-                var playerNumLabel = new Label("P" + p.getPlayerNum(), playerLabelStyle);
-                var playerNameLabel = new Label(p.getName(maxNameChars), playerLabelStyle);
-                var callRankLabel = new Label(Integer.toString(p.getCallRank().rankNum), playerLabelStyle);
-
-                if(p.getName().length() > maxNameChars) {
-                    playerNameLabel.setText(playerNameLabel.getText() + "...");
-                }
-
-                playersListTable.row();
-                playersListTable.add(playerNumLabel).padRight(groupSpacing);
-                playersListTable.add(playerNameLabel);
-                playersListTable.add(callRankLabel).padLeft(groupSpacing);
-
-                if(p.isHost()) {
-                    Color hostColor = new Color(1f, 1f, 0f, 1f);
-                    playerNumLabel.setColor(hostColor);
-                    playerNameLabel.setColor(hostColor);
-                    callRankLabel.setColor(hostColor);
-                }
-                if(p.getPlayerNum() == gameState.thisPlayer.getPlayerNum()) {
-                    playerNumLabel.getText().insert(0, "->");
-                }
-            });
-
-            playersListTable.invalidate();
-
-            if(gameState.thisPlayer.isHost()) {
-                startGameButton.setVisible(true);
-                startGameButton.setDisabled(false);
-            } else {
-                startGameButton.setVisible(false);
-                startGameButton.setDisabled(true);
-            }
+            updateUIFromGameState();
         }
 
         stage.act(delta);
         stage.draw();
+    }
+
+    private void updateUIFromGameState() {
+        float groupSpacing = viewport.getWorldWidth() / 12f;
+
+        var pNumHeaderLabel = new Label("P#", playerLabelStyle);
+        var pNameHeaderLabel = new Label("NAME", playerLabelStyle);
+        var pCallRankHeaderLabel = new Label("CALL RANK", playerLabelStyle);
+        pNameHeaderLabel.setAlignment(Align.center);
+
+        playersListTable.clearChildren();
+        playersListTable.setFillParent(false);
+        playersListTable.setWidth(viewport.getWorldWidth() / 20f);
+        playersListTable.defaults();
+
+        playersListTable.row().padBottom(viewport.getWorldHeight() / 20f);
+        playersListTable.add(pNumHeaderLabel).padRight(groupSpacing);
+        playersListTable.add(pNameHeaderLabel);
+        playersListTable.add(pCallRankHeaderLabel).padLeft(groupSpacing);
+
+        gameState.players.forEach(p -> {
+            var playerNumLabel = new Label("P" + p.getPlayerNum(), playerLabelStyle);
+            var playerNameLabel = new Label(p.getName(maxNameChars), playerLabelStyle);
+            var callRankLabel = new Label(Integer.toString(p.getCallRank().rankNum), playerLabelStyle);
+
+            var increaseCallRankButton = new TextButton("+", startGameButtonStyle);
+            var decreaseCallRankButton = new TextButton("-", startGameButtonStyle);
+            increaseCallRankButton.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    Rank nextRank = Rank.nextRank(p.getCallRank().rankNum);
+                    if(nextRank == Rank.JOKER) {
+                        nextRank = Rank.TWO;
+                    }
+
+                    p.setCallRank(nextRank.rankNum);
+                    client.sendInt(ClientCodes.WAIT_FOR_NEW_CALLING_RANK);
+                    client.sendInt(p.getPlayerNum());
+                    client.sendInt(nextRank.rankNum);
+
+                    updateUIFromGameState();
+                }
+            });
+            decreaseCallRankButton.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    Rank previousRank = Rank.previousRank(p.getCallRank().rankNum);
+                    if(previousRank == Rank.JOKER) {
+                        previousRank = Rank.TWO;
+                    }
+
+                    p.setCallRank(previousRank.rankNum);
+                    client.sendInt(ClientCodes.WAIT_FOR_NEW_CALLING_RANK);
+                    client.sendInt(p.getPlayerNum());
+                    client.sendInt(previousRank.rankNum);
+
+                    updateUIFromGameState();
+                }
+            });
+
+            if(p.getName().length() > maxNameChars) {
+                playerNameLabel.setText(playerNameLabel.getText() + "...");
+            }
+
+            playersListTable.row();
+            playersListTable.add(playerNumLabel).padRight(groupSpacing);
+            playersListTable.add(playerNameLabel);
+            playersListTable.add(callRankLabel).padLeft(groupSpacing);
+            if(gameState.thisPlayer != null && gameState.thisPlayer.isHost()) {
+                playersListTable.add(decreaseCallRankButton).padLeft(viewport.getWorldWidth() * 0.05f);
+                playersListTable.add(increaseCallRankButton).padLeft(viewport.getWorldWidth() * 0.05f);
+            }
+
+            if(p.isHost()) {
+                Color hostColor = new Color(1f, 1f, 0f, 1f);
+                playerNumLabel.setColor(hostColor);
+                playerNameLabel.setColor(hostColor);
+                callRankLabel.setColor(hostColor);
+            }
+            if(p.getPlayerNum() == gameState.thisPlayer.getPlayerNum()) {
+                playerNumLabel.getText().insert(0, "->");
+            }
+        });
+
+        playersListTable.invalidate();
+
+        if(gameState.thisPlayer != null && gameState.thisPlayer.isHost()) {
+            startGameButton.setVisible(true);
+            startGameButton.setDisabled(false);
+        } else {
+            startGameButton.setVisible(false);
+            startGameButton.setDisabled(true);
+        }
     }
 
     @Override

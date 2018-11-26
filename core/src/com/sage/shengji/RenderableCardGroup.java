@@ -18,7 +18,7 @@ class RenderableCardGroup extends RenderableCardList {
             prefDivisionProportion = 0.2f;
     // prefDivisionProportion is relative to card width. Maybe should be relative to viewport width instead?
 
-    ShapeRenderer debugRenderer = new ShapeRenderer();
+    private ShapeRenderer debugRenderer = new ShapeRenderer();
     private boolean inDebugMode = true;
 
     RenderableCardGroup() {
@@ -31,6 +31,11 @@ class RenderableCardGroup extends RenderableCardList {
 
     @Override
     void render(SpriteBatch batch, Viewport viewport) {
+        render(batch, viewport, false);
+    }
+
+    @Override
+    void render(SpriteBatch batch, Viewport viewport, boolean renderBase) {
         float cardPositionRegionWidth = regionWidth - (RenderableCard.WIDTH_TO_HEIGHT_RATIO * cardHeight);
 
         float division = Math.min(RenderableCard.WIDTH_TO_HEIGHT_RATIO * cardHeight * prefDivisionProportion,
@@ -45,30 +50,32 @@ class RenderableCardGroup extends RenderableCardList {
             c.setHeight(cardHeight).setPosition((i * division) + pos.x + offset, pos.y);
         }
 
-        super.render(batch, viewport);
-
         if(inDebugMode) {
             batch.end();
+            renderDebugLines(viewport);
+            batch.begin();
+        }
 
-            debugRenderer.setProjectionMatrix(viewport.getCamera().combined);
-            debugRenderer.begin(ShapeRenderer.ShapeType.Line);
+        super.render(batch, viewport, renderBase);
+    }
 
-            debugRenderer.setColor(0.0f, 0.0f, 1.0f, 1.0f);
-            debugRenderer.rect(pos.x, pos.y, regionWidth, cardHeight);
+    private void renderDebugLines(Viewport viewport) {
+        debugRenderer.setProjectionMatrix(viewport.getCamera().combined);
+        debugRenderer.begin(ShapeRenderer.ShapeType.Line);
 
-            debugRenderer.setColor(1.0f, 0.0f, 0.0f, 1.0f);
-            debugRenderer.line(pos.x + (regionWidth * 0.5f), pos.y + (cardHeight * 1.5f),
-                    pos.x + (regionWidth * 0.5f), pos.y - (cardHeight * 0.5f));
+        debugRenderer.setColor(0.0f, 0.0f, 1.0f, 1.0f);
+        debugRenderer.rect(pos.x, pos.y, regionWidth, cardHeight);
 
-            debugRenderer.line(viewport.getWorldWidth() / 2, 0, viewport.getWorldWidth() / 2, viewport.getWorldHeight());
-            debugRenderer.line(0, viewport.getWorldHeight() / 2, viewport.getWorldWidth(), viewport.getWorldHeight() / 2);
+        debugRenderer.setColor(1.0f, 0.0f, 0.0f, 1.0f);
+        debugRenderer.line(pos.x + (regionWidth * 0.5f), pos.y + (cardHeight * 1.5f),
+                pos.x + (regionWidth * 0.5f), pos.y - (cardHeight * 0.5f));
+
+        debugRenderer.line(viewport.getWorldWidth() / 2, 0, viewport.getWorldWidth() / 2, viewport.getWorldHeight());
+        debugRenderer.line(0, viewport.getWorldHeight() / 2, viewport.getWorldWidth(), viewport.getWorldHeight() / 2);
 
 //            debugRenderer.circle(viewport.getWorldWidth() / 2, viewport.getWorldHeight() / 2, viewport.getWorldHeight() / 50);
 
-            debugRenderer.end();
-
-            batch.begin();
-        }
+        debugRenderer.end();
     }
 
     RenderableCardGroup setCardHeight(float height) {

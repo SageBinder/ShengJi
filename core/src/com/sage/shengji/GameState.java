@@ -79,10 +79,10 @@ class GameState {
             this.client = client;
             lastServerCode = serverCode;
 
-            if(!client.readyToRead()) {
-                Gdx.app.log("Shengji.GameStateUpdater.update", "client read not ready. This usually shouldn't happen. " +
-                        "Last server code: " + serverCode);
-            }
+//            if(!client.readyToRead()) {
+//                Gdx.app.log("Shengji.GameStateUpdater.update", "client read not ready. This usually shouldn't happen. " +
+//                        "Last server code: " + serverCode);
+//            }
 
             switch(serverCode) {
                 // Calling codes:
@@ -673,9 +673,9 @@ class GameState {
                 roundWinners.add(players.getPlayerFromPlayerNum(client.readInt()));
             }
 
-            message = "Winners: ";
-            roundWinners.forEach(p -> message += roundWinners.lastIndexOf(p) == roundWinners.size() - 1
-                    ? p.getName(17) + ", "
+            message = "Winners: \n";
+            roundWinners.forEach(p -> message += roundWinners.lastIndexOf(p) != roundWinners.size() - 1
+                    ? p.getName(17) + ", \n"
                     : p.getName(17));
 
             disableButton();

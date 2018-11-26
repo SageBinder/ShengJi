@@ -171,7 +171,6 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
         }
 
         renderPointCards();
-        renderPlayerPointCards();
         renderFriendCards();
         renderTrumpCard();
         gameState.players.render(batch, viewport);
@@ -247,10 +246,6 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
                 0, Align.center, false);
     }
 
-    private void renderPlayerPointCards() {
-
-    }
-
     private void renderFriendCards() {
         if(gameState.lastServerCode != SEND_FRIEND_CARDS && !gameState.friendCards.isEmpty()) {
             gameState.friendCards.cardHeight =
@@ -315,12 +310,12 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
         }
     }
 
-    private void checkDelayAndPress(float delta, int ...keyCodes) {
+    private void checkDelayAndPress(float delta, int... keyCodes) {
         for(int keyCode: keyCodes) {
             if(Gdx.input.isKeyPressed(keyCode)) {
                 delayTimer += delta;
                 if(delayTimer > 0.5f) {
-                    delayTimer -= 0.05f;
+                    delayTimer -= 0.025f;
                     keyDown(keyCode);
                 }
                 return;
@@ -351,21 +346,27 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
     private RenderableCard lastHighlightedCard = null;
     @Override
     public boolean mouseMoved(int screenX, int screenY) {
-        Vector2 clickCoordinates = viewport.unproject(new Vector2(screenX, screenY));
+        Vector2 moveCoordinates = viewport.unproject(new Vector2(screenX, screenY));
 
         if(gameState.lastServerCode != SEND_FRIEND_CARDS) {
             for(ListIterator<RenderableCard> i = gameState.friendCards.reverseListIterator(); i.hasPrevious();) {
                 final RenderableCard c = i.previous();
-                if(c.isSelected()) {
-                    if(c.displayRectContainsPoint(clickCoordinates)) {
-                        break;
-                    } else {
-                        continue;
-                    }
-                }
-
-                if(c.displayRectContainsPoint(clickCoordinates) || c.baseRectContainsPoint(clickCoordinates)) {
+                if(c.displayRectContainsPoint(moveCoordinates) || c.baseRectContainsPoint(moveCoordinates)) {
                     highlightCard(c);
+                    return false;
+                }
+            }
+        }
+
+        for(var p : gameState.players) {
+            for(ListIterator<RenderableCard> i = p.getPoints().reverseListIterator(); i.hasPrevious();) {
+                final RenderableCard c = i.previous();
+                if(c.baseRectContainsPoint(moveCoordinates)) {
+                    highlightCard(c);
+                    c.setDisplayHeight(gameState.hand.cardHeight);
+                    c.setDisplayPosition(
+                            c.getX() + (c.getWidth() * 0.5f) - (c.getDisplayWidth() * 0.5f),
+                            c.getY() - c.getDisplayHeight());
                     return false;
                 }
             }
@@ -374,14 +375,14 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
         for(ListIterator<RenderableCard> i = gameState.hand.reverseListIterator(); i.hasPrevious();) {
             final RenderableCard c = i.previous();
             if(c.isSelected()) {
-                if(c.displayRectContainsPoint(clickCoordinates)) {
+                if(c.displayRectContainsPoint(moveCoordinates)) {
                     break;
                 } else {
                     continue;
                 }
             }
 
-            if(c.displayRectContainsPoint(clickCoordinates) || c.baseRectContainsPoint(clickCoordinates)) {
+            if(c.displayRectContainsPoint(moveCoordinates) || c.baseRectContainsPoint(moveCoordinates)) {
                 highlightCard(c);
                 return false;
             }
@@ -693,7 +694,7 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
             resetBorderedCard();
 
             boolean isBasePlay = gameState.players.stream()
-                    .allMatch(p -> p != gameState.thisPlayer && p.getPlay().isEmpty());
+                    .allMatch(p -> p == gameState.thisPlayer ^ p.getPlay().isEmpty());
             if(isBasePlay) {
                 gameState.thisPlayer.getPlay().forEach(c -> {
                     c.faceUnselectedBackgroundColor.set(Color.LIGHT_GRAY);

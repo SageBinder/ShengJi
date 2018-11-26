@@ -40,7 +40,7 @@ class PlaygroundScreen extends InputAdapter implements Screen {
         hand = new RenderableHand();
 
         for(int i = 0; i < 5; i++) {
-            hand.add(new RenderableCard());
+            hand.add(new RenderableCard(i));
         }
 
         currentCard = new RenderableCard(currentCardNum);

@@ -216,6 +216,13 @@ public class ShengJiServer extends Thread {
                                 int callRank = p.readInt();
                                 synchronized(playersLock) {
                                     players.getPlayerFromPlayerNum(playerNum).setCallRank(Rank.fromInt(callRank));
+
+                                    players.sendIntToAll(ServerCodes.WAIT_FOR_CALLING_NUMBERS);
+                                    players.sendIntToAll(players.size());
+                                    players.forEach(p1 -> {
+                                        players.sendIntToAll(p1.getPlayerNum());
+                                        players.sendIntToAll(p1.getCallRank().rankNum);
+                                    });
                                 }
                             }
                             break;

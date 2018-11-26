@@ -119,6 +119,10 @@ abstract class AbstractRenderableCard<T extends AbstractRenderableCard<T>> exten
         return displayCardRect.contains(x, y);
     }
 
+    boolean displayRectEqualsBaseRect() {
+        return displayCardRect.equals(baseCardRect);
+    }
+
     // invalidateSprites() is automatically called after a display parameter is set. Maybe it's better to manually call
     // invalidateSprites() after setting necessary display parameters?
 
