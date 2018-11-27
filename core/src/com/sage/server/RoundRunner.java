@@ -100,19 +100,19 @@ class RoundRunner {
 
         if(totalPointsCollected >= numPointsNeeded) {
             winningTeam = Team.COLLECTORS;
-            if(totalPointsCollected >= numPointsNeeded * 1.5f) {
-                callRankIncrease = 2;
-            } else if (totalPointsCollected == totalAvailablePoints) {
+            if(totalPointsCollected >= totalAvailablePoints) {
                 callRankIncrease = 3;
+            } else if (totalPointsCollected >= numPointsNeeded * 1.5f) {
+                callRankIncrease = 2;
             } else {
                 callRankIncrease = 1;
             }
         } else {
             winningTeam = Team.KEEPERS;
-            if(totalPointsCollected < numPointsNeeded / 2) {
-                callRankIncrease = 2;
-            } else if(totalPointsCollected == 0) {
+            if(totalPointsCollected == 0) {
                 callRankIncrease = 3;
+            } else if(totalPointsCollected < numPointsNeeded / 2) {
+                callRankIncrease = 2;
             } else {
                 callRankIncrease = 1;
             }

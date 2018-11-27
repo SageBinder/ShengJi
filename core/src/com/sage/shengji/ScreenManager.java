@@ -24,10 +24,10 @@ public class ScreenManager extends Game {
 
         try {
             startGameServer(25565, 10);
-            joinGame(25565, "127.0.0.1", "i");
+            joinGame(25565, "127.0.0.1", "Testy McTestFace");
         } catch(GdxRuntimeException e) {
             e.printStackTrace();
-            joinGame(25565, "127.0.0.1", "i");
+            joinGame(25565, "127.0.0.1", "Testy McTestFace");
         }
     }
 

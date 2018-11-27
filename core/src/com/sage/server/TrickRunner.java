@@ -37,9 +37,19 @@ class TrickRunner {
                 if(playOrderIndex == 0) {
                     turnPlayer.sendInt(ServerCodes.SEND_BASE_PLAY);
                     numCardsInPlay = turnPlayer.readInt();
+                    if(numCardsInPlay == 0) {
+                        turnPlayer.sendInt(ServerCodes.INVALID_PLAY);
+                        turnPlayer.clearReadBuffer();
+                        continue;
+                    }
                 } else {
                     turnPlayer.sendInt(ServerCodes.SEND_PLAY);
                     turnPlayer.sendInt(numCardsInPlay);
+                    if(numCardsInPlay != basePlay.size()) {
+                        turnPlayer.sendInt(ServerCodes.INVALID_PLAY);
+                        turnPlayer.clearReadBuffer();
+                        continue;
+                    }
                 }
 
                 for(int i = 0; i < numCardsInPlay; i++) {

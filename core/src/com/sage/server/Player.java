@@ -1,6 +1,5 @@
 package com.sage.server;
 
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.net.Socket;
 import com.sage.Rank;
 import com.sage.Suit;
@@ -66,7 +65,7 @@ class Player {
     Integer readInt() {
         try {
             Integer i = Integer.parseInt(readLine()); // readLine() will return null if player has disconnected
-            Gdx.app.log("Server.Player.readInt()", "READ INT: " + i);
+//            Gdx.app.log("Server.Player.readInt()", "READ INT: " + i);
             return i;
         } catch(NumberFormatException e) {
             e.printStackTrace();
@@ -77,7 +76,7 @@ class Player {
     String readLine() {
         try {
             String line = bufferedReader.readLine();
-            Gdx.app.log("Server.Player.readLine()", "READ STRING: " + line);
+//            Gdx.app.log("Server.Player.readLine()", "READ STRING: " + line);
             if(line == null) {
                 s.dispose();
             }
@@ -90,33 +89,57 @@ class Player {
         }
     }
 
-    void sendString(String string) {
+    void sendString(String string, boolean flushWriteBuffer) {
         try {
-            Gdx.app.log("Server.Player.sendString()", "SENDING STRING: " + string);
+//            Gdx.app.log("Server.Player.sendString()", "SENDING STRING: " + string);
             bufferedWriter.write(string);
             bufferedWriter.write("\n");
-            bufferedWriter.flush();
+            if(flushWriteBuffer) bufferedWriter.flush();
         } catch(IOException e) {
             e.printStackTrace();
             s.dispose();
         }
     }
 
-    void sendInt(int i) {
+    void sendInt(int i, boolean flushWriteBuffer) {
         try {
-            Gdx.app.log("Server.Player.sendInt()", "SENDING INT: " + i);
+//            Gdx.app.log("Server.Player.sendInt()", "SENDING INT: " + i);
             bufferedWriter.write(Integer.toString(i));
             bufferedWriter.write("\n");
-            bufferedWriter.flush();
+            if(flushWriteBuffer) bufferedWriter.flush();
         } catch(IOException e) {
             e.printStackTrace();
             s.dispose();
         }
+    }
+
+    void sendCards(ServerCardList cardList, boolean flushWriteBuffer) {
+        for(ServerCard c : cardList) {
+            sendInt(c.cardNum(), false);
+        }
+        if(flushWriteBuffer) flushWriteBuffer();
+    }
+
+    void sendString(String string) {
+        sendString(string, true);
+    }
+
+    void sendInt(int i) {
+        sendInt(i, true);
     }
 
     void sendCards(ServerCardList cardList) {
         for(ServerCard c : cardList) {
             sendInt(c.cardNum());
+        }
+    }
+
+    void flushWriteBuffer() {
+        try {
+            bufferedWriter.flush();
+        } catch(IOException e) {
+            e.printStackTrace();
+            s.dispose();
         }
     }
 

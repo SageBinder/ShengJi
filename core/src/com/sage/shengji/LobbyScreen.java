@@ -48,6 +48,8 @@ public class LobbyScreen extends InputAdapter implements Screen {
     private Label messageLabel;
     private Label.LabelStyle messageLabelStyle = skin.get(Label.LabelStyle.class);
 
+    private FreeTypeFontGenerator fontGenerator;
+
     LobbyScreen(ScreenManager game, GameState gameState, ShengJiClient client) {
         this.game = game;
         this.gameState = gameState;
@@ -57,19 +59,18 @@ public class LobbyScreen extends InputAdapter implements Screen {
                 viewportHeight = Gdx.graphics.getHeight() * viewportScale;
         viewport = new ExtendViewport(viewportWidth, viewportHeight);
 
-        var fontGenerator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/OpenSans-Bold.ttf"));
+        fontGenerator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/OpenSans-Bold.ttf"));
         var playerLabelFontParameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
 
         playerLabelFontParameter.size = (int)(Math.max(Gdx.graphics.getHeight(), Gdx.graphics.getWidth()) * textProportion);
         playerLabelFontParameter.hinting = FreeTypeFontGenerator.Hinting.Medium;
         playerLabelFontParameter.minFilter = Texture.TextureFilter.Linear;
         playerLabelFontParameter.magFilter = Texture.TextureFilter.Linear;
+        playerLabelFontParameter.incremental = true;
 
         playerLabelStyle.font = fontGenerator.generateFont(playerLabelFontParameter);
         startGameButtonStyle.font = fontGenerator.generateFont(playerLabelFontParameter);
         messageLabelStyle.font = fontGenerator.generateFont(playerLabelFontParameter);
-
-        fontGenerator.dispose();
 
         startGameButton = new TextButton("Start game!", startGameButtonStyle);
         startGameButton.addListener(new ChangeListener() {
@@ -95,11 +96,11 @@ public class LobbyScreen extends InputAdapter implements Screen {
         table.row();
         table.add(playersListTable).align(Align.center).maxWidth(viewportWidth / 2f);
 
-        table.row().padTop(viewportHeight / 10f);
+        table.row().padTop(viewportHeight * 0.1f);
         table.add(startGameButton);
 
-        table.row().padTop(viewportHeight / 10f);
-        table.add(messageLabel);
+        table.row().padTop(viewportHeight * 0.05f);
+        table.add(messageLabel).padBottom(viewportHeight * 0.01f);
 
         stage.addActor(table);
 
@@ -113,7 +114,6 @@ public class LobbyScreen extends InputAdapter implements Screen {
 
     @Override
     public void show() {
-//        game.showGameScreen(gameState); // Default to showing gameScreen for now just to test gameScreen
         Gdx.input.setInputProcessor(multiplexer);
     }
 
@@ -152,7 +152,7 @@ public class LobbyScreen extends InputAdapter implements Screen {
         gameState.players.forEach(p -> {
             var playerNumLabel = new Label("P" + p.getPlayerNum(), playerLabelStyle);
             var playerNameLabel = new Label(p.getName(maxNameChars), playerLabelStyle);
-            var callRankLabel = new Label(Integer.toString(p.getCallRank().rankNum), playerLabelStyle);
+            var callRankLabel = new Label(p.getCallRank().toString(), playerLabelStyle);
 
             var increaseCallRankButton = new TextButton("+", startGameButtonStyle);
             var decreaseCallRankButton = new TextButton("-", startGameButtonStyle);
@@ -163,12 +163,10 @@ public class LobbyScreen extends InputAdapter implements Screen {
                     if(nextRank == Rank.JOKER) {
                         nextRank = Rank.TWO;
                     }
-
                     p.setCallRank(nextRank.rankNum);
-                    client.sendInt(ClientCodes.WAIT_FOR_NEW_CALLING_RANK);
-                    client.sendInt(p.getPlayerNum());
-                    client.sendInt(nextRank.rankNum);
-
+                    client.sendString(ClientCodes.WAIT_FOR_NEW_CALLING_RANK
+                            + "\n" + p.getPlayerNum()
+                            + "\n" + nextRank.rankNum, false);
                     updateUIFromGameState();
                 }
             });
@@ -177,14 +175,12 @@ public class LobbyScreen extends InputAdapter implements Screen {
                 public void changed(ChangeEvent event, Actor actor) {
                     Rank previousRank = Rank.previousRank(p.getCallRank().rankNum);
                     if(previousRank == Rank.JOKER) {
-                        previousRank = Rank.TWO;
+                        previousRank = Rank.ACE;
                     }
-
                     p.setCallRank(previousRank.rankNum);
-                    client.sendInt(ClientCodes.WAIT_FOR_NEW_CALLING_RANK);
-                    client.sendInt(p.getPlayerNum());
-                    client.sendInt(previousRank.rankNum);
-
+                    client.sendString(ClientCodes.WAIT_FOR_NEW_CALLING_RANK
+                            + "\n" + p.getPlayerNum()
+                            + "\n" + previousRank.rankNum, false);
                     updateUIFromGameState();
                 }
             });
@@ -193,13 +189,17 @@ public class LobbyScreen extends InputAdapter implements Screen {
                 playerNameLabel.setText(playerNameLabel.getText() + "...");
             }
 
-            playersListTable.row();
+            playersListTable.row().padBottom(viewport.getWorldHeight() * 0.01f);
             playersListTable.add(playerNumLabel).padRight(groupSpacing);
             playersListTable.add(playerNameLabel);
             playersListTable.add(callRankLabel).padLeft(groupSpacing);
             if(gameState.thisPlayer != null && gameState.thisPlayer.isHost()) {
-                playersListTable.add(decreaseCallRankButton).padLeft(viewport.getWorldWidth() * 0.05f);
-                playersListTable.add(increaseCallRankButton).padLeft(viewport.getWorldWidth() * 0.05f);
+                playersListTable.add(decreaseCallRankButton)
+                        .padLeft(viewport.getWorldWidth() * 0.05f)
+                        .minWidth(viewport.getWorldWidth() * 0.05f);
+                playersListTable.add(increaseCallRankButton)
+                        .padLeft(viewport.getWorldWidth() * 0.05f)
+                        .minWidth(viewport.getWorldWidth() * 0.05f);
             }
 
             if(p.isHost()) {
@@ -230,6 +230,7 @@ public class LobbyScreen extends InputAdapter implements Screen {
 
         playersListTable.invalidate();
         table.invalidate();
+        updateUIFromGameState();
     }
 
     @Override
@@ -249,6 +250,6 @@ public class LobbyScreen extends InputAdapter implements Screen {
 
     @Override
     public void dispose() {
-
+        fontGenerator.dispose();
     }
 }

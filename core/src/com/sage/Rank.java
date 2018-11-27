@@ -54,8 +54,7 @@ public enum Rank {
 
     public static Rank previousRank(int rankNum) {
         int previousRankIdx = rankNum - 3;
-        previousRankIdx = previousRankIdx < 0 ? values().length + previousRankIdx : previousRankIdx;
-        return values()[previousRankIdx];
+        return values()[previousRankIdx < 0 ? values().length + previousRankIdx : previousRankIdx];
     }
 
     public static Rank nextRank(int rankNum) {

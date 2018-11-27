@@ -56,7 +56,7 @@ class ShengJiClient extends Thread {
         while(socket.isConnected() && !quit) {
             while(!waitingForServerCode) {
                 try {
-                    Thread.sleep(500);
+                    Thread.sleep(20);
                 } catch(InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -82,11 +82,13 @@ class ShengJiClient extends Thread {
             // Dear future me: please find a solution that isn't retarded. Sincerely, past me.
             // (Maybe implement your own buffer and only allow the gamestate to update when server sends enough info?)
 
-            try { // Give server time to send extra information so the render thread doesn't have to wait for the server
-                Thread.sleep(500);
-            } catch(InterruptedException e) {
-                e.printStackTrace();
-            }
+            // Dear past me: doesn't seem like that's actually a problem lol. (2018-11-26)
+
+//            try { // Give server time to send extra information so the render thread doesn't have to wait for the server
+//                Thread.sleep(500);
+//            } catch(InterruptedException e) {
+//                e.printStackTrace();
+//            }
 
             synchronized(waitingForServerCodeLock) {
                 waitingForServerCode = false;
@@ -105,7 +107,7 @@ class ShengJiClient extends Thread {
     Integer readInt() {
         try {
             Integer i = Integer.parseInt(readLine());
-            Gdx.app.log("Shengji.ShengJiClient.readInt()", "READ INT: " + i);
+//            Gdx.app.log("Shengji.ShengJiClient.readInt()", "READ INT: " + i);
             return i;
         } catch(NumberFormatException e) {
             e.printStackTrace();
@@ -116,7 +118,7 @@ class ShengJiClient extends Thread {
     String readLine() {
         try {
             String line = reader.readLine();
-            Gdx.app.log("Shengji.ShengJiClient.readLine()", "READ STRING: " + line);
+//            Gdx.app.log("Shengji.ShengJiClient.readLine()", "READ STRING: " + line);
             if(line == null) {
                 socket.dispose();
                 return null;
@@ -130,21 +132,38 @@ class ShengJiClient extends Thread {
         }
     }
 
-    void sendInt(int i) {
+    void sendInt(int i, boolean flushWriteBuffer) {
         Gdx.app.log("Shengji.ShengJiClient.sendInt()", "SENDING INT: " + i);
         try {
             writer.write(Integer.toString(i) + "\n");
-            writer.flush();
+            if(flushWriteBuffer) writer.flush();
         } catch(IOException e) {
             e.printStackTrace();
             quit();
         }
     }
 
-    void sendString(String s) {
+    void sendString(String s, boolean flushWriteBuffer) {
         Gdx.app.log("Shengji.ShengJiClient.sendString()", "SENDING STRING: \"" + s + "\"");
         try {
             writer.write(s + "\n");
+            if(flushWriteBuffer) writer.flush();
+        } catch(IOException e) {
+            e.printStackTrace();
+            quit();
+        }
+    }
+
+    void sendInt(int i) {
+        sendInt(i, true);
+    }
+
+    void sendString(String s) {
+        sendString(s, true);
+    }
+
+    void flushWriteBuffer() {
+        try {
             writer.flush();
         } catch(IOException e) {
             e.printStackTrace();

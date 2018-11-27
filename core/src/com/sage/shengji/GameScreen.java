@@ -41,6 +41,7 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
     private TextButton sendButton;
     private Label messageLabel;
 
+    private FreeTypeFontGenerator fontGenerator;
     private BitmapFont font;
 
     private float delayTimer = 0;
@@ -54,7 +55,7 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
                 viewportHeight = Gdx.graphics.getHeight() * viewportScale;
         viewport = new ExtendViewport(viewportWidth, viewportHeight);
 
-        var fontGenerator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/OpenSans-Bold.ttf"));
+        fontGenerator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/OpenSans-Bold.ttf"));
 
         var playerNameFontParameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
         playerNameFontParameter.incremental = true; // <- I don't know what this line does, but the font gets all fucky without it
@@ -73,9 +74,7 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
         var labelStyle = skin.get(Label.LabelStyle.class);
         labelStyle.font = fontGenerator.generateFont(uiFontParameter);
 
-        font = fontGenerator.generateFont(uiFontParameter);
-
-        fontGenerator.dispose();
+        font = fontGenerator.generateFont(uiFontParameter); // DON'T dispose of fontGenerator until screen is disposed
 
         uiStage = new Stage(viewport, batch);
 
@@ -569,6 +568,7 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
     public void dispose() {
         messageLabel.getStyle().font.dispose();
         sendButton.getStyle().font.dispose();
+        fontGenerator.dispose();
     }
 
     private void resetBorderedCard() {
@@ -677,9 +677,12 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
     private final ChangeListener sendPlayChangeListener = new ChangeListener() {
         @Override
         public void changed(ChangeEvent event, Actor actor) {
-            if(gameState.hand.stream().filter(AbstractRenderableCard::isSelected).count() != gameState.numCardsInBasePlay
-                    && gameState.numCardsInBasePlay > 0) {
+            int numSelectedCards = (int)gameState.hand.stream().filter(AbstractRenderableCard::isSelected).count();
+            if(numSelectedCards != gameState.numCardsInBasePlay && gameState.numCardsInBasePlay > 0) {
                 gameState.message = "Incorrect number of cards in play";
+                return;
+            } else if(numSelectedCards == 0) {
+                gameState.message = "Your turn";
                 return;
             }
 
@@ -708,8 +711,11 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
     private final ChangeListener sendBasePlayChangeListener = new ChangeListener() {
         @Override
         public void changed (ChangeEvent event, Actor actor) {
-            client.sendInt((int)gameState.hand.stream().filter(AbstractRenderableCard::isSelected).count());
-            sendPlayChangeListener.handle(event);
+            int numSelectedCards = (int)gameState.hand.stream().filter(AbstractRenderableCard::isSelected).count();
+            if(numSelectedCards != 0) {
+                client.sendInt(numSelectedCards);
+                sendPlayChangeListener.handle(event);
+            }
         }
     };
 

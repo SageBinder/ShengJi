@@ -194,6 +194,7 @@ class GameState {
                     break;
                 case WAIT_FOR_ROUND_END_KITTY:
                     waitForRoundEndKitty();
+                    break;
                 case ROUND_OVER:
                     roundOver();
                     break;
@@ -201,6 +202,9 @@ class GameState {
                 // Lobby codes:
                 case WAIT_FOR_PLAYERS_LIST:
                     waitForPlayersList();
+                    break;
+                case ServerCodes.WAIT_FOR_NEW_CALLING_RANK:
+                    waitForNewCallingRank();
                     break;
                 default:
                     Gdx.app.log("Shengji.GameState.Updater.update",
@@ -245,6 +249,12 @@ class GameState {
             thisPlayer.setThisPlayer(true);
 
             disableButton();
+        }
+
+        private void waitForNewCallingRank() {
+            int playerNum = client.readInt();
+            int callRank = client.readInt();
+            players.getPlayerFromPlayerNum(playerNum).setCallRank(callRank);
         }
 
         // CALLING CODES:
@@ -311,6 +321,11 @@ class GameState {
             
             buttonText = "Send call";
 
+            players.forEach(p -> {
+                p.getPoints().clear();
+                p.getPoints().add(new RenderableCard(p.getCallRank(), Suit.SPADES));
+            });
+
             enableButton();
         }
 
@@ -338,6 +353,7 @@ class GameState {
 
             hand.addAll(thisPlayer.getPlay());
             players.forEach(RenderablePlayer::clearPlay);
+            players.forEach(p -> p.getPoints().clear());
 
             message = "Call winner: " + callWinner.getName(17);
 
@@ -364,6 +380,7 @@ class GameState {
             callWinner.getPlay().add(callCard);
 
             noOneCalledCard = null;
+            players.forEach(p -> p.getPoints().clear());
 
             setTrump(Card.getCardNumFromRankAndSuit(callWinnerCallRank, callCard.suit()));
             
@@ -398,6 +415,7 @@ class GameState {
 
         private void roundStart() {
             noOneCalledCard = null;
+            trumpCard = null;
 
             roundWinners.clear();
             kitty.clear();
@@ -405,6 +423,10 @@ class GameState {
             hand.clear();
             friendCards.clear();
             thisPlayerCurrentCall.clear();
+            players.forEach(p -> {
+                p.getPoints().clear();
+                p.clearPlay();
+            });
 
             numCollectedPoints = 0;
 

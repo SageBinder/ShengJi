@@ -7,26 +7,38 @@ class PlayerList extends ArrayList<Player> {
         super();
     }
 
+    void sendIntToAll(int num, boolean flushWriteBuffer) {
+        forEach(p -> p.sendInt(num, false));
+        if(flushWriteBuffer) flushAllWriteBuffers();
+    }
+
+    void sendStringToAll(String str, boolean flushWriteBuffer) {
+        forEach(p -> p.sendString(str, false));
+        if(flushWriteBuffer) flushAllWriteBuffers();
+    }
+
+    void sendCardsToAll(ServerCardList cards, boolean flushWriteBuffer) {
+        forEach(p -> p.sendCards(cards, false));
+        if(flushWriteBuffer) flushAllWriteBuffers();
+    }
+
     void sendIntToAll(int num) {
-        forEach(p -> p.sendInt(num));
+        sendIntToAll(num, true);
     }
 
     void sendStringToAll(String str) {
-        forEach(p -> p.sendString(str));
+        sendStringToAll(str, true);
     }
 
     void sendCardsToAll(ServerCardList cards) {
-        forEach(p -> p.sendCards(cards));
+        sendCardsToAll(cards, true);
+    }
+
+    void flushAllWriteBuffers() {
+        forEach(Player::flushWriteBuffer);
     }
 
     Player getPlayerFromPlayerNum(int playerNum) {
-//        for(Player p : this) {
-//            if(p.getPlayerNum() == playerNum) {
-//                return p;
-//            }
-//        }
-//        return null;
-
         return stream().filter(player -> player.getPlayerNum() == playerNum).findFirst().orElse(null);
     }
 }

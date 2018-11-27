@@ -47,6 +47,7 @@ public class ServerCodes { // Codes are negative so as to not clash with the sen
     public static final int JOIN_SUCCESSFUL = -300;
     public static final int CONNECTION_DENIED = -301;
     public static final int WAIT_FOR_PLAYERS_LIST = -302;
+    public static final int WAIT_FOR_NEW_CALLING_RANK = -303;
 
     public static final int PING = -400;
 }
