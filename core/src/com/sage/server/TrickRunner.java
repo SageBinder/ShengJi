@@ -26,8 +26,15 @@ class TrickRunner {
         int playOrderIndex = 0;
         // Outer loop iterates through all the players and gets their play
         do {
-            players.sendIntToAll(ServerCodes.WAIT_FOR_TURN_PLAYER);
-            players.sendIntToAll(turnPlayer.getPlayerNum());
+            for(Player p : players) {
+                if(p != turnPlayer) {
+                    p.sendInt(ServerCodes.WAIT_FOR_TURN_PLAYER, false);
+                    p.sendInt(turnPlayer.getPlayerNum(), false);
+                }
+            }
+            players.flushAllWriteBuffers();
+//            players.sendIntToAll(ServerCodes.WAIT_FOR_TURN_PLAYER);
+//            players.sendIntToAll(turnPlayer.getPlayerNum());
 
             // Inner loop repeats if player submitted an invalid play, and breaks once player submits valid play
             while(true) {

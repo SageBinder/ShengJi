@@ -114,9 +114,7 @@ class Player {
     }
 
     void sendCards(ServerCardList cardList, boolean flushWriteBuffer) {
-        for(ServerCard c : cardList) {
-            sendInt(c.cardNum(), false);
-        }
+        cardList.forEach(c -> sendInt(c.cardNum(), false));
         if(flushWriteBuffer) flushWriteBuffer();
     }
 

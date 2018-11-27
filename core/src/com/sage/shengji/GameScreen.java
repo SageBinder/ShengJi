@@ -239,7 +239,8 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
                 viewport.getWorldHeight() - gameState.collectedPointCards.cardHeight - (viewport.getWorldWidth() * 0.027f));
         gameState.collectedPointCards.render(batch, viewport);
 
-        font.draw(batch, "Collectors have " + gameState.numCollectedPoints + " points",
+        font.draw(batch,
+                "Collectors have " + gameState.numCollectedPoints + "/" + gameState.numPointsNeeded + " points",
                 gameState.collectedPointCards.pos.x + (gameState.collectedPointCards.regionWidth * 0.5f),
                 gameState.collectedPointCards.pos.y + (font.getXHeight() * 2) + gameState.collectedPointCards.cardHeight,
                 0, Align.center, false);
@@ -508,7 +509,7 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
         }
 
         if(borderedCard == null) {
-            borderedCard = currentBorderGroup.get(direction < 0 ? currentBorderGroup.size() - 1 : 0);
+            borderedCard = currentBorderGroup.get(direction < 0 ? 0 : currentBorderGroup.size() - 1);
         } else {
             borderedCard.resetBothBorderColors();
 

@@ -42,6 +42,7 @@ class GameState {
 
     final RenderableCardGroup collectedPointCards = new RenderableCardGroup();
     int numCollectedPoints = 0;
+    int numPointsNeeded = 0;
 
     final RenderableCardList kitty = new RenderableCardList();
 
@@ -147,6 +148,9 @@ class GameState {
                     break;
                 case INVALID_FRIEND_CARDS:
                     invalidFriendCards();
+                    break;
+                case WAIT_FOR_NUM_POINTS_NEEDED:
+                    waitForNumPointsNeeded();
                     break;
 
                 // Game codes:
@@ -544,6 +548,12 @@ class GameState {
             // I don't think this will need to be implemented but I don't want to delete it
         }
 
+        private void waitForNumPointsNeeded() {
+            numPointsNeeded = client.readInt();
+
+            disableButton();
+        }
+
         // GAME CODES:
 
         private void trickStart() {
@@ -665,7 +675,9 @@ class GameState {
                     : "(no team)";
             message = lastTrickWinner.getName(17) + " " + teamString + " won the trick!";
 
-            players.forEach(RenderablePlayer::clearPlay);
+            // We don't want to clear plays here because we want the plays to be visible for a second after trick winner
+            // is decided. Clear plays in trickStart() instead.
+//            players.forEach(RenderablePlayer::clearPlay);
 
             disableButton();
         }

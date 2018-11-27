@@ -24,6 +24,7 @@ public class ServerCodes { // Codes are negative so as to not clash with the sen
     public static final int SEND_FRIEND_CARDS = -106;
     public static final int WAIT_FOR_FRIEND_CARDS = -107;
     public static final int INVALID_FRIEND_CARDS = -108;
+    public static final int WAIT_FOR_NUM_POINTS_NEEDED = -109;
 
     // Game codes:
     public static final int TRICK_START = -200;

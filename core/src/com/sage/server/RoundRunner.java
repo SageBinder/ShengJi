@@ -25,6 +25,22 @@ class RoundRunner {
     }
 
     void playNewRound() {
+        int numFullDecks;
+        Deck deck;
+        ServerCardList kitty;
+        ServerCardList friendCards;
+
+        final int numPointsNeeded;
+        final int totalAvailablePoints;
+        ServerCardList pointCardsCollected;
+
+        Player caller;
+        Player trickWinner;
+        Play winningPlay;
+
+        trumpSuit = null;
+        trumpRank = null;
+
         // Reorganize "seating"
         Collections.shuffle(players);
         players.sendIntToAll(ServerCodes.ROUND_START);
@@ -32,26 +48,27 @@ class RoundRunner {
         players.sendIntToAll(players.size());
         players.forEach(p -> players.sendIntToAll(p.getPlayerNum()));
 
-        trumpSuit = null;
-        trumpRank = null;
+        numFullDecks = Math.max(players.size() / 2, 1);
+        deck = new Deck(numFullDecks);
+        numPointsNeeded = 40 * numFullDecks;
 
-        int numFullDecks = Math.max(players.size() / 2, 1);
-        Deck deck = new Deck(numFullDecks);
-        ServerCardList kitty = getKittyFromDeck(deck);
-        ServerCardList friendCards;
+        players.sendIntToAll(ServerCodes.WAIT_FOR_NUM_POINTS_NEEDED, false);
+        players.sendIntToAll(numPointsNeeded, false);
+        players.flushAllWriteBuffers();
 
-        final int numPointsNeeded = 40 * numFullDecks;
-        final int totalAvailablePoints = deck.getTotalPoints();
-        ServerCardList pointCardsCollected = new ServerCardList();
+        kitty = getKittyFromDeck(deck);
+
+        totalAvailablePoints = deck.getTotalPoints();
+        pointCardsCollected = new ServerCardList();
 
         dealDeckToPlayers(deck);
-        Player caller = establishCaller(kitty);
+        caller = establishCaller(kitty);
 
         kitty = sendKittyToCallerAndGetNewKitty(kitty, caller);
         friendCards = getFriendCardsAndSendToOtherPlayers(caller);
 
-        Player trickWinner = caller;
-        Play winningPlay = null;
+        trickWinner = caller;
+        winningPlay = null;
         while(players.get(0).getHand().size() > 0) {
             TrickRunner trickRunner = new TrickRunner(players, friendCards);
             TrickResult trickResult = trickRunner.startNewTrick(trickWinner);
@@ -206,18 +223,20 @@ class RoundRunner {
         ServerCardList friendCards = new ServerCardList();
         int numFriendCards = Math.max(((players.size() / 2) - 1), 0);
 
-        caller.sendInt(ServerCodes.SEND_FRIEND_CARDS);
-        caller.sendInt(numFriendCards);
-        for(int i = 0; i < numFriendCards; i++) {
-            friendCards.add(new ServerCard(caller.readInt()));
-        }
+        if(numFriendCards > 0) {
+            caller.sendInt(ServerCodes.SEND_FRIEND_CARDS);
+            caller.sendInt(numFriendCards);
+            for(int i = 0; i < numFriendCards; i++) {
+                friendCards.add(new ServerCard(caller.readInt()));
+            }
 
-        // Send friend cards to other players
-        for(Player p : players) {
-            if(p != caller) {
-                p.sendInt(ServerCodes.WAIT_FOR_FRIEND_CARDS);
-                p.sendInt(friendCards.size());
-                p.sendCards(friendCards);
+            // Send friend cards to other players
+            for(Player p : players) {
+                if(p != caller) {
+                    p.sendInt(ServerCodes.WAIT_FOR_FRIEND_CARDS);
+                    p.sendInt(friendCards.size());
+                    p.sendCards(friendCards);
+                }
             }
         }
 

@@ -8,7 +8,7 @@ import com.sage.server.ServerCodes;
 
 import java.io.*;
 
-import static com.sage.server.ServerCodes.CONNECTION_DENIED;
+import static com.sage.server.ServerCodes.*;
 
 class ShengJiClient extends Thread {
     private final int PORT;
@@ -97,6 +97,27 @@ class ShengJiClient extends Thread {
             synchronized(consumableServerCodeLock) {
                 consumableServerCode = serverCode;
             }
+
+            // We want to wait on after server codes to make the messages readable instead of updating instantly
+            long sleepLength = 0;
+            switch(serverCode) {
+                case WAIT_FOR_CALL_WINNER:
+                case WAIT_FOR_KITTY_CALL_WINNER:
+                case SUCCESSFUL_KITTY_CALL:
+                case WAIT_FOR_TRICK_WINNER:
+                case WAIT_FOR_ROUND_WINNERS:
+                    sleepLength = 2000;
+                    break;
+
+                case INVALID_PLAY:
+                    sleepLength = 1000;
+                    break;
+            }
+            try {
+                if(sleepLength > 0) Thread.sleep(sleepLength);
+            } catch(InterruptedException e) {
+                e.printStackTrace();
+            }
         }
 
         if(socket.isConnected()) {
@@ -133,7 +154,7 @@ class ShengJiClient extends Thread {
     }
 
     void sendInt(int i, boolean flushWriteBuffer) {
-        Gdx.app.log("Shengji.ShengJiClient.sendInt()", "SENDING INT: " + i);
+//        Gdx.app.log("Shengji.ShengJiClient.sendInt()", "SENDING INT: " + i);
         try {
             writer.write(Integer.toString(i) + "\n");
             if(flushWriteBuffer) writer.flush();
@@ -144,7 +165,7 @@ class ShengJiClient extends Thread {
     }
 
     void sendString(String s, boolean flushWriteBuffer) {
-        Gdx.app.log("Shengji.ShengJiClient.sendString()", "SENDING STRING: \"" + s + "\"");
+//        Gdx.app.log("Shengji.ShengJiClient.sendString()", "SENDING STRING: \"" + s + "\"");
         try {
             writer.write(s + "\n");
             if(flushWriteBuffer) writer.flush();
