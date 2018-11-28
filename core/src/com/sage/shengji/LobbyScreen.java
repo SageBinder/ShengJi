@@ -7,6 +7,7 @@ import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
@@ -20,11 +21,15 @@ import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.sage.Rank;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.URL;
+
 public class LobbyScreen extends InputAdapter implements Screen {
     private ScreenManager game;
     private GameState gameState;
     private ShengJiClient client;
-
     private Viewport viewport;
 
     private int maxNameChars = 38;
@@ -38,6 +43,9 @@ public class LobbyScreen extends InputAdapter implements Screen {
 
     private Stage stage;
     private Table table;
+
+    private Label gameIPLabel;
+    private Label.LabelStyle gameIPLabelStyle = skin.get(Label.LabelStyle.class);
 
     private Table playersListTable;
     private Label.LabelStyle playerLabelStyle = skin.get(Label.LabelStyle.class);
@@ -61,16 +69,37 @@ public class LobbyScreen extends InputAdapter implements Screen {
 
         fontGenerator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/OpenSans-Bold.ttf"));
         var playerLabelFontParameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
-
         playerLabelFontParameter.size = (int)(Math.max(Gdx.graphics.getHeight(), Gdx.graphics.getWidth()) * textProportion);
         playerLabelFontParameter.hinting = FreeTypeFontGenerator.Hinting.Medium;
         playerLabelFontParameter.minFilter = Texture.TextureFilter.Linear;
         playerLabelFontParameter.magFilter = Texture.TextureFilter.Linear;
         playerLabelFontParameter.incremental = true;
 
-        playerLabelStyle.font = fontGenerator.generateFont(playerLabelFontParameter);
-        startGameButtonStyle.font = fontGenerator.generateFont(playerLabelFontParameter);
-        messageLabelStyle.font = fontGenerator.generateFont(playerLabelFontParameter);
+        BitmapFont font = fontGenerator.generateFont(playerLabelFontParameter);
+        font.getData().markupEnabled = true;
+        gameIPLabelStyle.font = font;
+        playerLabelStyle.font = font;
+        startGameButtonStyle.font = font;
+        messageLabelStyle.font = font;
+
+        if(client.serverIP.equals("127.0.0.1")) {
+            gameIPLabel = new Label("Fetching game IP...", gameIPLabelStyle);
+            new Thread(() -> {
+                try {
+                    String thisMachineIP =
+                            new BufferedReader(
+                                    new InputStreamReader(
+                                            new URL("https://api.ipify.org").openStream())).readLine();
+                    gameIPLabel.setText("Connected to [CYAN]" + thisMachineIP + "[]:[ORANGE]" + client.port);
+                } catch(IOException e) {
+                    gameIPLabel.setText("Error: could not determine game IP");
+                }
+            }).start();
+        } else {
+            gameIPLabel = new Label("Connected to [CYAN]" + client.serverIP + "[]:[ORANGE]" + client.port, gameIPLabelStyle);
+        }
+
+        playersListTable = new Table();
 
         startGameButton = new TextButton("Start game!", startGameButtonStyle);
         startGameButton.addListener(new ChangeListener() {
@@ -84,15 +113,13 @@ public class LobbyScreen extends InputAdapter implements Screen {
 
         messageLabel = new Label("", messageLabelStyle);
 
-        stage = new Stage();
-        stage.setViewport(viewport);
-
         table = new Table();
         table.setFillParent(true);
 
-        playersListTable = new Table();
+//        table.debugAll();
+        table.row();
+        table.add(gameIPLabel).padBottom(viewportHeight * 0.1f);
 
-        table.debugAll();
         table.row();
         table.add(playersListTable).align(Align.center).maxWidth(viewportWidth / 2f);
 
@@ -102,6 +129,7 @@ public class LobbyScreen extends InputAdapter implements Screen {
         table.row().padTop(viewportHeight * 0.05f);
         table.add(messageLabel).padBottom(viewportHeight * 0.01f);
 
+        stage = new Stage(viewport);
         stage.addActor(table);
 
         multiplexer = new InputMultiplexer();

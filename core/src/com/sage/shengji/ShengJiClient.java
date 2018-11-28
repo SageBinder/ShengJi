@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Net;
 import com.badlogic.gdx.net.NetJavaSocketImpl;
 import com.badlogic.gdx.net.SocketHints;
+import com.badlogic.gdx.utils.GdxRuntimeException;
 import com.sage.server.ServerCodes;
 
 import java.io.*;
@@ -11,8 +12,8 @@ import java.io.*;
 import static com.sage.server.ServerCodes.*;
 
 class ShengJiClient extends Thread {
-    private final int PORT;
-    private final String serverIP;
+    final int port;
+    final String serverIP;
     private final ScreenManager game;
     private final String playerName;
 
@@ -28,15 +29,15 @@ class ShengJiClient extends Thread {
     private volatile Integer consumableServerCode = null;
     private final Object consumableServerCodeLock = new Object();
 
-    ShengJiClient(int PORT, String serverIP, String playerName, ScreenManager game) {
-        this.PORT = PORT;
+    ShengJiClient(int port, String serverIP, String playerName, ScreenManager game) throws GdxRuntimeException {
+        this.port = port;
         this.serverIP = serverIP;
         this.game = game;
         this.playerName = playerName;
 
         SocketHints socketHints = new SocketHints();
         socketHints.socketTimeout = 0;
-        socket = new NetJavaSocketImpl(Net.Protocol.TCP, serverIP, PORT, socketHints);
+        socket = new NetJavaSocketImpl(Net.Protocol.TCP, serverIP, port, socketHints);
         writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
         reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 

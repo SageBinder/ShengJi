@@ -20,166 +20,170 @@ import java.io.InputStreamReader;
 import java.net.URL;
 
 class CreateGameScreen extends InputAdapter implements Screen {
-    private static int MAX_PLAYERS = 10;
-    private static int MAX_NAME_LENGTH = 24;
+    static final int MAX_PLAYERS = 10;
+    static final int MAX_NAME_LENGTH = 17;
 
+    private ScreenManager game;
+    private Viewport viewport;
     private float textProportion = 1f / 7f;
     private float viewportScale = 5f;
 
-    private ScreenManager game;
     private Stage stage;
+
     private Table table;
-    private Viewport viewport;
+    private Label IPLabel;
+    private TextField portField;
+    private TextField numPlayersField;
+    private TextField nameField;
+    private Label errorLabel;
+    private TextButton createGameButton;
+
+    private FreeTypeFontGenerator generator;
 
     CreateGameScreen(ScreenManager game) {
         this.game = game;
 
-        float viewportHeight = Gdx.graphics.getHeight() * viewportScale;
-        float viewportWidth = Gdx.graphics.getWidth() * viewportScale;
-
         int textSize = (int)(Math.max(Gdx.graphics.getHeight(), Gdx.graphics.getWidth()) * textProportion);
 
-        stage = new Stage();
+        float viewportHeight = Gdx.graphics.getHeight() * viewportScale;
+        float viewportWidth = Gdx.graphics.getWidth() * viewportScale;
         viewport = new ExtendViewport(viewportWidth, viewportHeight);
-        stage.setViewport(viewport);
 
-        var generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/OpenSans-Bold.ttf"));
+        generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/OpenSans-Bold.ttf"));
         var parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
         parameter.size = textSize;
         parameter.hinting = FreeTypeFontGenerator.Hinting.Medium;
         parameter.minFilter = Texture.TextureFilter.Linear;
         parameter.magFilter = Texture.TextureFilter.Linear;
+        parameter.incremental = true;
 
         BitmapFont font = generator.generateFont(parameter);
-        generator.dispose();
         Skin skin = new Skin(Gdx.files.internal("uiskin.json"));
-        TextField.TextFieldStyle textFieldStyle = skin.get(TextField.TextFieldStyle.class);
+
+        var textFieldStyle = skin.get(TextField.TextFieldStyle.class);
         textFieldStyle.font = font;
 
-        Label.LabelStyle labelStyle = skin.get(Label.LabelStyle.class);
+        var labelStyle = skin.get(Label.LabelStyle.class);
         labelStyle.font = font;
+        labelStyle.font.getData().markupEnabled = true;
 
-        TextButton.TextButtonStyle textButtonStyle = skin.get(TextButton.TextButtonStyle.class);
+        var textButtonStyle = skin.get(TextButton.TextButtonStyle.class);
         textButtonStyle.font = font;
 
-        TextField portField = new TextField("", textFieldStyle);
+        IPLabel = new Label("Determining your IP...", labelStyle);
+        IPLabel.setAlignment(Align.center);
+        new Thread(() -> {
+            try {
+                String thisMachineIP =
+                        new BufferedReader(
+                                new InputStreamReader(
+                                        new URL("https://api.ipify.org").openStream())).readLine();
+                IPLabel.setText("Your IP: [CYAN]" + thisMachineIP);
+            } catch(IOException e) {
+                IPLabel.setText("[YELLOW]Error: could not determine your IP");
+            }
+        }).start();
+
+        nameField = new TextField("", textFieldStyle);
+        nameField.setMessageText("Enter name");
+        nameField.setDisabled(false);
+
+        portField = new TextField("", textFieldStyle);
         portField.setTextFieldFilter(new TextField.TextFieldFilter.DigitsOnlyFilter());
         portField.setMessageText("Enter port");
         portField.setDisabled(false);
 
-        TextField numPlayersField = new TextField("", textFieldStyle);
+        numPlayersField = new TextField("", textFieldStyle);
         numPlayersField.setMessageText("# of players");
         numPlayersField.setTextFieldFilter(new TextField.TextFieldFilter.DigitsOnlyFilter());
         numPlayersField.setDisabled(false);
 
-        TextField nameField = new TextField("", textFieldStyle);
-        nameField.setMessageText("Enter name");
-        nameField.setDisabled(false);
-
-        Label errorLabel = new Label("", labelStyle);
+        errorLabel = new Label("", labelStyle);
         errorLabel.setColor(new Color(1f, 0.2f, 0.2f, 1));
 
-        TextButton createGameButton = new TextButton("Start game", textButtonStyle);
+        createGameButton = new TextButton("Start game", textButtonStyle);
         createGameButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 int port, numPlayers;
                 String name = nameField.getText();
 
+                if(name.length() > MAX_NAME_LENGTH) {
+                    errorLabel.setText("Error: your name cannot be more than "
+                            + MAX_NAME_LENGTH + " letters");
+                    return;
+                } else if(name.length() == 0) {
+                    errorLabel.setText("Error: no name");
+                    return;
+                }
+
                 try {
                     port = Integer.parseInt(portField.getText());
-                    if(port > 65535) {
-                        errorLabel.setText("Error: Port number too large");
+                    if(port < 1 || port > 65535) {
+                        errorLabel.setText("Error: port number must be between 1 and 65535");
                         return;
-                    } else if(port < 1) {
-                        errorLabel.setText("Error: Port number cannot be negative or zero");
+                    } else if(port == 1023) { // 1023 is a reserved port
+                        errorLabel.setText("Error: port 1023 is reserved");
                         return;
                     }
                 } catch(NumberFormatException e) {
-                    errorLabel.setText("Error: Invalid port");
+                    errorLabel.setText("Error: invalid port");
                     return;
                 }
 
                 try {
                     numPlayers = Integer.parseInt(numPlayersField.getText());
                     if(numPlayers > MAX_PLAYERS) {
-                        errorLabel.setText("Error: Too many players");
+                        errorLabel.setText("Error: cannot have more than " + MAX_PLAYERS + " players");
                         return;
                     } else if(numPlayers < 2) {
-                        errorLabel.setText("Error: The number of players must be greater than 1");
+                        errorLabel.setText("Error: the max number of players must be greater than 1");
                         return;
                     }
                 } catch(NumberFormatException e) {
-                    errorLabel.setText("Error: Invalid number of players");
-                    return;
-                }
-
-                if(name.length() > MAX_NAME_LENGTH) {
-                    errorLabel.setText("Error: Name too long");
-                    return;
-                } else if(name.length() == 0) {
-                    errorLabel.setText("Error: No name");
+                    errorLabel.setText("Error: invalid number of players");
                     return;
                 }
 
                 game.startGameServer(port, numPlayers);
-                game.joinGame(port, "127.0.0.1", name);
+                game.joinGame("127.0.0.1", port, name);
             }
         });
 
+        table = new Table().top().padTop(viewportHeight * 0.2f);
+        table.setFillParent(true);
+//        table.setWidth(viewportWidth / 2);
 
-        Label IPLabel = new Label("Determining your IP...", labelStyle);
-        IPLabel.setAlignment(Align.center);
-        Thread ipGetterThread = new Thread(()->{
-            try {
-                String thisMachineIP = new BufferedReader(new InputStreamReader(new URL("https://api.ipify.org").openStream())).readLine();
-                IPLabel.setText("Your IP: " + thisMachineIP);
-            } catch(IOException e) {
-                IPLabel.setText("Error: could not determine your IP");
-            }
-        });
+        table.row().padBottom(viewportHeight / 30f);
+        table.add(new Label("Create game", labelStyle)).align(Align.center).colspan(2);
 
-        table = new Table();
-//        table.setDebug(true);
+        table.row();
         table.add(IPLabel).align(Align.center).colspan(2);
-        ipGetterThread.start();
 
-        table.row().fillX().padTop(viewportHeight / 35f);
-//        HorizontalGroup portGroup = new HorizontalGroup();
-//        Label portLabel = new Label("Port: ", labelStyle);
-//        portLabel.setFillParent(true);
-//        portGroup.addActor(portLabel);
-//        portField.setFillParent(true);
-//        portGroup.addActor(portField);
-        table.add(new Label("Port: ", labelStyle));
-        table.add(portField).prefWidth(viewportWidth / 5);
+        table.row().padTop(viewportHeight / 35f).fillX();
+        table.add(new Label("Enter name: ", labelStyle));
+        table.add(nameField).prefWidth(viewportWidth * 0.3f);
+
+        table.row().fillX().padTop(viewportHeight / 120f);
+        table.add(new Label("Enter port: ", labelStyle));
+        table.add(portField);
 
         table.row().padTop(viewportHeight / 120f).fillX();
-        table.add(new Label("Number of players: ", labelStyle));
+        table.add(new Label("Enter max players: ", labelStyle));
         table.add(numPlayersField);
-
-        table.row().padTop(viewportHeight / 120f).fillX();
-        table.add(new Label("Your name: ", labelStyle));
-        table.add(nameField);
 
         table.row().padTop(viewportHeight / 120f).fillX();
         table.add(errorLabel).colspan(2);
 
-        table.row().padTop(viewportHeight / 20f).fillX();
+        table.row().padTop(viewportHeight * 0.05f).fillX();
         table.add(createGameButton).colspan(2);
 
-        table.top().padTop(viewportHeight / 5f);
-
-        table.setFillParent(true);
-
-        table.setWidth(viewportWidth / 2);
-
+        stage = new Stage(viewport);
         stage.addActor(table);
 
         var inputMultiplexer = new InputMultiplexer();
-        inputMultiplexer.addProcessor(stage);
         inputMultiplexer.addProcessor(this);
-
+        inputMultiplexer.addProcessor(stage);
         Gdx.input.setInputProcessor(inputMultiplexer);
     }
 
@@ -200,9 +204,7 @@ class CreateGameScreen extends InputAdapter implements Screen {
     @Override
     public void resize(int width, int height) {
         viewport.update(width, height, true);
-        table.setFillParent(true);
         table.invalidate();
-
     }
 
     @Override
@@ -231,6 +233,6 @@ class CreateGameScreen extends InputAdapter implements Screen {
 
     @Override
     public void dispose() {
-
+        generator.dispose();
     }
 }

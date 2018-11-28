@@ -27,7 +27,6 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
     private ScreenManager game;
     private GameState gameState;
     private ShengJiClient client;
-
     private ExtendViewport viewport;
 
     private SpriteBatch batch = new SpriteBatch();
@@ -76,16 +75,11 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
 
         font = fontGenerator.generateFont(uiFontParameter); // DON'T dispose of fontGenerator until screen is disposed
 
-        uiStage = new Stage(viewport, batch);
-
         sendButton = new TextButton("I AM A BUTTON", textButtonStyle);
         sendButton.setProgrammaticChangeEvents(true);
         messageLabel = new Label("I AM NOT A BUTTON", labelStyle);
 
         Table table = new Table();
-//        table.setFillParent(true);
-//        table.top().padTop(viewportHeight * (0.30f));
-//        table.debug();
 
         table.row();
         table.add(messageLabel);
@@ -93,12 +87,12 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
         table.row().padTop(viewportHeight / 30f);
         table.add(sendButton);
 
+        uiStage = new Stage(viewport, batch);
         uiStage.addActor(table);
 
         multiplexer = new InputMultiplexer();
-        multiplexer.addProcessor(uiStage);
         multiplexer.addProcessor(this);
-
+        multiplexer.addProcessor(uiStage);
         Gdx.input.setInputProcessor(multiplexer);
     }
 

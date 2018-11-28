@@ -22,13 +22,15 @@ public class ScreenManager extends Game {
 
 //        showPlaygroundScreen();
 
-        try {
-            startGameServer(25565, 10);
-            joinGame(25565, "127.0.0.1", "Testy McTestFace");
-        } catch(GdxRuntimeException e) {
-            e.printStackTrace();
-            joinGame(25565, "127.0.0.1", "Testy McTestFace");
-        }
+        showStartScreen();
+
+//        try {
+//            startGameServer(25565, 10);
+//            joinGame(25565, "127.0.0.1", "Testy McTestFace");
+//        } catch(GdxRuntimeException e) {
+//            e.printStackTrace();
+//            joinGame(25565, "127.0.0.1", "Testy McTestFace");
+//        }
     }
 
     void showStartScreen() {
@@ -48,7 +50,7 @@ public class ScreenManager extends Game {
     }
 
     void showOptionsScreen() {
-        setScreen(new JoinGameScreen(this));
+        setScreen(new OptionsScreen(this));
     }
 
     void showLobbyScreen(GameState gameState) {
@@ -59,7 +61,7 @@ public class ScreenManager extends Game {
         setScreen(new GameScreen(this, gameState, client));
     }
 
-    void joinGame(int port, String serverIP, String name) {
+    void joinGame(String serverIP, int port, String name) throws GdxRuntimeException {
         gameState = new GameState(this);
         this.client = new ShengJiClient(port, serverIP, name, this);
         client.start();
