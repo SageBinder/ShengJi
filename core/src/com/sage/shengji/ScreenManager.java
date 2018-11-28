@@ -1,9 +1,11 @@
 package com.sage.shengji;
 
+import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.utils.GdxRuntimeException;
+import com.dosse.upnp.UPnP;
 import com.sage.server.ShengJiServer;
 
 public class ScreenManager extends Game {
@@ -17,20 +19,8 @@ public class ScreenManager extends Game {
     @Override
     public void create() {
         Gdx.graphics.setTitle("ShengJi");
-
-//        showCreateGameScreen();
-
-//        showPlaygroundScreen();
-
+        Gdx.app.setLogLevel(Application.LOG_NONE);
         showStartScreen();
-
-//        try {
-//            startGameServer(25565, 10);
-//            joinGame(25565, "127.0.0.1", "Testy McTestFace");
-//        } catch(GdxRuntimeException e) {
-//            e.printStackTrace();
-//            joinGame(25565, "127.0.0.1", "Testy McTestFace");
-//        }
     }
 
     void showStartScreen() {
@@ -70,6 +60,11 @@ public class ScreenManager extends Game {
     }
 
     void startGameServer(int port, int numPlayers) {
+        if(server != null) {
+            UPnP.closePortTCP(server.port);
+        }
+
+        UPnP.openPortTCP(port);
         this.server = new ShengJiServer(port, numPlayers);
         server.start();
     }
@@ -78,6 +73,9 @@ public class ScreenManager extends Game {
     public void dispose() {
         if(client != null) {
             client.quit();
+        }
+        if(server != null) {
+            UPnP.closePortTCP(server.port);
         }
     }
 }

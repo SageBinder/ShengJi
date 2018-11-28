@@ -12,6 +12,8 @@ import com.sage.shengji.ClientCodes;
 import java.io.*;
 
 public class ShengJiServer extends Thread {
+    public final int port;
+
     private int maxPlayers;
 
     private final Object playersLock = new Object();
@@ -31,6 +33,7 @@ public class ShengJiServer extends Thread {
     private NetJavaServerSocketImpl serverSocket;
 
     public ShengJiServer(int port, int numPlayers) throws GdxRuntimeException {
+        this.port = port;
         maxPlayers = numPlayers;
 
         ServerSocketHints serverSocketHints = new ServerSocketHints();
@@ -185,7 +188,6 @@ public class ShengJiServer extends Thread {
                 e.printStackTrace();
             }
 
-//            Gdx.app.log("Server.managePlayerCommunication", "in while");
             synchronized(playersLock) {
                 boolean flushBuffers = false;
                 for(Player p : players) {
@@ -217,8 +219,6 @@ public class ShengJiServer extends Thread {
                                 }
                                 break;
                             case ClientCodes.PING:
-//                                                            Gdx.app.log("Server.managePlayerCommunication",
-//                                                                    "RECEIVED PING FROM PLAYER " + p.getPlayerNum() + " (" + p.getName() + ")");
                                 break;
                         }
                     }

@@ -39,7 +39,7 @@ public class LobbyScreen extends InputAdapter implements Screen {
 
     private Skin skin = new Skin(Gdx.files.internal("uiskin.json"));
 
-    InputMultiplexer multiplexer;
+    private InputMultiplexer multiplexer;
 
     private Stage stage;
     private Table table;
@@ -116,7 +116,6 @@ public class LobbyScreen extends InputAdapter implements Screen {
         table = new Table();
         table.setFillParent(true);
 
-//        table.debugAll();
         table.row();
         table.add(gameIPLabel).padBottom(viewportHeight * 0.1f);
 

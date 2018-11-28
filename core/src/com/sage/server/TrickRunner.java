@@ -33,8 +33,6 @@ class TrickRunner {
                 }
             }
             players.flushAllWriteBuffers();
-//            players.sendIntToAll(ServerCodes.WAIT_FOR_TURN_PLAYER);
-//            players.sendIntToAll(turnPlayer.getPlayerNum());
 
             // Inner loop repeats if player submitted an invalid play, and breaks once player submits valid play
             while(true) {
@@ -45,16 +43,16 @@ class TrickRunner {
                     turnPlayer.sendInt(ServerCodes.SEND_BASE_PLAY);
                     numCardsInPlay = turnPlayer.readInt();
                     if(numCardsInPlay == 0) {
-                        turnPlayer.sendInt(ServerCodes.INVALID_PLAY);
                         turnPlayer.clearReadBuffer();
+                        turnPlayer.sendInt(ServerCodes.INVALID_PLAY);
                         continue;
                     }
                 } else {
                     turnPlayer.sendInt(ServerCodes.SEND_PLAY);
                     turnPlayer.sendInt(numCardsInPlay);
                     if(numCardsInPlay != basePlay.size()) {
-                        turnPlayer.sendInt(ServerCodes.INVALID_PLAY);
                         turnPlayer.clearReadBuffer();
+                        turnPlayer.sendInt(ServerCodes.INVALID_PLAY);
                         continue;
                     }
                 }

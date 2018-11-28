@@ -58,12 +58,6 @@ class PlaygroundScreen extends InputAdapter implements Screen {
 	    float sin = (MathUtils.sin(currentCardSinInput * MathUtils.PI2 * speed) / 2f) + 0.5f;
 	    currentCard.setX((viewport.getWorldWidth() / 10f) + (sin * viewport.getWorldWidth() * 0.7f));
 
-//	    if(Gdx.input.isKeyPressed(Input.Keys.A)) {
-//            for(int i = 0; i < 10; i++) {
-//                hand.add(new RenderableCard());
-//            }
-//        }
-
         Gdx.gl.glClearColor(ScreenManager.BACKGROUND_COLOR.r, ScreenManager.BACKGROUND_COLOR.g, ScreenManager.BACKGROUND_COLOR.b, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
@@ -151,7 +145,6 @@ class PlaygroundScreen extends InputAdapter implements Screen {
                 .setPosition(currentCard.getPosition())
                 .setHeight(currentCard.getHeight());
 
-//	    hand.add(new RenderableCard()); // For the lols
         return false;
     }
 

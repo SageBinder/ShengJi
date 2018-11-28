@@ -80,11 +80,6 @@ class GameState {
             this.client = client;
             lastServerCode = serverCode;
 
-//            if(!client.readyToRead()) {
-//                Gdx.app.log("Shengji.GameStateUpdater.update", "client read not ready. This usually shouldn't happen. " +
-//                        "Last server code: " + serverCode);
-//            }
-
             switch(serverCode) {
                 // Calling codes:
                 case INVALID_CALL:

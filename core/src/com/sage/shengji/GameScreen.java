@@ -664,8 +664,6 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
             gameState.thisPlayer.getPlay().addAll(selectedCards);
             gameState.hand.removeAll(selectedCards);
             selectedCards.forEach(c -> client.sendInt(c.cardNum()));
-
-//            disableButton();
         }
     };
 
@@ -699,7 +697,6 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
                     c.setFaceBackgroundColor(c.faceUnselectedBackgroundColor);
                 });
             }
-//            disableButton();
         }
     };
 

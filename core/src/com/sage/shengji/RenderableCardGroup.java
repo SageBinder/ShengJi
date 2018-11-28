@@ -19,7 +19,7 @@ class RenderableCardGroup extends RenderableCardList {
     // prefDivisionProportion is relative to card width. Maybe should be relative to viewport width instead?
 
     private ShapeRenderer debugRenderer = new ShapeRenderer();
-    private boolean inDebugMode = true;
+    private boolean inDebugMode = false;
 
     RenderableCardGroup() {
         super();
@@ -72,8 +72,6 @@ class RenderableCardGroup extends RenderableCardList {
 
         debugRenderer.line(viewport.getWorldWidth() / 2, 0, viewport.getWorldWidth() / 2, viewport.getWorldHeight());
         debugRenderer.line(0, viewport.getWorldHeight() / 2, viewport.getWorldWidth(), viewport.getWorldHeight() / 2);
-
-//            debugRenderer.circle(viewport.getWorldWidth() / 2, viewport.getWorldHeight() / 2, viewport.getWorldHeight() / 50);
 
         debugRenderer.end();
     }

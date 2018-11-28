@@ -152,7 +152,6 @@ class CreateGameScreen extends InputAdapter implements Screen {
 
         table = new Table().top().padTop(viewportHeight * 0.2f);
         table.setFillParent(true);
-//        table.setWidth(viewportWidth / 2);
 
         table.row().padBottom(viewportHeight / 30f);
         table.add(new Label("Create game", labelStyle)).align(Align.center).colspan(2);

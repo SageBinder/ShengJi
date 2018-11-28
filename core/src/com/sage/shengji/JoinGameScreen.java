@@ -109,7 +109,6 @@ class JoinGameScreen extends InputAdapter implements Screen  {
                     return;
                 }
 
-                errorLabel.setText("[WHITE]Connecting...");
                 try {
                     game.joinGame(ipField.getText(), port, nameField.getText());
                 } catch(GdxRuntimeException e) {

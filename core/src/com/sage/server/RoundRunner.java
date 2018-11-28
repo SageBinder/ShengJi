@@ -24,6 +24,7 @@ class RoundRunner {
         this.players = players;
     }
 
+    // TODO: clear player read buffers when appropriate (to reduce repeated messages/ignore errors)
     void playNewRound() {
         int numFullDecks;
         Deck deck;
