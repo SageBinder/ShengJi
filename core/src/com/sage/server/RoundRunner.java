@@ -70,8 +70,8 @@ class RoundRunner {
 
         trickWinner = caller;
         winningPlay = null;
+        TrickRunner trickRunner = new TrickRunner(players, friendCards);
         while(players.get(0).getHand().size() > 0) {
-            TrickRunner trickRunner = new TrickRunner(players, friendCards);
             TrickResult trickResult = trickRunner.startNewTrick(trickWinner);
 
             trickWinner = trickResult.getWinner();
@@ -106,7 +106,8 @@ class RoundRunner {
         } catch(AssertionError e) {
             e.printStackTrace();
             players.sendIntToAll(ServerCodes.ROUND_OVER);
-            Gdx.app.log("Server.RoundRunner.playNewRound()", "assert winningPlay != null FAILED. SHOULDN'T FUCKING HAPPEN.\n" +
+            Gdx.app.log("Server.RoundRunner.playNewRound()",
+                    "assert winningPlay != null FAILED. SHOULDN'T FUCKING HAPPEN.\n" +
                     "Returning now because at this point it's way fucked.");
             return;
         }
@@ -248,13 +249,17 @@ class RoundRunner {
     // DEAR GOD I'M SO SORRY
 
     private final Object lock = new Object();
-    volatile private int highestNumCallCards = 0; // This variable is the highest number of cards used to call (single, double, or triple)
+    volatile private int highestNumCallCards; // This variable is the highest number of cards used to call (single, double, or triple)
     volatile private Player caller;
-    volatile private int numNoCallPlayers = 0;
+    volatile private int numNoCallPlayers;
 
     // TODO: Make sure synchronization in this method is correct
     // TODO: Try going single-threaded and continuously loop over every player and check if they're ready to read?
     private Player establishCaller(ServerCardList kitty) {
+        caller = null;
+        highestNumCallCards = 0;
+        numNoCallPlayers = 0;
+
         ArrayList<Thread> threads = new ArrayList<>();
 
         // Creates a thread for each player listening for their call.

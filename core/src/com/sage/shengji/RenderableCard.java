@@ -36,34 +36,34 @@ class RenderableCard extends AbstractRenderableCard<RenderableCard> {
 
     RenderableCard(Rank rank, Suit suit) {
         super(rank, suit);
-        if(isJoker()) {
-            setFaceBorderColor(defaultTrumpFaceBorderColor);
-            setBackBorderColor(defaultTrumpBackBorderColor);
-        }
+//        if(isJoker()) {
+//            setFaceBorderColor(defaultTrumpFaceBorderColor);
+//            setBackBorderColor(defaultTrumpBackBorderColor);
+//        }
     }
 
     RenderableCard(Card c) {
         super(c);
-        if(isJoker()) {
-            setFaceBorderColor(defaultTrumpFaceBorderColor);
-            setBackBorderColor(defaultTrumpBackBorderColor);
-        }
+//        if(isJoker()) {
+//            setFaceBorderColor(defaultTrumpFaceBorderColor);
+//            setBackBorderColor(defaultTrumpBackBorderColor);
+//        }
     }
 
     RenderableCard(int cardNum) {
         super(cardNum);
-        if(isJoker()) {
-            setFaceBorderColor(defaultTrumpFaceBorderColor);
-            setBackBorderColor(defaultTrumpBackBorderColor);
-        }
+//        if(isJoker()) {
+//            setFaceBorderColor(defaultTrumpFaceBorderColor);
+//            setBackBorderColor(defaultTrumpBackBorderColor);
+//        }
     }
 
     RenderableCard() {
         super();
-        if(isJoker()) {
-            setFaceBorderColor(defaultTrumpFaceBorderColor);
-            setBackBorderColor(defaultTrumpBackBorderColor);
-        }
+//        if(isJoker()) {
+//            setFaceBorderColor(defaultTrumpFaceBorderColor);
+//            setBackBorderColor(defaultTrumpBackBorderColor);
+//        }
     }
 
     static void setSpriteFolder(FileHandle newSpriteFolder) {

@@ -1,9 +1,6 @@
 package com.sage.shengji;
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.InputAdapter;
-import com.badlogic.gdx.InputMultiplexer;
-import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.*;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
@@ -141,6 +138,10 @@ public class LobbyScreen extends InputAdapter implements Screen {
 
     @Override
     public void show() {
+        if(gameState.roundStarted) {
+            game.showGameScreen(gameState);
+        }
+
         Gdx.input.setInputProcessor(multiplexer);
     }
 
@@ -193,7 +194,7 @@ public class LobbyScreen extends InputAdapter implements Screen {
                     p.setCallRank(nextRank.rankNum);
                     client.sendString(ClientCodes.WAIT_FOR_NEW_CALLING_RANK
                             + "\n" + p.getPlayerNum()
-                            + "\n" + nextRank.rankNum, false);
+                            + "\n" + nextRank.rankNum);
                     updateUIFromGameState();
                 }
             });
@@ -207,7 +208,7 @@ public class LobbyScreen extends InputAdapter implements Screen {
                     p.setCallRank(previousRank.rankNum);
                     client.sendString(ClientCodes.WAIT_FOR_NEW_CALLING_RANK
                             + "\n" + p.getPlayerNum()
-                            + "\n" + previousRank.rankNum, false);
+                            + "\n" + previousRank.rankNum);
                     updateUIFromGameState();
                 }
             });
@@ -235,7 +236,7 @@ public class LobbyScreen extends InputAdapter implements Screen {
                 playerNameLabel.setColor(hostColor);
                 callRankLabel.setColor(hostColor);
             }
-            if(p.getPlayerNum() == gameState.thisPlayer.getPlayerNum()) {
+            if(gameState.thisPlayer != null && p.getPlayerNum() == gameState.thisPlayer.getPlayerNum()) {
                 playerNumLabel.getText().insert(0, "->");
             }
         });
@@ -258,6 +259,15 @@ public class LobbyScreen extends InputAdapter implements Screen {
         playersListTable.invalidate();
         table.invalidate();
         updateUIFromGameState();
+    }
+
+    @Override
+    public boolean keyDown(int keyCode) {
+        if(keyCode == Input.Keys.ESCAPE) {
+            client.quit();
+            game.showStartScreen();
+        }
+        return true;
     }
 
     @Override

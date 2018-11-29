@@ -61,10 +61,10 @@ public class ScreenManager extends Game {
 
     void startGameServer(int port, int numPlayers) {
         if(server != null) {
-            UPnP.closePortTCP(server.port);
+            new Thread(() -> UPnP.closePortTCP(server.port)).start();
         }
+        new Thread(() -> UPnP.openPortTCP(port)).start();
 
-        UPnP.openPortTCP(port);
         this.server = new ShengJiServer(port, numPlayers);
         server.start();
     }

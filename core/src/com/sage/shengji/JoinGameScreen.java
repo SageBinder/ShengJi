@@ -45,8 +45,8 @@ class JoinGameScreen extends InputAdapter implements Screen  {
         textFieldParameter.size = textSize;
         textFieldParameter.incremental = true;
 
-        BitmapFont font = generator.generateFont(textFieldParameter);
         Skin skin = new Skin(Gdx.files.internal("uiskin.json"));
+        BitmapFont font = generator.generateFont(textFieldParameter);
         font.getData().markupEnabled = true;
 
         var textFieldStyle = skin.get(TextField.TextFieldStyle.class);

@@ -57,12 +57,6 @@ public class CardList<T extends Card> extends ArrayList<T> {
     }
 
     public int getTotalPoints() {
-        int sum = 0;
-
-        for(Card c : this) {
-            sum += c.getPointValue();
-        }
-
-        return sum;
+        return stream().mapToInt(Card::getPointValue).sum();
     }
 }

@@ -46,13 +46,10 @@ class ShengJiClient extends Thread {
 
     @Override
     public void run() {
-        Gdx.app.log("Client run", "Beginning");
         if(readInt() == CONNECTION_DENIED) {
             return;
         }
-        Gdx.app.log("Client run", "JOIN_SUCCESSFUL");
         sendString(playerName);
-        Gdx.app.log("Client run", "sent name");
 
         while(socket.isConnected() && !quit) {
             while(!waitingForServerCode) {
@@ -106,7 +103,6 @@ class ShengJiClient extends Thread {
                 case WAIT_FOR_KITTY_CALL_WINNER:
                 case SUCCESSFUL_KITTY_CALL:
                 case WAIT_FOR_TRICK_WINNER:
-                case WAIT_FOR_ROUND_WINNERS:
                     sleepLength = 2000;
                     break;
 
@@ -117,7 +113,7 @@ class ShengJiClient extends Thread {
             try {
                 if(sleepLength > 0) Thread.sleep(sleepLength);
             } catch(InterruptedException e) {
-                e.printStackTrace();
+//                e.printStackTrace();
             }
         }
 
@@ -128,11 +124,9 @@ class ShengJiClient extends Thread {
 
     Integer readInt() {
         try {
-            Integer i = Integer.parseInt(readLine());
-//            Gdx.app.log("Shengji.ShengJiClient.readInt()", "READ INT: " + i);
-            return i;
+            return Integer.parseInt(readLine());
         } catch(NumberFormatException e) {
-            e.printStackTrace();
+//            e.printStackTrace();
             return null;
         }
     }
@@ -140,38 +134,34 @@ class ShengJiClient extends Thread {
     String readLine() {
         try {
             String line = reader.readLine();
-//            Gdx.app.log("Shengji.ShengJiClient.readLine()", "READ STRING: " + line);
             if(line == null) {
                 socket.dispose();
                 return null;
             }
-
             return line;
         } catch(IOException e) {
-            e.printStackTrace();
+//            e.printStackTrace();
             quit();
             return null;
         }
     }
 
     void sendInt(int i, boolean flushWriteBuffer) {
-//        Gdx.app.log("Shengji.ShengJiClient.sendInt()", "SENDING INT: " + i);
         try {
             writer.write(Integer.toString(i) + "\n");
             if(flushWriteBuffer) writer.flush();
         } catch(IOException e) {
-            e.printStackTrace();
+//            e.printStackTrace();
             quit();
         }
     }
 
     void sendString(String s, boolean flushWriteBuffer) {
-//        Gdx.app.log("Shengji.ShengJiClient.sendString()", "SENDING STRING: \"" + s + "\"");
         try {
             writer.write(s + "\n");
             if(flushWriteBuffer) writer.flush();
         } catch(IOException e) {
-            e.printStackTrace();
+//            e.printStackTrace();
             quit();
         }
     }

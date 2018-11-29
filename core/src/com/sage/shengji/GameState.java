@@ -19,6 +19,10 @@ class GameState {
 
     private GameStateUpdater updater = new GameStateUpdater();
 
+    // Light Goldenrod
+    static final Color winningPlayColor = new Color(238f / 255f, 221f / 255f, 130f / 255f, 1f);
+
+    // Oof I dunno how I ended up with static variables for trumpSuit and trumpRank but I guess we're doing that now
     static Suit trumpSuit = null;
     static Rank trumpRank = null;
     RenderableCard trumpCard = null;
@@ -44,7 +48,7 @@ class GameState {
     int numCollectedPoints = 0;
     int numPointsNeeded = 0;
 
-    final RenderableCardList kitty = new RenderableCardList();
+    final RenderableCardGroup kitty = new RenderableCardGroup();
 
     final RenderableCardGroup friendCards = new RenderableCardGroup();
 
@@ -55,13 +59,13 @@ class GameState {
 
     int lastServerCode = ServerCodes.ROUND_OVER;
 
+    boolean roundStarted = false;
+
     GameState(ScreenManager game) {
         this.game = game;
     }
 
     boolean update(ShengJiClient client) {
-        numCollectedPoints = collectedPointCards.getTotalPoints();
-
         Integer serverCode = client.consumeServerCode();
         if(serverCode != null) {
             Gdx.app.log("Shengji.GameState.update()", "Updating with server code " + serverCode);
@@ -247,7 +251,8 @@ class GameState {
             thisPlayer.setHost(thisPlayer == host);
             thisPlayer.setThisPlayer(true);
 
-            disableButton();
+            // Don't disable button so that it stays enabled if a player disconnects during ROUND_OVER phase
+//            disableButton();
         }
 
         private void waitForNewCallingRank() {
@@ -354,7 +359,7 @@ class GameState {
             players.forEach(RenderablePlayer::clearPlay);
             players.forEach(p -> p.getPoints().clear());
 
-            message = "Call winner: " + callWinner.getName(17);
+            message = "Call winner: [GREEN]" + callWinner.getName(17);
 
             disableButton();
         }
@@ -372,7 +377,7 @@ class GameState {
             Rank callWinnerCallRank = Rank.fromInt(client.readInt());
             RenderableCard callCard = new RenderableCard(client.readInt());
 
-            message = "Call winner: " + callWinner.getName(17);
+            message = "Call winner: [GREEN]" + callWinner.getName(17);
 
             callWinner.setTeam(Team.KEEPERS);
             callWinner.clearPlay();
@@ -414,7 +419,7 @@ class GameState {
 
         private void roundStart() {
             noOneCalledCard = null;
-            trumpCard = null;
+            resetTrump();
 
             roundWinners.clear();
             kitty.clear();
@@ -427,6 +432,7 @@ class GameState {
                 p.clearPlay();
             });
 
+            numCardsInBasePlay = 0;
             numCollectedPoints = 0;
 
             turnPlayer = null;
@@ -436,9 +442,9 @@ class GameState {
             message = "";
             buttonText = "";
 
-            resetTrump();
-
             disableButton();
+
+            roundStarted = true;
             game.showGameScreen(GameState.this);
         }
 
@@ -468,10 +474,12 @@ class GameState {
         // [[cardNum]\n for each card in kitty]
         private void waitForKitty() {
             int kittySize = client.readInt();
+            kitty.clear();
             for(int i = 0; i < kittySize; i++) {
-                kitty.add(new RenderableCard(client.readInt()));
+                var kittyCardNum = client.readInt();
+                kitty.add(new RenderableCard(kittyCardNum));
+                hand.add(new RenderableCard(kittyCardNum));
             }
-            hand.addAll(kitty);
 
             disableButton();
         }
@@ -583,7 +591,10 @@ class GameState {
         private void waitForTurnPlayer() {
             turnPlayer = players.getPlayerFromPlayerNum(client.readInt());
 
-            message = "Waiting on " + turnPlayer.getName(17);
+            message = "Waiting on "
+                    + (turnPlayer.getTeam() == Team.COLLECTORS ? "[ORANGE]"
+                    : turnPlayer.getTeam() == Team.KEEPERS ? "[GREEN]"
+                    : "[WHITE]") + turnPlayer.getName(17);
 
             disableButton();
         }
@@ -643,6 +654,7 @@ class GameState {
             // I don't think newTeam will ever be NO_TEAM but I'm not sure
             if(newTeam == Team.COLLECTORS) {
                 collectedPointCards.addAll(p.getPoints());
+                numCollectedPoints = collectedPointCards.getTotalPoints();
                 p.clearPoints();
             } else if(newTeam == Team.KEEPERS) {
                 p.clearPoints();
@@ -658,17 +670,15 @@ class GameState {
                 }
             });
             leadingPlayer.getPlay()
-                    .forEach(c -> c.setFaceBackgroundColor(
-                            new Color(238f / 255f, 221f / 255f, 130f / 255f, 1f))); // Light Goldenrod
+                    .forEach(c -> c.setFaceBackgroundColor(winningPlayColor));
         }
 
         private void waitForTrickWinner() {
             lastTrickWinner = players.getPlayerFromPlayerNum(client.readInt());
-
-            String teamString = lastTrickWinner.getTeam() == Team.COLLECTORS ? "(collector)"
-                    : lastTrickWinner.getTeam() == Team.KEEPERS ? "(keeper)"
-                    : "(no team)";
-            message = lastTrickWinner.getName(17) + " " + teamString + " won the trick!";
+            message =
+                    (lastTrickWinner.getTeam() == Team.COLLECTORS ? "[ORANGE]"
+                    : lastTrickWinner.getTeam() == Team.KEEPERS ? "[GREEN]"
+                    : "[WHITE]") + lastTrickWinner.getName(17) + "[] won the trick!";
 
             // We don't want to clear plays here because we want the plays to be visible for a second after trick winner
             // is decided. Clear plays in trickStart() instead.
@@ -689,6 +699,7 @@ class GameState {
                 lastTrickWinner.addToPoints(pointCards);
             } else if(lastTrickWinner.getTeam() == Team.COLLECTORS) {
                 collectedPointCards.addAll(pointCards);
+                numCollectedPoints = collectedPointCards.getTotalPoints();
             }
 
             disableButton();
@@ -702,7 +713,7 @@ class GameState {
                 roundWinners.add(players.getPlayerFromPlayerNum(client.readInt()));
             }
 
-            message = "Winners: \n";
+            message = (roundWinners.get(0).getTeam() == Team.COLLECTORS ? "[ORANGE]" : "[GREEN]") + "Winners: \n";
             roundWinners.forEach(p -> message += roundWinners.lastIndexOf(p) != roundWinners.size() - 1
                     ? p.getName(17) + ", \n"
                     : p.getName(17));
@@ -730,6 +741,7 @@ class GameState {
 
         private void waitForRoundEndKitty() {
             int kittySize = client.readInt();
+            kitty.clear();
             for(int i = 0; i < kittySize; i++) {
                 kitty.add(new RenderableCard(client.readInt()));
             }
@@ -738,7 +750,8 @@ class GameState {
         }
 
         private void roundOver() {
-            game.showLobbyScreen(GameState.this);
+            roundStarted = false;
+            buttonText = "Return to lobby";
         }
 
         // Whether the button is enabled should be stored as boolean and the event listener should be stored as well,

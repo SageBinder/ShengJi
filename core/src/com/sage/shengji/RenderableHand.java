@@ -36,7 +36,9 @@ class RenderableHand extends RenderableCardGroup {
     @Override
     void render(SpriteBatch batch, Viewport viewport, boolean renderBase) {
         super.cardHeight = viewport.getWorldHeight() * cardHeightProportion;
-        super.regionWidth = viewport.getWorldWidth() - (viewport.getWorldWidth() * leftPaddingProportion) - (viewport.getWorldWidth() * rightPaddingProportion);
+        super.regionWidth = viewport.getWorldWidth()
+                - (viewport.getWorldWidth() * leftPaddingProportion)
+                - (viewport.getWorldWidth() * rightPaddingProportion);
         super.pos.x = viewport.getWorldWidth() * leftPaddingProportion;
         super.pos.y = viewport.getWorldHeight() * bottomPaddingProportion;
 

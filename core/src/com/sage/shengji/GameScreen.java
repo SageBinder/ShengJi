@@ -65,27 +65,28 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
         uiFontParameter.incremental = true; // <- I don't know what this line does, but the font gets all fucky without it
         uiFontParameter.size = (int)(Math.max(Gdx.graphics.getHeight(), Gdx.graphics.getWidth()) * textProportion);
 
-        var skin = new Skin(Gdx.files.internal("uiskin.json"));
+        Skin skin = new Skin(Gdx.files.internal("uiskin.json"));
+        font = fontGenerator.generateFont(uiFontParameter);
+        font.getData().markupEnabled = true;
 
         var textButtonStyle = skin.get(TextButton.TextButtonStyle.class);
-        textButtonStyle.font = fontGenerator.generateFont(uiFontParameter);
+        textButtonStyle.font = font;
 
         var labelStyle = skin.get(Label.LabelStyle.class);
-        labelStyle.font = fontGenerator.generateFont(uiFontParameter);
-
-        font = fontGenerator.generateFont(uiFontParameter); // DON'T dispose of fontGenerator until screen is disposed
+        labelStyle.font = font;
 
         sendButton = new TextButton("I AM A BUTTON", textButtonStyle);
         sendButton.setProgrammaticChangeEvents(true);
+
         messageLabel = new Label("I AM NOT A BUTTON", labelStyle);
 
         Table table = new Table();
 
+        table.row().padBottom(viewportHeight / 120f);
+        table.add(sendButton);
+
         table.row();
         table.add(messageLabel);
-
-        table.row().padTop(viewportHeight / 30f);
-        table.add(sendButton);
 
         uiStage = new Stage(viewport, batch);
         uiStage.addActor(table);
@@ -119,14 +120,14 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
                 Input.Keys.LEFT,
                 Input.Keys.RIGHT,
                 Input.Keys.UP,
-                Input.Keys.DOWN);
+                Input.Keys.DOWN,
+                Input.Keys.SPACE);
 
         Gdx.gl.glClearColor(ScreenManager.BACKGROUND_COLOR.r, ScreenManager.BACKGROUND_COLOR.g, ScreenManager.BACKGROUND_COLOR.b, ScreenManager.BACKGROUND_COLOR.a);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         batch.begin();
         batch.setProjectionMatrix(viewport.getCamera().combined);
-
         switch(gameState.lastServerCode) {
             case INVALID_CALL:
             case UNSUCCESSFUL_CALL:
@@ -146,7 +147,7 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
 
             case SEND_KITTY:
             case INVALID_KITTY:
-                gameState.kitty.render(batch, viewport);
+                renderKitty();
                 break;
 
             case SEND_FRIEND_CARDS:
@@ -159,19 +160,25 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
             case SEND_PLAY:
                 break;
 
+            case ROUND_OVER:
+                renderRoundEndKitty();
+                break;
+
             default:
                 disableButton();
+                break;
         }
-
+        renderTrumpCard();
         renderPointCards();
         renderFriendCards();
-        renderTrumpCard();
-        gameState.players.render(batch, viewport);
-        gameState.hand.render(batch, viewport);
-
         batch.end();
 
         uiStage.draw();
+
+        batch.begin();
+        gameState.players.render(batch, viewport);
+        gameState.hand.render(batch, viewport);
+        batch.end();
     }
 
     private void updateGameState() {
@@ -213,8 +220,13 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
                     enableButton(sendPlayChangeListener);
                     break;
 
+                case ROUND_OVER:
+                    enableButton(backToLobbyChangeListener);
+                    break;
+
                 default:
                     disableButton();
+                    break;
             }
 
             if(gameState.lastServerCode != SEND_FRIEND_CARDS) {
@@ -260,6 +272,26 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
         }
     }
 
+    private void renderKitty() {
+        gameState.kitty.cardHeight =
+                gameState.thisPlayer.getPlay().cardHeight;
+
+        gameState.kitty.regionWidth =
+                (RenderableCard.WIDTH_TO_HEIGHT_RATIO * gameState.kitty.cardHeight) * 4;
+
+        gameState.kitty.setPosition(
+                gameState.kitty.regionWidth * 0.1f,
+                (viewport.getWorldHeight() * 0.4f) - (gameState.kitty.cardHeight * 0.75f));
+
+        gameState.kitty.prefDivisionProportion = 1.5f;
+
+        font.draw(batch, "Original kitty:",
+                gameState.kitty.pos.x + (gameState.kitty.regionWidth * 0.5f),
+                gameState.kitty.pos.y + (font.getXHeight() * 2) + gameState.kitty.cardHeight,
+                0, Align.center, false);
+        gameState.kitty.render(batch, viewport); // !! kitty should be rendered AFTER font.draw !!
+    }
+
     private void renderChoosableFriendCards() {
         gameState.friendCards.cardHeight =
                 gameState.thisPlayer.getPlay().cardHeight;
@@ -302,6 +334,19 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
                     0, Align.center, false);
             font.setColor(Color.WHITE);
         }
+    }
+
+    private void renderRoundEndKitty() {
+        gameState.kitty.cardHeight = gameState.hand.cardHeight;
+        gameState.kitty.regionWidth = gameState.hand.regionWidth;
+        gameState.kitty.pos.set(gameState.hand.pos.x, gameState.hand.pos.y + (gameState.hand.cardHeight * 0.25f));
+        gameState.kitty.prefDivisionProportion = 1.5f;
+
+        font.draw(batch, "Final kitty:",
+                gameState.kitty.pos.x + (gameState.kitty.regionWidth * 0.5f),
+                gameState.kitty.pos.y + (font.getXHeight() * 4) + gameState.kitty.cardHeight,
+                0, Align.center, false);
+        gameState.kitty.render(batch, viewport);
     }
 
     private void checkDelayAndPress(float delta, int... keyCodes) {
@@ -361,6 +406,19 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
                     c.setDisplayPosition(
                             c.getX() + (c.getWidth() * 0.5f) - (c.getDisplayWidth() * 0.5f),
                             c.getY() - c.getDisplayHeight());
+                    return false;
+                }
+            }
+        }
+
+        if(gameState.lastServerCode == ROUND_OVER
+                || gameState.lastServerCode == SEND_KITTY
+                || gameState.lastServerCode == INVALID_KITTY) {
+            for(ListIterator<RenderableCard> i = gameState.kitty.reverseListIterator(); i.hasPrevious();) {
+                final RenderableCard c = i.previous();
+                if(c.displayRectContainsPoint(moveCoordinates) || c.baseRectContainsPoint(moveCoordinates)) {
+                    highlightCard(c);
+                    c.setDisplayHeight(gameState.hand.cardHeight);
                     return false;
                 }
             }
@@ -471,8 +529,6 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
             return false;
         }
 
-        int direction;
-
         if(gameState.lastServerCode == SEND_FRIEND_CARDS
                 && (keyCode == Input.Keys.UP || keyCode == Input.Keys.DOWN)) {
             scrolled(keyCode == Input.Keys.UP ? -1 : 1);
@@ -492,6 +548,7 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
             return false;
         }
 
+        int direction;
         if(keyCode == Input.Keys.RIGHT || keyCode == Input.Keys.LEFT) {
             direction = keyCode == Input.Keys.RIGHT ? 1 : -1;
         } else {
@@ -694,7 +751,7 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
             if(isBasePlay) {
                 gameState.thisPlayer.getPlay().forEach(c -> {
                     c.faceUnselectedBackgroundColor.set(Color.LIGHT_GRAY);
-                    c.setFaceBackgroundColor(c.faceUnselectedBackgroundColor);
+                    c.setFaceBackgroundColor(GameState.winningPlayColor);
                 });
             }
         }
@@ -715,6 +772,13 @@ public class GameScreen extends InputAdapter implements Screen, InputProcessor {
         @Override
         public void changed(ChangeEvent event, Actor actor) {
             gameState.friendCards.forEach(c -> client.sendInt(c.cardNum()));
+        }
+    };
+
+    private final ChangeListener backToLobbyChangeListener = new ChangeListener() {
+        @Override
+        public void changed(ChangeEvent event, Actor actor) {
+            game.showLobbyScreen(gameState);
         }
     };
 }

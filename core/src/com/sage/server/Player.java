@@ -41,7 +41,7 @@ class Player {
         try {
             return bufferedReader.ready();
         } catch(IOException e) {
-            e.printStackTrace();
+//            e.printStackTrace();
             s.dispose();
             return false;
         }
@@ -56,7 +56,7 @@ class Player {
             }
             return i;
         } catch(IOException e) {
-            e.printStackTrace();
+//            e.printStackTrace();
             s.dispose();
             return -1;
         }
@@ -64,11 +64,9 @@ class Player {
 
     Integer readInt() {
         try {
-            Integer i = Integer.parseInt(readLine()); // readLine() will return null if player has disconnected
-//            Gdx.app.log("Server.Player.readInt()", "READ INT: " + i);
-            return i;
+            return Integer.parseInt(readLine()); // readLine() will return null if player has disconnected
         } catch(NumberFormatException e) {
-            e.printStackTrace();
+//            e.printStackTrace();
             return null;
         }
     }
@@ -76,14 +74,12 @@ class Player {
     String readLine() {
         try {
             String line = bufferedReader.readLine();
-//            Gdx.app.log("Server.Player.readLine()", "READ STRING: " + line);
             if(line == null) {
                 s.dispose();
             }
-
             return line;
         } catch(IOException e) {
-            e.printStackTrace();
+//            e.printStackTrace();
             s.dispose();
             return null;
         }
@@ -91,24 +87,22 @@ class Player {
 
     void sendString(String string, boolean flushWriteBuffer) {
         try {
-//            Gdx.app.log("Server.Player.sendString()", "SENDING STRING: " + string);
             bufferedWriter.write(string);
             bufferedWriter.write("\n");
             if(flushWriteBuffer) bufferedWriter.flush();
         } catch(IOException e) {
-            e.printStackTrace();
+//            e.printStackTrace();
             s.dispose();
         }
     }
 
     void sendInt(int i, boolean flushWriteBuffer) {
         try {
-//            Gdx.app.log("Server.Player.sendInt()", "SENDING INT: " + i);
             bufferedWriter.write(Integer.toString(i));
             bufferedWriter.write("\n");
             if(flushWriteBuffer) bufferedWriter.flush();
         } catch(IOException e) {
-            e.printStackTrace();
+//            e.printStackTrace();
             s.dispose();
         }
     }
