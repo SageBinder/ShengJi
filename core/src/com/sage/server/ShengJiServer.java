@@ -52,21 +52,34 @@ public class ShengJiServer extends Thread {
         while(!endGame) {
             // Once roundStarted is set to true, all three threads should exit
             Thread manageNewConnectionsThread = new Thread(manageNewConnections);
-            Thread manageDisconnectionsThread = new Thread(manageDisconnections);
+            Thread pingPlayersThread = new Thread(pingPlayers);
             Thread managePlayerCommunicationsThread = new Thread(managePlayerCommunication);
             manageNewConnectionsThread.start();
-            manageDisconnectionsThread.start();
+            pingPlayersThread.start();
             managePlayerCommunicationsThread.start();
             try {
-                manageDisconnectionsThread.join();
+                pingPlayersThread.join();
                 managePlayerCommunicationsThread.join();
             } catch(InterruptedException e) {
                 e.printStackTrace();
             }
 
             synchronized(playersLock) {
-                roundRunner.setPlayers(players);
-                roundRunner.playNewRound();
+                try {
+                    roundRunner.playNewRound();
+                } catch(PlayerDisconnectedException e) {
+                    Gdx.app.log("Server.run()",
+                            "A player disconnected during round, " +
+                                    "removing disconnected players and sending PLAYER_DISCONNECTED_DURING_ROUND to all");
+                    removeDisconnectedPlayers(false);
+                    try {
+                        players.sendIntToAll(ServerCodes.PLAYER_DISCONNECTED_DURING_ROUND, false);
+                    } catch(PlayerDisconnectedException e1) {
+                        removeDisconnectedPlayers(false);
+                    } finally {
+                        sendPlayersToAll(true);
+                    }
+                }
                 players.forEach(Player::resetForNewRound);
             }
 
@@ -152,7 +165,7 @@ public class ShengJiServer extends Thread {
     };
 
     // If any player socket is not connected, remove that player from players and compress player nums
-    private Runnable manageDisconnections = () -> {
+    private Runnable pingPlayers = () -> {
         while(!roundStarted) {
             try {
                 Thread.sleep(1000);
@@ -160,17 +173,12 @@ public class ShengJiServer extends Thread {
                 e.printStackTrace();
             }
 
-            Gdx.app.log("Server.manageDisconnections", "in while");
             synchronized(playersLock) {
-                players.forEach(p -> p.sendInt(ServerCodes.PING));
-
-                if(players.removeIf(p -> !p.socketIsConnected())) {
-                    // "Compress" player nums ([0, 1, 2, 4, 5] -> [0, 1, 2, 3, 4])
-                    for(Player p : players) {
-                        p.setPlayerNum(players.indexOf(p));
-                    }
-
-                    sendPlayersToAll(); // If any players were removed, resend to players list
+                Gdx.app.log("Server.pingPlayers", "Pinging all players");
+                try {
+                    players.sendIntToAll(ServerCodes.PING);
+                } catch(PlayerDisconnectedException e) {
+                    removeDisconnectedPlayers(true);
                 }
             }
         }
@@ -190,41 +198,68 @@ public class ShengJiServer extends Thread {
 
             synchronized(playersLock) {
                 boolean flushBuffers = false;
+                boolean anyPlayersDisconnected = false;
                 for(Player p : players) {
-                    for(int i = 0; p.readyToRead() && i < maxReadsPerPlayer; i++) {
-                        Integer clientCode = p.readInt();
-                        switch(clientCode) {
-                            case ClientCodes.START_ROUND:
-                                if(p == host) {
-                                    this.roundStarted = true;
-                                    return;
-                                }
-                                break;
-                            case ClientCodes.WAIT_FOR_NEW_CALLING_RANK:
-                                Gdx.app.log("Server.managePlayerCommunication",
-                                        "WAIT_FOR_NEW_CALLING_RANK code received from player " + p);
-                                if(p == host) {
-                                    int playerNum = p.readInt();
-                                    int callRank = p.readInt();
-                                    players.getPlayerFromPlayerNum(playerNum).setCallRank(Rank.fromInt(callRank));
+                    try {
+                        thisPlayerReadLoop:
+                        for(int i = 0; p.readyToRead() && i < maxReadsPerPlayer; i++) {
+                            Integer clientCode = p.readInt();
+                            switch(clientCode) {
+                                case ClientCodes.START_ROUND:
+                                    if(p == host) {
+                                        this.roundStarted = true;
+                                        return;
+                                    }
+                                    break;
+                                case ClientCodes.WAIT_FOR_NEW_CALLING_RANK:
+                                    Gdx.app.log("Server.managePlayerCommunication",
+                                            "WAIT_FOR_NEW_CALLING_RANK code received from player " + p);
+                                    if(p == host) {
+                                        int playerNum = p.readInt();
+                                        int callRank = p.readInt();
+                                        var player = players.getPlayerFromPlayerNum(playerNum);
 
-                                    players.forEach(p1 -> {
-                                        if(p1 != host) {
-                                            p1.sendInt(ServerCodes.WAIT_FOR_NEW_CALLING_RANK, false);
-                                            p1.sendInt(playerNum, false);
-                                            p1.sendInt(callRank, false);
+                                        try {
+                                            assert player != null;
+                                            player.setCallRank(Rank.fromInt(callRank));
+                                        } catch(AssertionError | IllegalArgumentException e) {
+                                            try {
+                                                p.clearReadBuffer();
+                                            } catch(PlayerDisconnectedException e1) {
+                                                removeDisconnectedPlayers(true);
+                                            }
+                                            break thisPlayerReadLoop;
                                         }
-                                    });
-                                    flushBuffers = true;
-                                }
-                                break;
-                            case ClientCodes.PING:
-                                break;
+
+                                        players.forEach(p1 -> {
+                                            if(p1 != host) {
+                                                p1.sendInt(ServerCodes.WAIT_FOR_NEW_CALLING_RANK, false);
+                                                p1.sendInt(playerNum, false);
+                                                p1.sendInt(callRank, false);
+                                            }
+                                        });
+                                        flushBuffers = true;
+                                    } else {
+                                        p.clearReadBuffer();
+                                    }
+                                    break;
+                                case ClientCodes.PING:
+                                    break;
+                            }
                         }
+                    } catch(PlayerDisconnectedException e) {
+                        anyPlayersDisconnected = true;
                     }
                 }
+                if(anyPlayersDisconnected) {
+                    removeDisconnectedPlayers(true);
+                }
                 if(flushBuffers) {
-                    players.flushAllWriteBuffers();
+                    try {
+                        players.flushAllWriteBuffers();
+                    } catch(PlayerDisconnectedException e) {
+                        removeDisconnectedPlayers(true);
+                    }
                 }
             }
         }
@@ -232,25 +267,60 @@ public class ShengJiServer extends Thread {
 
     // This method is always called from inside a synchronized block so I don't think it needs another one inside but I don't fucking know
     private void sendPlayersToAll(boolean flushWriteBuffers) {
-        Gdx.app.log("Server run", "WAIT_FOR_PLAYERS_LIST write");
-        players.sendIntToAll(ServerCodes.WAIT_FOR_PLAYERS_LIST, false);
+        boolean anyPlayerDisconnected = false;
+        var playersMessage = new StringBuilder();
+        playersMessage
+                .append(ServerCodes.WAIT_FOR_PLAYERS_LIST).append("\n")
+                .append(players.size()).append("\n");
+        players.forEach(p -> playersMessage
+                .append(p.getPlayerNum()).append("\n")
+                .append(p.getName()).append("\n")
+                .append(p.getCallRank().rankNum).append("\n"));
+        playersMessage.append(host.getPlayerNum());
+        // Last append doesn't need "\n" because sendStringToAll automatically appends "\n" to the end
 
-        players.forEach(p -> {
-            p.sendInt(p.getPlayerNum(), false); // As playerNum can change, first send player p their playerNum
-            p.sendInt(players.size(), false);
-        });
+        try {
+            players.sendStringToAll(playersMessage.toString(), false);
+        } catch(PlayerDisconnectedException e) {
+            anyPlayerDisconnected = true;
+        }
+        for(Player p : players) {
+            try {
+                p.sendInt(p.getPlayerNum(), false);
+            } catch(PlayerDisconnectedException e) {
+                anyPlayerDisconnected = true;
+            }
+        }
 
-        players.forEach(p -> {
-            players.sendIntToAll(p.getPlayerNum(), false);
-            players.sendStringToAll(p.getName(), false);
-            players.sendIntToAll(p.getCallRank().rankNum, false);
-        });
-
-        players.sendIntToAll(host.getPlayerNum(), false);
-        if(flushWriteBuffers) players.flushAllWriteBuffers();
+        if(flushWriteBuffers) {
+            try {
+                players.flushAllWriteBuffers();
+            } catch(PlayerDisconnectedException e) {
+                anyPlayerDisconnected = true;
+            }
+        }
+        if(anyPlayerDisconnected) {
+            removeDisconnectedPlayers(true);
+        }
     }
 
-    private void sendPlayersToAll() {
+    private void sendPlayersToAll() throws PlayerDisconnectedException {
         sendPlayersToAll(true);
+    }
+
+    private void removeDisconnectedPlayers(boolean sendPlayersToAll) {
+        while(true) {
+            if(players.removeIf(p -> !p.socketIsConnected())) {
+                // "Compress" player nums ([0, 1, 2, 4, 5] -> [0, 1, 2, 3, 4])
+                players.forEach(p -> p.setPlayerNum(players.indexOf(p)));
+                try {
+                    Gdx.app.log("ShengJiServer.removeDisconnectedPlayers()", "Removed at least one player");
+                    if(sendPlayersToAll) sendPlayersToAll(); // If any players were removed, resend players list
+                    return;
+                } catch(PlayerDisconnectedException ignored) {}
+            } else {
+                return;
+            }
+        }
     }
 }

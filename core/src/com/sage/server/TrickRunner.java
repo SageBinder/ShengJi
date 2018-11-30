@@ -14,7 +14,7 @@ class TrickRunner {
         this.friendCards.addAll(friendCards);
     }
     
-    TrickResult startNewTrick(Player startingPlayer) {
+    TrickResult startNewTrick(Player startingPlayer) throws PlayerDisconnectedException {
         Player turnPlayer = startingPlayer;
         ArrayList<Play> plays = new ArrayList<>();
         Play basePlay = null;

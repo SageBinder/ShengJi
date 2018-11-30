@@ -6,7 +6,6 @@ import com.sage.Suit;
 import com.sage.Team;
 import com.sage.shengji.ClientCodes;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.stream.Collectors;
 
@@ -25,7 +24,7 @@ class RoundRunner {
     }
 
     // TODO: clear player read buffers when appropriate (to reduce repeated messages/ignore errors)
-    void playNewRound() {
+    void playNewRound() throws PlayerDisconnectedException {
         int numFullDecks;
         Deck deck;
         ServerCardList kitty;
@@ -247,101 +246,87 @@ class RoundRunner {
 
     // EVERYTHING BELOW THIS LINE IS AWFUL
     // DEAR GOD I'M SO SORRY
-
-    private final Object lock = new Object();
-    volatile private int highestNumCallCards; // This variable is the highest number of cards used to call (single, double, or triple)
-    volatile private Player caller;
-    volatile private int numNoCallPlayers;
-
-    // TODO: Make sure synchronization in this method is correct
-    // TODO: Try going single-threaded and continuously loop over every player and check if they're ready to read?
     private Player establishCaller(ServerCardList kitty) {
-        caller = null;
-        highestNumCallCards = 0;
-        numNoCallPlayers = 0;
+        Player caller = null;
+        PlayerList noCallPlayers = new PlayerList();
+        int highestNumCallCards = 0; // This variable is the highest number of cards used to call (single, double, or triple)
 
-        ArrayList<Thread> threads = new ArrayList<>();
+        float pingPeriod = 10; // getDeltaTime() doesn't seem to be returning seconds for some reason
+        float deltaSum = 0;
 
-        // Creates a thread for each player listening for their call.
-        for(Player p : players) {
-            Runnable r = () -> {
-                try {
-                    p.sendInt(ServerCodes.SEND_CALL);
-                    int callCardNum;
-                    int numCardsInCall;
-                    while(true) {
-                        Thread.sleep(100);
-                        if(numNoCallPlayers == players.size() - 1 && caller != null) {
-                            return;
+        players.sendIntToAll(ServerCodes.SEND_CALL);
+        callLoop:
+        while(true) {
+            deltaSum += Gdx.graphics.getDeltaTime();
+            if(deltaSum >= pingPeriod) {
+                deltaSum = 0;
+                players.sendIntToAll(ServerCodes.PING);
+            }
+//            try {
+//                Thread.sleep(10);
+//            } catch(InterruptedException e) {
+//                continue;
+//            }
+
+            if(noCallPlayers.containsAll(players)) {
+                break;
+            }
+            for(var p : players) {
+                if(noCallPlayers.contains(p)) {
+                    continue;
+                }
+                if(noCallPlayers.size() == players.size() - 1 && caller != null) {
+                    break callLoop;
+                }
+
+                int callCardNum;
+                int numCardsInCall;
+                if(p.readyToRead()) { // As a way to avoid the blocking call to readLine(),
+                    try {                   // check first if the bufferedReader has input available
+                        callCardNum = p.readInt();
+                        if(callCardNum == ClientCodes.NO_CALL) {
+                            p.sendInt(ServerCodes.NO_CALL);
+                            noCallPlayers.add(p);
+                            continue;
+                        } else if(callCardNum < 0) {
+                            p.sendInt(ServerCodes.SEND_CALL);
+                            continue;
                         }
-                        if(p.readyToRead()) { // As a way to avoid the blocking call to readLine(),
-                            try {                   // check first if the bufferedReader has input available
-                                callCardNum = p.readInt();
-                                if(callCardNum == ClientCodes.NO_CALL) {
-                                    p.sendInt(ServerCodes.NO_CALL);
-                                    synchronized(lock) {
-                                        numNoCallPlayers++;
-                                    }
-                                    return;
-                                } else if(callCardNum < 0) {
-                                    p.sendInt(ServerCodes.SEND_CALL);
-                                    continue;
-                                }
-                                numCardsInCall = p.readInt();
-                                if(numCardsInCall < 0) {
-                                    p.sendInt(ServerCodes.SEND_CALL);
-                                    continue;
-                                }
-                            } catch(NullPointerException | NumberFormatException e) {
-                                p.sendInt(ServerCodes.SEND_CALL);
-                                continue;
-                            }
-
-                            ServerCard callCard = new ServerCard(callCardNum);
-                            boolean isValidCall = p.isValidCall(callCard, numCardsInCall);
-                            if(isValidCall && numCardsInCall > highestNumCallCards) {
-                                synchronized(lock) {
-                                    highestNumCallCards = numCardsInCall;
-
-                                    caller = p;
-                                    caller.sendInt(ServerCodes.SUCCESSFUL_CALL);
-                                    caller.sendInt(callCardNum);
-                                    caller.sendInt(numCardsInCall);
-
-                                    trumpSuit = callCard.suit();
-                                    trumpRank = callCard.rank();
-
-                                    for(Player p1 : players) {
-                                        if(p1 != caller) {
-                                            p1.sendInt(ServerCodes.WAIT_FOR_NEW_WINNING_CALL);
-                                            p1.sendString(caller.getPlayerNum() + "\n" + callCardNum + "\n" + numCardsInCall);
-                                        }
-                                    }
-                                }
-                            } else if(isValidCall) {
-                                p.sendInt(ServerCodes.UNSUCCESSFUL_CALL);
-                            } else {
-                                p.sendInt(ServerCodes.INVALID_CALL);
-                            }
+                        numCardsInCall = p.readInt();
+                        if(numCardsInCall < 0) {
+                            p.sendInt(ServerCodes.SEND_CALL);
+                            continue;
                         }
+                    } catch(NullPointerException | NumberFormatException e) {
+                        p.sendInt(ServerCodes.SEND_CALL);
+                        continue;
                     }
-                } catch(InterruptedException e) {
-                    p.sendInt(ServerCodes.NO_CALL);
-                    synchronized(lock) {
-                        numNoCallPlayers++;
+
+                    ServerCard callCard = new ServerCard(callCardNum);
+                    boolean isValidCall = p.isValidCall(callCard, numCardsInCall);
+                    if(isValidCall && numCardsInCall > highestNumCallCards) {
+                        highestNumCallCards = numCardsInCall;
+
+                        caller = p;
+                        caller.sendInt(ServerCodes.SUCCESSFUL_CALL);
+                        caller.sendInt(callCardNum);
+                        caller.sendInt(numCardsInCall);
+
+                        trumpSuit = callCard.suit();
+                        trumpRank = callCard.rank();
+
+                        for(Player p1 : players) {
+                            if(p1 != caller) {
+                                p1.sendInt(ServerCodes.WAIT_FOR_NEW_WINNING_CALL);
+                                p1.sendString(caller.getPlayerNum() + "\n" + callCardNum + "\n" + numCardsInCall);
+                            }
+                        }
+                    } else if(isValidCall) {
+                        p.sendInt(ServerCodes.UNSUCCESSFUL_CALL);
+                    } else {
+                        p.sendInt(ServerCodes.INVALID_CALL);
                     }
                 }
-            };
-            Thread t = new Thread(r);
-            t.start();
-            threads.add(t);
-        }
-
-        for(Thread t : threads) {
-            try {
-                t.join();
-            } catch(InterruptedException e) {
-                e.printStackTrace();
             }
         }
 
@@ -358,8 +343,15 @@ class RoundRunner {
             }
             players.sendIntToAll(kittyCard.cardNum());
 
+            deltaSum = 0;
             kittyCallLoop:
             while(true) {
+                deltaSum += Gdx.graphics.getDeltaTime();
+                if(deltaSum >= pingPeriod) {
+                    deltaSum = 0;
+                    players.sendIntToAll(ServerCodes.PING);
+                }
+
                 for(Player p : players) {
                     if(p.readyToRead()) {
                         int callCardNum = p.readInt();
@@ -374,14 +366,14 @@ class RoundRunner {
                             trumpSuit = callCard.suit();
                             trumpRank = caller.getCallRank();
 
-                            players.forEach((p1) -> {
+                            for(var p1 : players) {
                                 if(p1 != caller) {
                                     p1.sendInt(ServerCodes.WAIT_FOR_KITTY_CALL_WINNER);
                                     p1.sendInt(p.getPlayerNum());
                                     p1.sendInt(p.getCallRank().rankNum);
                                     p1.sendInt(callCardNum);
                                 }
-                            });
+                            }
 
                             break kittyCallLoop;
                         } else {

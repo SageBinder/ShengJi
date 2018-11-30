@@ -6,6 +6,7 @@ import com.sage.Card;
 import com.sage.Rank;
 import com.sage.Suit;
 import com.sage.Team;
+import com.sage.server.PlayerDisconnectedException;
 import com.sage.server.ServerCodes;
 
 import java.util.Collection;
@@ -84,145 +85,155 @@ class GameState {
             this.client = client;
             lastServerCode = serverCode;
 
-            switch(serverCode) {
-                // Calling codes:
-                case INVALID_CALL:
-                    invalidCall();
-                    break;
-                case NO_CALL:
-                    noCall();
-                    break;
-                case UNSUCCESSFUL_CALL:
-                    unsuccessfulCall();
-                    break;
-                case SUCCESSFUL_CALL:
-                    successfulCall();
-                    break;
-                case SEND_CALL:
-                    sendCall();
-                    break;
-                case WAIT_FOR_NEW_WINNING_CALL:
-                    waitForNewWinningCall();
-                    break;
-                case WAIT_FOR_CALL_WINNER:
-                    waitForCallWinner();
-                    break;
-                case NO_ONE_CALLED:
-                    noOneCalled();
-                    break;
-                case WAIT_FOR_KITTY_CALL_WINNER:
-                    waitForKittyCallWinner();
-                    break;
-                case SUCCESSFUL_KITTY_CALL:
-                    successfulKittyCall();
-                    break;
-                case INVALID_KITTY_CALL:
-                    invalidKittyCall();
-                    break;
+            try {
+                switch(serverCode) {
+                    // Calling codes:
+                    case INVALID_CALL:
+                        invalidCall();
+                        break;
+                    case NO_CALL:
+                        noCall();
+                        break;
+                    case UNSUCCESSFUL_CALL:
+                        unsuccessfulCall();
+                        break;
+                    case SUCCESSFUL_CALL:
+                        successfulCall();
+                        break;
+                    case SEND_CALL:
+                        sendCall();
+                        break;
+                    case WAIT_FOR_NEW_WINNING_CALL:
+                        waitForNewWinningCall();
+                        break;
+                    case WAIT_FOR_CALL_WINNER:
+                        waitForCallWinner();
+                        break;
+                    case NO_ONE_CALLED:
+                        noOneCalled();
+                        break;
+                    case WAIT_FOR_KITTY_CALL_WINNER:
+                        waitForKittyCallWinner();
+                        break;
+                    case SUCCESSFUL_KITTY_CALL:
+                        successfulKittyCall();
+                        break;
+                    case INVALID_KITTY_CALL:
+                        invalidKittyCall();
+                        break;
 
-                // Game setup codes:
-                case ROUND_START:
-                    roundStart();
-                    break;
-                case WAIT_FOR_PLAYER_ORDER:
-                    waitForPlayerOrder();
-                    break;
-                case WAIT_FOR_KITTY:
-                    waitForKitty();
-                    break;
-                case WAIT_FOR_HAND:
-                    waitForHand();
-                    break;
-                case SEND_KITTY:
-                    sendKitty();
-                    break;
-                case INVALID_KITTY:
-                    invalidKitty();
-                    break;
-                case SEND_FRIEND_CARDS:
-                    sendFriendCards();
-                    break;
-                case WAIT_FOR_FRIEND_CARDS:
-                    waitForFriendCards();
-                    break;
-                case INVALID_FRIEND_CARDS:
-                    invalidFriendCards();
-                    break;
-                case WAIT_FOR_NUM_POINTS_NEEDED:
-                    waitForNumPointsNeeded();
-                    break;
+                    // Game setup codes:
+                    case ROUND_START:
+                        roundStart();
+                        break;
+                    case WAIT_FOR_PLAYER_ORDER:
+                        waitForPlayerOrder();
+                        break;
+                    case WAIT_FOR_KITTY:
+                        waitForKitty();
+                        break;
+                    case WAIT_FOR_HAND:
+                        waitForHand();
+                        break;
+                    case SEND_KITTY:
+                        sendKitty();
+                        break;
+                    case INVALID_KITTY:
+                        invalidKitty();
+                        break;
+                    case SEND_FRIEND_CARDS:
+                        sendFriendCards();
+                        break;
+                    case WAIT_FOR_FRIEND_CARDS:
+                        waitForFriendCards();
+                        break;
+                    case INVALID_FRIEND_CARDS:
+                        invalidFriendCards();
+                        break;
+                    case WAIT_FOR_NUM_POINTS_NEEDED:
+                        waitForNumPointsNeeded();
+                        break;
 
-                // Game codes:
-                case TRICK_START:
-                    trickStart();
-                    break;
-                case SEND_BASE_PLAY:
-                    sendBasePlay();
-                    break;
-                case SEND_PLAY:
-                    sendPlay();
-                    break;
-                case WAIT_FOR_TURN_PLAYER:
-                    waitForTurnPlayer();
-                    break;
-                case WAIT_FOR_PLAY:
-                    waitForPlay();
-                    break;
-                case INVALID_PLAY:
-                    invalidPlay();
-                    break;
-                case WAIT_FOR_INVALIDATED_FRIEND_CARD:
-                    waitForInvalidatedFriendCard();
-                    break;
-                case WAIT_FOR_NEW_PLAYER_TEAM:
-                    waitForNewPlayerTeam();
-                    break;
-                case WAIT_FOR_PLAYER_IN_LEAD:
-                    waitForPlayerInLead();
-                    break;
-                case WAIT_FOR_TRICK_WINNER:
-                    waitForTrickWinner();
-                    break;
-                case WAIT_FOR_TRICK_POINT_CARDS:
-                    waitForTrickPointCards();
-                    break;
-                case WAIT_FOR_ROUND_WINNERS:
-                    waitForRoundWinners();
-                    break;
-                case WAIT_FOR_NUM_COLLECTED_POINTS:
-                    waitForNumCollectedPoints();
-                    break;
-                case WAIT_FOR_CALLING_NUMBERS:
-                    waitForCallingNumbers();
-                    break;
-                case WAIT_FOR_ROUND_END_KITTY:
-                    waitForRoundEndKitty();
-                    break;
-                case ROUND_OVER:
-                    roundOver();
-                    break;
+                    // Game codes:
+                    case TRICK_START:
+                        trickStart();
+                        break;
+                    case SEND_BASE_PLAY:
+                        sendBasePlay();
+                        break;
+                    case SEND_PLAY:
+                        sendPlay();
+                        break;
+                    case WAIT_FOR_TURN_PLAYER:
+                        waitForTurnPlayer();
+                        break;
+                    case WAIT_FOR_PLAY:
+                        waitForPlay();
+                        break;
+                    case INVALID_PLAY:
+                        invalidPlay();
+                        break;
+                    case WAIT_FOR_INVALIDATED_FRIEND_CARD:
+                        waitForInvalidatedFriendCard();
+                        break;
+                    case WAIT_FOR_NEW_PLAYER_TEAM:
+                        waitForNewPlayerTeam();
+                        break;
+                    case WAIT_FOR_PLAYER_IN_LEAD:
+                        waitForPlayerInLead();
+                        break;
+                    case WAIT_FOR_TRICK_WINNER:
+                        waitForTrickWinner();
+                        break;
+                    case WAIT_FOR_TRICK_POINT_CARDS:
+                        waitForTrickPointCards();
+                        break;
+                    case WAIT_FOR_ROUND_WINNERS:
+                        waitForRoundWinners();
+                        break;
+                    case WAIT_FOR_NUM_COLLECTED_POINTS:
+                        waitForNumCollectedPoints();
+                        break;
+                    case WAIT_FOR_CALLING_NUMBERS:
+                        waitForCallingNumbers();
+                        break;
+                    case WAIT_FOR_ROUND_END_KITTY:
+                        waitForRoundEndKitty();
+                        break;
+                    case ROUND_OVER:
+                        roundOver();
+                        break;
 
-                // Lobby codes:
-                case WAIT_FOR_PLAYERS_LIST:
-                    waitForPlayersList();
-                    break;
-                case ServerCodes.WAIT_FOR_NEW_CALLING_RANK:
-                    waitForNewCallingRank();
-                    break;
-                default:
-                    Gdx.app.log("Shengji.GameState.Updater.update",
-                            "GameState update switch went to default. This really really really shouldn't happen");
-                    break;
+                    // Lobby codes:
+                    case WAIT_FOR_PLAYERS_LIST:
+                        waitForPlayersList();
+                        break;
+                    case ServerCodes.WAIT_FOR_NEW_CALLING_RANK:
+                        waitForNewCallingRank();
+                        break;
+                    case PLAYER_DISCONNECTED_DURING_ROUND:
+                        playerDisconnectedDuringRound();
+                        break;
+                    default:
+                        Gdx.app.log("Shengji.GameState.Updater.update",
+                                "GameState update switch went to default. This really really really shouldn't happen");
+                        break;
+                }
+            } catch(PlayerDisconnectedException e) {
+                Gdx.app.log("GameState.Updater.update()",
+                        "Switch threw PlayerDisconnectedException," +
+                                "went to catch, calling playerDisconnectedDuringRound");
+                playerDisconnectedDuringRound();
             }
         }
 
         // Server should send:
-        // [thisPlayerNum]\n
         // [# of players]\n
         // [[[playerNum]\n[name]\n[callRank]\n] for each RenderablePlayer]
+        // [hostPlayerNum]\n
+        // [thisPlayerNum]\n
         private void waitForPlayersList() {
             // Server will send this RenderablePlayer's playerNum first
-            int thisPlayerNum = client.readInt();
 
             // Server will send the number of players
             int numPlayers = client.readInt();
@@ -234,7 +245,12 @@ class GameState {
                 int playerNum = client.readInt();
                 String name = client.readLine();
                 int callRank = client.readInt();
-                players.add(new RenderablePlayer(playerNum, name, Rank.fromInt(callRank)));
+                try {
+                    players.add(new RenderablePlayer(playerNum, name, Rank.fromInt(callRank)));
+                } catch(IllegalArgumentException e) {
+                    e.printStackTrace(); // Print stack trace cause this shouldn't happen
+                    players.add(new RenderablePlayer(playerNum, name, Rank.values()[0]));
+                }
             }
 
             int hostPlayerNum = client.readInt();
@@ -247,6 +263,7 @@ class GameState {
             host.setHost(true);
 
             GameState.this.players = players;
+            int thisPlayerNum = client.readInt();
             thisPlayer = players.getPlayerFromPlayerNum(thisPlayerNum);
             thisPlayer.setHost(thisPlayer == host);
             thisPlayer.setThisPlayer(true);
@@ -255,15 +272,23 @@ class GameState {
 //            disableButton();
         }
 
-        private void waitForNewCallingRank() {
+        private void waitForNewCallingRank() throws PlayerDisconnectedException {
             int playerNum = client.readInt();
             int callRank = client.readInt();
             players.getPlayerFromPlayerNum(playerNum).setCallRank(callRank);
         }
 
+        private void playerDisconnectedDuringRound() throws PlayerDisconnectedException {
+            message = "[#FF3333]A player disconnected during the round!";
+            roundOver();
+            game.showLobbyScreen(GameState.this);
+            Gdx.app.log("GameState.Updater.playerDisconnectedDuringRound",
+                    "detected player disconnect, calling roundOver() and showing lobby screen");
+        }
+
         // CALLING CODES:
 
-        private void invalidCall() {
+        private void invalidCall() throws PlayerDisconnectedException {
             message = "Invalid call, try again";
             
             hand.addAll(thisPlayer.getPlay());
@@ -273,7 +298,7 @@ class GameState {
             enableButton();
         }
 
-        private void noCall() {
+        private void noCall() throws PlayerDisconnectedException {
             message = "You have chosen not to call";
             
             hand.addAll(thisPlayer.getPlay());
@@ -282,7 +307,7 @@ class GameState {
             disableButton();
         }
 
-        private void unsuccessfulCall() {
+        private void unsuccessfulCall() throws PlayerDisconnectedException {
             message = "Call not strong enough";
             
             hand.addAll(thisPlayer.getPlay());
@@ -293,7 +318,7 @@ class GameState {
             enableButton();
         }
 
-        private void successfulCall() {
+        private void successfulCall() throws PlayerDisconnectedException {
             message = "Successful call";
 
             int callCardNum = client.readInt();
@@ -320,9 +345,8 @@ class GameState {
             enableButton();
         }
 
-        private void sendCall() {
+        private void sendCall() throws PlayerDisconnectedException {
             message = "Make your call";
-            
             buttonText = "Send call";
 
             players.forEach(p -> {
@@ -333,7 +357,7 @@ class GameState {
             enableButton();
         }
 
-        private void waitForNewWinningCall() {
+        private void waitForNewWinningCall() throws PlayerDisconnectedException {
             int callLeaderPlayerNum = client.readInt();
             int callCardNum = client.readInt();
             int numCallCards = client.readInt();
@@ -350,7 +374,7 @@ class GameState {
             sendCall();
         }
 
-        private void waitForCallWinner() {
+        private void waitForCallWinner() throws PlayerDisconnectedException {
             RenderablePlayer callWinner = players.getPlayerFromPlayerNum(client.readInt());
             setTrump(callWinner.getPlay().get(0).cardNum());
             callWinner.setTeam(Team.KEEPERS);
@@ -364,15 +388,13 @@ class GameState {
             disableButton();
         }
 
-        private void noOneCalled() {
+        private void noOneCalled() throws PlayerDisconnectedException {
             noOneCalledCard = new RenderableCard(client.readInt());
-
             message = "No one called";
-
             enableButton();
         }
 
-        private void waitForKittyCallWinner() {
+        private void waitForKittyCallWinner() throws PlayerDisconnectedException {
             RenderablePlayer callWinner = players.getPlayerFromPlayerNum(client.readInt());
             Rank callWinnerCallRank = Rank.fromInt(client.readInt());
             RenderableCard callCard = new RenderableCard(client.readInt());
@@ -391,7 +413,7 @@ class GameState {
             disableButton();
         }
 
-        private void successfulKittyCall() {
+        private void successfulKittyCall() throws PlayerDisconnectedException {
             message = "Successful call!";
 
             setTrump(Card.getCardNumFromRankAndSuit(thisPlayer.getCallRank(), noOneCalledCard.suit()));
@@ -406,7 +428,7 @@ class GameState {
             disableButton();
         }
 
-        private void invalidKittyCall() {
+        private void invalidKittyCall() throws PlayerDisconnectedException {
             message = "Invalid call. Try again.";
 
             hand.addAll(thisPlayer.getPlay());
@@ -417,7 +439,7 @@ class GameState {
 
         // GAME SETUP CODES:
 
-        private void roundStart() {
+        private void roundStart() throws PlayerDisconnectedException {
             noOneCalledCard = null;
             resetTrump();
 
@@ -451,7 +473,7 @@ class GameState {
         // Server should send:
         // [# of players]\n
         // [[playerNum]\n for each RenderablePlayer]
-        private void waitForPlayerOrder() {
+        private void waitForPlayerOrder() throws PlayerDisconnectedException {
             int numPlayers = client.readInt();
             int[] playerOrder = new int[numPlayers];
             for(int i = 0; i < playerOrder.length; i++) {
@@ -472,7 +494,7 @@ class GameState {
         // Server should send:
         // [kitty size]\n
         // [[cardNum]\n for each card in kitty]
-        private void waitForKitty() {
+        private void waitForKitty() throws PlayerDisconnectedException {
             int kittySize = client.readInt();
             kitty.clear();
             for(int i = 0; i < kittySize; i++) {
@@ -486,7 +508,7 @@ class GameState {
 
         // Server should send:
         // [cardNum]\n for each card in this RenderablePlayer's hand
-        private void waitForHand() {
+        private void waitForHand() throws PlayerDisconnectedException {
             int[] cardNums = new int[client.readInt()];
 
             for(int i = 0; i < cardNums.length; i++) {
@@ -500,14 +522,14 @@ class GameState {
             disableButton();
         }
 
-        private void sendKitty() {
+        private void sendKitty() throws PlayerDisconnectedException {
             message = "Select " + kitty.size() +  " cards to put in kitty";
             buttonText = "Confirm kitty";
 
             enableButton();
         }
 
-        private void invalidKitty() {
+        private void invalidKitty() throws PlayerDisconnectedException {
             message = "Invalid kitty!";
             buttonText = "Confirm kitty";
 
@@ -517,7 +539,7 @@ class GameState {
             enableButton();
         }
 
-        private void sendFriendCards() {
+        private void sendFriendCards() throws PlayerDisconnectedException {
             // First, clear the this player's play because it contains the selected kitty cards
             thisPlayer.clearPlay(); // UPDATE 2018-11-22 actually I don't think it does but I'm leaving it here
             
@@ -536,7 +558,7 @@ class GameState {
             enableButton();
         }
 
-        private void waitForFriendCards() {
+        private void waitForFriendCards() throws PlayerDisconnectedException {
             int numFriendCards = client.readInt();
             friendCards.clear();
             friendCards.prefDivisionProportion = 1.1f;
@@ -547,22 +569,20 @@ class GameState {
             disableButton();
         }
 
-        private void invalidFriendCards() {
+        private void invalidFriendCards() throws PlayerDisconnectedException {
             // I don't think this will need to be implemented but I don't want to delete it
         }
 
-        private void waitForNumPointsNeeded() {
+        private void waitForNumPointsNeeded() throws PlayerDisconnectedException {
             numPointsNeeded = client.readInt();
-
             disableButton();
         }
 
         // GAME CODES:
 
-        private void trickStart() {
+        private void trickStart() throws PlayerDisconnectedException {
             players.forEach(RenderablePlayer::clearPlay);
             numCardsInBasePlay = 0;
-
             disableButton();
         }
 
@@ -570,36 +590,31 @@ class GameState {
         // Should send to server:
         // [numCardsInPlay]\n
         // [[cardNum] for each selected card in hand]
-        private void sendBasePlay() {
+        private void sendBasePlay() throws PlayerDisconnectedException {
             message = "Your turn";
             buttonText = "Send play";
-
             enableButton();
         }
 
         // Should send to server:
         // [[cardNum] for each selected card in hand]
-        private void sendPlay() {
+        private void sendPlay() throws PlayerDisconnectedException {
             message = "Your turn";
             buttonText = "Send play";
-
             numCardsInBasePlay = client.readInt();
-
             enableButton();
         }
 
-        private void waitForTurnPlayer() {
+        private void waitForTurnPlayer() throws PlayerDisconnectedException {
             turnPlayer = players.getPlayerFromPlayerNum(client.readInt());
-
             message = "Waiting on "
                     + (turnPlayer.getTeam() == Team.COLLECTORS ? "[ORANGE]"
                     : turnPlayer.getTeam() == Team.KEEPERS ? "[GREEN]"
                     : "[WHITE]") + turnPlayer.getName(17);
-
             disableButton();
         }
 
-        private void waitForPlay() {
+        private void waitForPlay() throws PlayerDisconnectedException {
             int numCardsInPlay = client.readInt();
 
             turnPlayer.clearPlay();
@@ -618,11 +633,10 @@ class GameState {
             }
 
             message = "";
-
             disableButton();
         }
 
-        private void invalidPlay() {
+        private void invalidPlay() throws PlayerDisconnectedException {
             message = "Invalid play";
 
             thisPlayer.getPlay().forEach(c -> {
@@ -633,7 +647,7 @@ class GameState {
             thisPlayer.clearPlay();
         }
 
-        private void waitForInvalidatedFriendCard() {
+        private void waitForInvalidatedFriendCard() throws PlayerDisconnectedException {
             int invalidatedFriendCard = client.readInt();
             Optional<RenderableCard> invalidatedCardOptional =
                     friendCards.stream().filter(c -> c.cardNum() == invalidatedFriendCard).limit(1).findFirst();
@@ -644,7 +658,7 @@ class GameState {
             });
         }
 
-        private void waitForNewPlayerTeam() {
+        private void waitForNewPlayerTeam() throws PlayerDisconnectedException {
             RenderablePlayer p = players.getPlayerFromPlayerNum(client.readInt());
             int teamNum = client.readInt();
             Team newTeam = Team.getTeamFromTeamNum(teamNum);
@@ -661,7 +675,7 @@ class GameState {
             }
         }
 
-        private void waitForPlayerInLead() {
+        private void waitForPlayerInLead() throws PlayerDisconnectedException {
             leadingPlayer = players.getPlayerFromPlayerNum(client.readInt());
 
             players.forEach(p -> {
@@ -673,7 +687,7 @@ class GameState {
                     .forEach(c -> c.setFaceBackgroundColor(winningPlayColor));
         }
 
-        private void waitForTrickWinner() {
+        private void waitForTrickWinner() throws PlayerDisconnectedException {
             lastTrickWinner = players.getPlayerFromPlayerNum(client.readInt());
             message =
                     (lastTrickWinner.getTeam() == Team.COLLECTORS ? "[ORANGE]"
@@ -687,7 +701,7 @@ class GameState {
             disableButton();
         }
 
-        private void waitForTrickPointCards() {
+        private void waitForTrickPointCards() throws PlayerDisconnectedException {
             int numCards = client.readInt();
             RenderableCardList pointCards = new RenderableCardList();
 
@@ -705,7 +719,7 @@ class GameState {
             disableButton();
         }
 
-        private void waitForRoundWinners() {
+        private void waitForRoundWinners() throws PlayerDisconnectedException {
             int numWinners = client.readInt();
 
             roundWinners.clear();
@@ -717,17 +731,15 @@ class GameState {
             roundWinners.forEach(p -> message += roundWinners.lastIndexOf(p) != roundWinners.size() - 1
                     ? p.getName(17) + ", \n"
                     : p.getName(17));
-
             disableButton();
         }
 
-        private void waitForNumCollectedPoints() {
+        private void waitForNumCollectedPoints() throws PlayerDisconnectedException {
             numCollectedPoints = client.readInt();
-
             disableButton();
         }
 
-        private void waitForCallingNumbers() {
+        private void waitForCallingNumbers() throws PlayerDisconnectedException {
             int numPlayers = client.readInt();
 
             for(int i = 0; i < numPlayers; i++) {
@@ -735,21 +747,19 @@ class GameState {
                 int callRank = client.readInt();
                 players.getPlayerFromPlayerNum(playerNum).setCallRank(callRank);
             }
-
             disableButton();
         }
 
-        private void waitForRoundEndKitty() {
+        private void waitForRoundEndKitty() throws PlayerDisconnectedException {
             int kittySize = client.readInt();
             kitty.clear();
             for(int i = 0; i < kittySize; i++) {
                 kitty.add(new RenderableCard(client.readInt()));
             }
-
             disableButton();
         }
 
-        private void roundOver() {
+        private void roundOver() throws PlayerDisconnectedException {
             roundStarted = false;
             buttonText = "Return to lobby";
         }
@@ -768,7 +778,6 @@ class GameState {
             trumpSuit = Card.getSuitFromCardNum(cardNum);
             trumpRank = Card.getRankFromCardNum(cardNum);
             trumpCard = new RenderableCard(trumpRank, trumpSuit);
-
             Gdx.app.log("ShengJi.GameState.Updater.setTrump()", "Trump rank = " + trumpRank.toString() + ", trump suit = " + trumpSuit.toString());
         }
 

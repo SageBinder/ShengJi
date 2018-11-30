@@ -44,7 +44,7 @@ public enum Rank {
         }
     }
 
-    public static Rank fromInt(int rankNum) {
+    public static Rank fromInt(int rankNum) throws IllegalArgumentException {
         try {
             return values()[rankNum - 2];
         } catch(IndexOutOfBoundsException e) {

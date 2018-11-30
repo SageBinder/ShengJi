@@ -36,9 +36,8 @@ project(":desktop") {
 
     compileJava.options.fork = true
     compileJava.options.forkOptions.executable = "C:\\Program Files\\Java\\jdk-10.0.2\\bin\\javac.exe"
-    sourceCompatibility = 10
-    targetCompatibility = 10
-    compileJava.options.compilerArgs.addAll(['--release', '10', '-Xlint'])
+    sourceCompatibility = JavaVersion.VERSION_1_10
+    targetCompatibility = JavaVersion.VERSION_1_10
 
     dependencies {
         compile project(":core")
@@ -46,6 +45,7 @@ project(":desktop") {
         compile "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
         compile "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-desktop"
         compile "com.badlogicgames.gdx:gdx-tools:$gdxVersion"
+
     }
 }
 
@@ -63,7 +63,7 @@ project(":core") {
         compile "com.kotcrab.vis:vis-ui:1.2.4"
         compile "net.dermetfan.libgdx-utils:libgdx-utils:0.13.3"
         compile "net.dermetfan.libgdx-utils:libgdx-utils-box2d:0.13.3"
-        compile fileTree(dir: 'libs', include: '*.jar', exclude: 'WaifUPnP-javadoc.jar')
+        compile fileTree(dir: 'libs', include: '*.jar')
     }
 }
 

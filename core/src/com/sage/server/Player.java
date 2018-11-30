@@ -1,5 +1,6 @@
 package com.sage.server;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.net.Socket;
 import com.sage.Rank;
 import com.sage.Suit;
@@ -37,17 +38,16 @@ class Player {
         points.clear();
     }
 
-    boolean readyToRead() {
+    boolean readyToRead() throws PlayerDisconnectedException {
         try {
             return bufferedReader.ready();
         } catch(IOException e) {
-//            e.printStackTrace();
             s.dispose();
-            return false;
+            throw new PlayerDisconnectedException();
         }
     }
 
-    int clearReadBuffer() {
+    int clearReadBuffer() throws PlayerDisconnectedException {
         try {
             int i = 0;
             while(bufferedReader.ready()) {
@@ -56,82 +56,81 @@ class Player {
             }
             return i;
         } catch(IOException e) {
-//            e.printStackTrace();
             s.dispose();
-            return -1;
+            throw new PlayerDisconnectedException();
         }
     }
 
-    Integer readInt() {
+    Integer readInt() throws PlayerDisconnectedException {
         try {
-            return Integer.parseInt(readLine()); // readLine() will return null if player has disconnected
+            return Integer.parseInt(readLine());
         } catch(NumberFormatException e) {
-//            e.printStackTrace();
             return null;
         }
     }
 
-    String readLine() {
+    String readLine() throws PlayerDisconnectedException {
         try {
             String line = bufferedReader.readLine();
             if(line == null) {
                 s.dispose();
+                throw new PlayerDisconnectedException();
+            } else {
+                return line;
             }
-            return line;
         } catch(IOException e) {
-//            e.printStackTrace();
             s.dispose();
-            return null;
+            throw new PlayerDisconnectedException();
         }
     }
 
-    void sendString(String string, boolean flushWriteBuffer) {
+    void sendString(String string, boolean flushWriteBuffer) throws PlayerDisconnectedException {
+        Gdx.app.log("Server.sendString", "Sending string: " + string + " to " + name);
         try {
             bufferedWriter.write(string);
             bufferedWriter.write("\n");
             if(flushWriteBuffer) bufferedWriter.flush();
         } catch(IOException e) {
-//            e.printStackTrace();
             s.dispose();
+            throw new PlayerDisconnectedException();
         }
     }
 
-    void sendInt(int i, boolean flushWriteBuffer) {
+    void sendInt(int i, boolean flushWriteBuffer) throws PlayerDisconnectedException {
+        Gdx.app.log("Server.sendInt", "Sending int: " + i + " to " + name);
         try {
             bufferedWriter.write(Integer.toString(i));
             bufferedWriter.write("\n");
             if(flushWriteBuffer) bufferedWriter.flush();
         } catch(IOException e) {
-//            e.printStackTrace();
             s.dispose();
+            throw new PlayerDisconnectedException();
         }
     }
 
-    void sendCards(ServerCardList cardList, boolean flushWriteBuffer) {
+    void sendCards(ServerCardList cardList, boolean flushWriteBuffer) throws PlayerDisconnectedException{
         cardList.forEach(c -> sendInt(c.cardNum(), false));
         if(flushWriteBuffer) flushWriteBuffer();
     }
 
-    void sendString(String string) {
+    void sendString(String string) throws PlayerDisconnectedException{
         sendString(string, true);
     }
 
-    void sendInt(int i) {
+    void sendInt(int i) throws PlayerDisconnectedException{
         sendInt(i, true);
     }
 
-    void sendCards(ServerCardList cardList) {
-        for(ServerCard c : cardList) {
-            sendInt(c.cardNum());
-        }
+    void sendCards(ServerCardList cardList) throws PlayerDisconnectedException {
+        cardList.forEach(c -> sendInt(c.cardNum()));
     }
 
-    void flushWriteBuffer() {
+    void flushWriteBuffer() throws PlayerDisconnectedException {
         try {
             bufferedWriter.flush();
         } catch(IOException e) {
-            e.printStackTrace();
             s.dispose();
+            throw new PlayerDisconnectedException();
         }
     }
 

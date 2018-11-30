@@ -5,6 +5,7 @@ import com.badlogic.gdx.Net;
 import com.badlogic.gdx.net.NetJavaSocketImpl;
 import com.badlogic.gdx.net.SocketHints;
 import com.badlogic.gdx.utils.GdxRuntimeException;
+import com.sage.server.PlayerDisconnectedException;
 import com.sage.server.ServerCodes;
 
 import java.io.*;
@@ -60,20 +61,25 @@ class ShengJiClient extends Thread {
                 }
             }
 
-            Integer serverCode = readInt();
-            if(serverCode == null) {
-                return;
-            }
-            while(serverCode > -1) {
-                Gdx.app.log("ShengJiClient.run","Oh shit, server code is > -1. This should never happen. IT'S BORKED.");
+            Integer serverCode;
+            try {
                 serverCode = readInt();
                 if(serverCode == null) {
                     return;
                 }
+                while(serverCode > -1) {
+                    Gdx.app.log("ShengJiClient.run","Oh shit, server code is > -1. This should never happen. IT'S BORKED.");
+                    serverCode = readInt();
+                    if(serverCode == null) {
+                        return;
+                    }
+                }
+            } catch(PlayerDisconnectedException e) {
+                serverCode = ServerCodes.PLAYER_DISCONNECTED_DURING_ROUND;
             }
 
             if(serverCode == ServerCodes.PING) {
-                sendInt(ClientCodes.PING);
+//                sendInt(ClientCodes.PING);
                 continue;
             }
 
@@ -122,7 +128,7 @@ class ShengJiClient extends Thread {
         }
     }
 
-    Integer readInt() {
+    Integer readInt() throws PlayerDisconnectedException {
         try {
             return Integer.parseInt(readLine());
         } catch(NumberFormatException e) {
@@ -131,12 +137,14 @@ class ShengJiClient extends Thread {
         }
     }
 
-    String readLine() {
+    String readLine() throws PlayerDisconnectedException {
         try {
             String line = reader.readLine();
             if(line == null) {
                 socket.dispose();
                 return null;
+            } else if(line.equals(Integer.toString(ServerCodes.PLAYER_DISCONNECTED_DURING_ROUND))) {
+                throw new PlayerDisconnectedException();
             }
             return line;
         } catch(IOException e) {
